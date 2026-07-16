@@ -101,10 +101,11 @@ export function CronogramaView({ month, onMonthChange, showHeader = true }: Cron
 
   const { data, isLoading } = useQuery({
     queryKey: ["activities-plan", activeMonth, week],
-    queryFn: () => activitiesService.listByPlan({
-      mes_planeacion: activeMonth,
-      semana_planeacion: week === "all" ? undefined : Number(week),
-    }),
+    queryFn: () =>
+      activitiesService.listByPlan({
+        mes_planeacion: activeMonth,
+        semana_planeacion: week === "all" ? undefined : Number(week),
+      }),
   });
 
   const monthStart = useMemo(() => parseMonth(activeMonth), [activeMonth]);
@@ -135,7 +136,11 @@ export function CronogramaView({ month, onMonthChange, showHeader = true }: Cron
     const map = new Map<string, Activity[]>();
     for (const a of filtered) {
       const key =
-        groupBy === "responsable" ? a.responsable : groupBy === "estado" ? STATUS_LABEL[a.estado] : a.aplicacion;
+        groupBy === "responsable"
+          ? a.responsable
+          : groupBy === "estado"
+            ? STATUS_LABEL[a.estado]
+            : a.aplicacion;
       const arr = map.get(key) ?? [];
       arr.push(a);
       map.set(key, arr);
@@ -164,7 +169,10 @@ export function CronogramaView({ month, onMonthChange, showHeader = true }: Cron
       for (let weekIndex = 1; weekIndex <= totalWeeks; weekIndex++) {
         const startDay = (weekIndex - 1) * 7 + 1;
         const endDay = Math.min(weekIndex * 7, totalDays);
-        const sub = startDay <= totalDays ? `${String(startDay).padStart(2, "0")}–${String(endDay).padStart(2, "0")}` : "—";
+        const sub =
+          startDay <= totalDays
+            ? `${String(startDay).padStart(2, "0")}–${String(endDay).padStart(2, "0")}`
+            : "—";
         arr.push({ label: `S${weekIndex}`, sub, isWeekStart: true });
       }
     }
@@ -178,7 +186,10 @@ export function CronogramaView({ month, onMonthChange, showHeader = true }: Cron
     const s = startOfDay(new Date(a.fechaInicio));
     const e = startOfDay(new Date(a.fechaLimite));
     const startOffset = Math.max(0, Math.round((s.getTime() - rangeStart.getTime()) / DAY_MS));
-    const endOffset = Math.min(totalDays, Math.round((e.getTime() - rangeStart.getTime()) / DAY_MS) + 1);
+    const endOffset = Math.min(
+      totalDays,
+      Math.round((e.getTime() - rangeStart.getTime()) / DAY_MS) + 1,
+    );
     if (endOffset <= 0 || startOffset >= totalDays) return null;
     const left = (startOffset / totalDays) * timelineWidth;
     const width = Math.max(colWidth * 0.6, ((endOffset - startOffset) / totalDays) * timelineWidth);
@@ -220,25 +231,35 @@ export function CronogramaView({ month, onMonthChange, showHeader = true }: Cron
           onChange={(e) => setQuery(e.target.value)}
           className="max-w-xs"
         />
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as ActivityStatus | "all")}>
+        <Select
+          value={statusFilter}
+          onValueChange={(v) => setStatusFilter(v as ActivityStatus | "all")}
+        >
           <SelectTrigger className="w-40">
             <SelectValue placeholder="Estado" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Estado: Todos</SelectItem>
             {STATUSES.map((s) => (
-              <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>
+              <SelectItem key={s} value={s}>
+                {STATUS_LABEL[s]}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <Select value={priorityFilter} onValueChange={(v) => setPriorityFilter(v as ActivityPriority | "all")}>
+        <Select
+          value={priorityFilter}
+          onValueChange={(v) => setPriorityFilter(v as ActivityPriority | "all")}
+        >
           <SelectTrigger className="w-44">
             <SelectValue placeholder="Prioridad" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Prioridad: Todas</SelectItem>
             {PRIORITIES.map((p) => (
-              <SelectItem key={p} value={p}>{PRIORITY_LABEL[p]}</SelectItem>
+              <SelectItem key={p} value={p}>
+                {PRIORITY_LABEL[p]}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -262,13 +283,21 @@ export function CronogramaView({ month, onMonthChange, showHeader = true }: Cron
           </SelectContent>
         </Select>
         <div className="ml-auto flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => setMonth(shiftMonth(activeMonth, -1))}>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setMonth(shiftMonth(activeMonth, -1))}
+          >
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <Button variant="outline" size="sm" onClick={() => setMonth(formatMonth(new Date()))}>
             Hoy
           </Button>
-          <Button variant="outline" size="icon" onClick={() => setMonth(shiftMonth(activeMonth, 1))}>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setMonth(shiftMonth(activeMonth, 1))}
+          >
             <ChevronRight className="h-4 w-4" />
           </Button>
           <span className="text-sm text-muted-foreground ml-2">
@@ -288,7 +317,9 @@ export function CronogramaView({ month, onMonthChange, showHeader = true }: Cron
           <div className="p-16 text-center text-muted-foreground">
             <CalendarRange className="h-10 w-10 mx-auto mb-3 opacity-50" />
             <p className="font-medium">Sin actividades para mostrar</p>
-            <p className="text-sm">Crea actividades desde el módulo Actividades para verlas aquí.</p>
+            <p className="text-sm">
+              Crea actividades desde el módulo Actividades para verlas aquí.
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -296,13 +327,19 @@ export function CronogramaView({ month, onMonthChange, showHeader = true }: Cron
               {/* Left fixed column */}
               <div className="w-72 shrink-0 border-r bg-card sticky left-0 z-10">
                 <div className="h-14 border-b flex items-end px-4 pb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide bg-muted/30">
-                  {groupBy === "responsable" ? "Responsable / Tarea" : groupBy === "estado" ? "Estado / Tarea" : "Aplicación / Tarea"}
+                  {groupBy === "responsable"
+                    ? "Responsable / Tarea"
+                    : groupBy === "estado"
+                      ? "Estado / Tarea"
+                      : "Aplicación / Tarea"}
                 </div>
                 {groups.map(([groupName, items]) => (
                   <div key={groupName}>
                     <div className="h-9 flex items-center px-4 text-sm font-semibold bg-muted/40 border-b">
                       {groupName}
-                      <span className="ml-2 text-xs font-normal text-muted-foreground">({items.length})</span>
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">
+                        ({items.length})
+                      </span>
                     </div>
                     {items.map((a) => (
                       <div
@@ -327,11 +364,13 @@ export function CronogramaView({ month, onMonthChange, showHeader = true }: Cron
                       key={i}
                       className={cn(
                         "flex flex-col items-center justify-end pb-1 text-[10px] text-muted-foreground border-r",
-                        h.isWeekStart && "border-l border-l-border/80"
+                        h.isWeekStart && "border-l border-l-border/80",
                       )}
                       style={{ width: colWidth }}
                     >
-                      <span className="font-semibold text-foreground text-xs leading-none">{h.label}</span>
+                      <span className="font-semibold text-foreground text-xs leading-none">
+                        {h.label}
+                      </span>
                       {h.sub && <span className="leading-none mt-0.5">{h.sub}</span>}
                     </div>
                   ))}
@@ -356,7 +395,10 @@ export function CronogramaView({ month, onMonthChange, showHeader = true }: Cron
                         {headers.map((h, i) => (
                           <div
                             key={i}
-                            className={cn("border-r border-border/40", h.isWeekStart && "border-l border-l-border/70")}
+                            className={cn(
+                              "border-r border-border/40",
+                              h.isWeekStart && "border-l border-l-border/70",
+                            )}
                             style={{ width: colWidth }}
                           />
                         ))}
@@ -376,7 +418,7 @@ export function CronogramaView({ month, onMonthChange, showHeader = true }: Cron
                                 key={i}
                                 className={cn(
                                   "border-r border-border/30",
-                                  h.isWeekStart && "border-l border-l-border/60"
+                                  h.isWeekStart && "border-l border-l-border/60",
                                 )}
                                 style={{ width: colWidth }}
                               />
@@ -419,11 +461,17 @@ export function CronogramaView({ month, onMonthChange, showHeader = true }: Cron
                                 <TooltipContent side="top" className="max-w-xs">
                                   <div className="space-y-1">
                                     <p className="font-semibold">{a.nombre}</p>
-                                    <p className="text-xs opacity-80">{a.id} · {a.aplicacion}</p>
+                                    <p className="text-xs opacity-80">
+                                      {a.id} · {a.aplicacion}
+                                    </p>
                                     <p className="text-xs">Responsable: {a.responsable}</p>
-                                    <p className="text-xs">Estado: {STATUS_LABEL[a.estado]} · Prioridad: {PRIORITY_LABEL[a.prioridad]}</p>
                                     <p className="text-xs">
-                                      {fmtFull(new Date(a.fechaInicio))} → {fmtFull(new Date(a.fechaLimite))}
+                                      Estado: {STATUS_LABEL[a.estado]} · Prioridad:{" "}
+                                      {PRIORITY_LABEL[a.prioridad]}
+                                    </p>
+                                    <p className="text-xs">
+                                      {fmtFull(new Date(a.fechaInicio))} →{" "}
+                                      {fmtFull(new Date(a.fechaLimite))}
                                     </p>
                                   </div>
                                 </TooltipContent>

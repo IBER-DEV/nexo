@@ -13,3 +13,7 @@ DATABASES = {
         "PORT": config("DB_PORT", default="5432"),
     }
 }
+
+# With DEBUG (runserver) static files come from source dirs; entrypoint.sh
+# only runs collectstatic for non-debug (gunicorn) runs.
+WHITENOISE_AUTOREFRESH = DEBUG

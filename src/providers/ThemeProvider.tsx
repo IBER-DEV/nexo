@@ -25,7 +25,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     root.classList.toggle("dark", theme === "dark");
     try {
       localStorage.setItem(KEY, theme);
-    } catch {}
+    } catch {
+      // Storage can be unavailable (private mode, quota); theme just won't persist.
+    }
   }, [theme]);
 
   return (

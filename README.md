@@ -1,6 +1,9 @@
 # Nexo
 
-Plataforma interna de gestión de actividades y proyectos para equipos de TI: backlog,
+[![CI](https://github.com/IBER-DEV/nexo-/actions/workflows/ci.yml/badge.svg)](https://github.com/IBER-DEV/nexo-/actions/workflows/ci.yml)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
+
+Plataforma open source de gestión de actividades y proyectos para equipos de TI: backlog,
 planeación semanal/mensual, tablero Kanban, reportes ejecutivos y administración de usuarios.
 
 ## Stack
@@ -90,3 +93,15 @@ backend/apps/         Apps Django (activities, users)
 backend/config/       Settings (dev / docker / prod), URLs
 docker-compose.yml    Backend + Postgres para desarrollo local
 ```
+
+## Contribuir
+
+Las contribuciones son bienvenidas — lee la [guía de contribución](CONTRIBUTING.md) y el
+[código de conducta](CODE_OF_CONDUCT.md). El CI ejecuta lint, typecheck, build y las
+pruebas del backend en cada pull request.
+
+## Licencia
+
+Nexo se distribuye bajo la licencia [AGPL-3.0](LICENSE). Puedes usarlo, modificarlo y
+auto-alojarlo libremente; si lo ofreces como servicio con modificaciones, debes publicar
+esas modificaciones bajo la misma licencia.

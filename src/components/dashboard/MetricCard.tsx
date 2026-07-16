@@ -17,8 +17,10 @@ export function MetricCard({
 }) {
   const colors = {
     primary: "text-primary bg-primary/10",
-    success: "text-[var(--status-done)] bg-[color-mix(in_oklab,var(--status-done)_12%,transparent)]",
-    warning: "text-[var(--priority-high)] bg-[color-mix(in_oklab,var(--priority-high)_12%,transparent)]",
+    success:
+      "text-[var(--status-done)] bg-[color-mix(in_oklab,var(--status-done)_12%,transparent)]",
+    warning:
+      "text-[var(--priority-high)] bg-[color-mix(in_oklab,var(--priority-high)_12%,transparent)]",
     danger: "text-destructive bg-destructive/10",
     info: "text-[var(--status-progress)] bg-[color-mix(in_oklab,var(--status-progress)_12%,transparent)]",
   }[accent];

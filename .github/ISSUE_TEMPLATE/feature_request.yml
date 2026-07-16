@@ -1,0 +1,23 @@
+name: ✨ Propuesta de feature
+description: Una idea o mejora para Nexo
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema que resuelve
+      description: Qué necesidad o fricción motivó esta propuesta.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Solución propuesta
+      description: Cómo imaginas que debería funcionar.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativas consideradas
+      description: Otras formas de resolver el problema y por qué preferís esta.

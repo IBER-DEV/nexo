@@ -10,8 +10,7 @@ const STYLES: Record<ActivityStatus, string> = {
     "bg-[color-mix(in_oklab,var(--status-testing)_15%,transparent)] text-[var(--status-testing)] border-[color-mix(in_oklab,var(--status-testing)_30%,transparent)]",
   pending_client:
     "bg-[color-mix(in_oklab,var(--status-pending)_15%,transparent)] text-[var(--status-pending)] border-[color-mix(in_oklab,var(--status-pending)_30%,transparent)]",
-  done:
-    "bg-[color-mix(in_oklab,var(--status-done)_15%,transparent)] text-[var(--status-done)] border-[color-mix(in_oklab,var(--status-done)_30%,transparent)]",
+  done: "bg-[color-mix(in_oklab,var(--status-done)_15%,transparent)] text-[var(--status-done)] border-[color-mix(in_oklab,var(--status-done)_30%,transparent)]",
   cancelled: "bg-muted text-muted-foreground border-border line-through",
 };
 

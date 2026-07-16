@@ -1,0 +1,43 @@
+name: 🐛 Reporte de bug
+description: Algo no funciona como debería
+labels: [bug]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Descripción
+      description: Qué pasó y qué esperabas que pasara.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Pasos para reproducir
+      placeholder: |
+        1. Ir a '...'
+        2. Hacer clic en '...'
+        3. Ver el error
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área
+      options:
+        - Frontend (UI)
+        - Backend (API)
+        - Sync AppSheet/Google Sheets
+        - Docker / despliegue
+        - Otro
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Entorno
+      placeholder: "SO, navegador, versión de Nexo, self-hosted o desarrollo local"
+  - type: textarea
+    id: extra
+    attributes:
+      label: Capturas o logs
+      description: Cualquier contexto adicional que ayude a diagnosticar.

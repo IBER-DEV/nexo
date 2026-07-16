@@ -30,14 +30,22 @@ export const activitiesService = {
     return apiFetch<ActivityMetaOptions>("/activities/meta/");
   },
 
-  async listByPlan(params: { mes_planeacion: string; semana_planeacion?: number }): Promise<Activity[]> {
+  async listByPlan(params: {
+    mes_planeacion: string;
+    semana_planeacion?: number;
+  }): Promise<Activity[]> {
     const search = new URLSearchParams({ mes_planeacion: params.mes_planeacion });
     if (params.semana_planeacion) search.set("semana_planeacion", String(params.semana_planeacion));
-    const res = await apiFetch<{ results: Activity[] } | Activity[]>(`/activities/?${search.toString()}`);
+    const res = await apiFetch<{ results: Activity[] } | Activity[]>(
+      `/activities/?${search.toString()}`,
+    );
     return Array.isArray(res) ? res : res.results;
   },
 
-  async importExcel(file: File, params: { mes_planeacion?: string; semana_planeacion?: number }): Promise<{
+  async importExcel(
+    file: File,
+    params: { mes_planeacion?: string; semana_planeacion?: number },
+  ): Promise<{
     created: number;
     updated: number;
     skipped: number;
@@ -47,7 +55,8 @@ export const activitiesService = {
     const form = new FormData();
     form.append("file", file);
     if (params.mes_planeacion) form.append("mes_planeacion", params.mes_planeacion);
-    if (params.semana_planeacion) form.append("semana_planeacion", String(params.semana_planeacion));
+    if (params.semana_planeacion)
+      form.append("semana_planeacion", String(params.semana_planeacion));
 
     return apiFetch("/activities/import/", {
       method: "POST",

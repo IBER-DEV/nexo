@@ -23,7 +23,8 @@ const AuthCtx = createContext<AuthState>({
   logout: () => {},
 });
 
-const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:8000/api/v1";
+const BASE_URL =
+  (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:8000/api/v1";
 const USER_KEY = "flowdesk-user";
 
 function loadStoredUser(): User | null {
@@ -81,9 +82,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error((err as Record<string, unknown>)?.detail as string | undefined ?? "Credenciales inválidas");
+      throw new Error(
+        ((err as Record<string, unknown>)?.detail as string | undefined) ??
+          "Credenciales inválidas",
+      );
     }
-    const data = await res.json() as { access: string; refresh: string; user: User };
+    const data = (await res.json()) as { access: string; refresh: string; user: User };
     setTokens(data.access, data.refresh);
     localStorage.setItem(USER_KEY, JSON.stringify(data.user));
     setUser(data.user);
@@ -96,7 +100,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthCtx.Provider value={{ isAuthenticated, isAdmin, isCoordinator, canAccessPlanning, user, login, logout }}>
+    <AuthCtx.Provider
+      value={{ isAuthenticated, isAdmin, isCoordinator, canAccessPlanning, user, login, logout }}
+    >
       {children}
     </AuthCtx.Provider>
   );

@@ -10,21 +10,21 @@ export type ActivityPriority = "low" | "medium" | "high" | "critical";
 
 export interface Activity {
   pk: number;
-  id: string;              // "ACT-0001" — display only
+  id: string; // "ACT-0001" — display only
   empresa: string;
   proceso: string;
   aplicacion: string;
   nombre: string;
   descripcion: string;
-  responsable: string;     // nombre del usuario — display only
-  responsable_id: number;  // PK del usuario — usado en formularios
+  responsable: string; // nombre del usuario — display only
+  responsable_id: number; // PK del usuario — usado en formularios
   stakeholder: string;
   mes_planeacion: string | null; // YYYY-MM
   semana_planeacion: number | null; // 1-5
   prioridad: ActivityPriority;
   estado: ActivityStatus;
-  fechaInicio: string;     // ISO date
-  fechaLimite: string;     // ISO date
+  fechaInicio: string; // ISO date
+  fechaLimite: string; // ISO date
 }
 
 export interface ActivityInput {

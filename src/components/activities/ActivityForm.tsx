@@ -37,7 +37,7 @@ const schema = z.object({
   aplicacion: z.string().min(1, "Requerido"),
   nombre: z.string().min(3, "Mínimo 3 caracteres").max(120),
   descripcion: z.string().max(500),
-  responsable_id: z.number({ required_error: "Requerido" }).int().positive("Requerido"),
+  responsable_id: z.number({ error: "Requerido" }).int().positive("Requerido"),
   stakeholder: z.string().min(1, "Requerido"),
   mes_planeacion: z.string().regex(/^\d{4}-\d{2}$/, "Formato YYYY-MM"),
   semana_planeacion: z.number().int().min(1).max(5),

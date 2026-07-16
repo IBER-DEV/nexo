@@ -29,7 +29,9 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
     setEnabled(value);
     try {
       localStorage.setItem(KEY, String(value));
-    } catch {}
+    } catch {
+      // Storage can be unavailable (private mode, quota); preference just won't persist.
+    }
   };
 
   return (

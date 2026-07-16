@@ -142,7 +142,9 @@ function DashboardPage() {
         description="Resumen ejecutivo del equipo de sistemas"
         actions={
           <Button asChild>
-            <Link to="/activities">Ver actividades</Link>
+            <Link to="/activities" search={{ q: "" }}>
+              Ver actividades
+            </Link>
           </Button>
         }
       />
@@ -333,7 +335,9 @@ function DashboardPage() {
             <p className="text-xs text-muted-foreground">Últimas 5 creadas</p>
           </div>
           <Button variant="outline" size="sm" asChild>
-            <Link to="/activities">Ver todas</Link>
+            <Link to="/activities" search={{ q: "" }}>
+              Ver todas
+            </Link>
           </Button>
         </div>
         <div className="space-y-2">

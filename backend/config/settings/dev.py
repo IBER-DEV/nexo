@@ -13,3 +13,6 @@ DATABASES = {
 
 # Allow all origins in development
 CORS_ALLOW_ALL_ORIGINS = True
+
+# Serve static files from source dirs without needing collectstatic locally.
+WHITENOISE_AUTOREFRESH = True

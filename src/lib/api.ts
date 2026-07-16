@@ -1,4 +1,5 @@
-const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:8000/api/v1";
+const BASE_URL =
+  (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:8000/api/v1";
 
 const ACCESS_KEY = "flowdesk-access";
 const REFRESH_KEY = "flowdesk-refresh";
@@ -26,8 +27,11 @@ async function tryRefresh(): Promise<string | null> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refresh }),
     });
-    if (!res.ok) { clearTokens(); return null; }
-    const data = await res.json() as { access: string };
+    if (!res.ok) {
+      clearTokens();
+      return null;
+    }
+    const data = (await res.json()) as { access: string };
     localStorage.setItem(ACCESS_KEY, data.access);
     return data.access;
   } catch {
@@ -77,7 +81,8 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    const message = (data as Record<string, unknown>)?.detail as string | undefined ?? "Error en la petición";
+    const message =
+      ((data as Record<string, unknown>)?.detail as string | undefined) ?? "Error en la petición";
     throw new ApiError(res.status, data, message);
   }
 

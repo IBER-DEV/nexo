@@ -3,7 +3,14 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Select,
   SelectContent,
@@ -56,18 +63,9 @@ function UsersPage() {
     enabled: isAdmin,
   });
 
-  const coordinators = useMemo(
-    () => (users ?? []).filter((u) => u.rol === "coordinator"),
-    [users],
-  );
-  const members = useMemo(
-    () => (users ?? []).filter((u) => u.rol === "member"),
-    [users],
-  );
-  const unassigned = useMemo(
-    () => members.filter((m) => m.coordinador_id == null),
-    [members],
-  );
+  const coordinators = useMemo(() => (users ?? []).filter((u) => u.rol === "coordinator"), [users]);
+  const members = useMemo(() => (users ?? []).filter((u) => u.rol === "member"), [users]);
+  const unassigned = useMemo(() => members.filter((m) => m.coordinador_id == null), [members]);
   const teamByCoordinator = useMemo(() => {
     const map = new Map<number, User[]>();
     coordinators.forEach((c) => map.set(c.id, []));
@@ -93,7 +91,7 @@ function UsersPage() {
     } catch (err) {
       const msg =
         err instanceof ApiError
-          ? (err.data as { coordinador_id?: string[] })?.coordinador_id?.[0] ?? err.message
+          ? ((err.data as { coordinador_id?: string[] })?.coordinador_id?.[0] ?? err.message)
           : "No se pudo actualizar el equipo";
       toast.error(msg);
     } finally {
@@ -213,9 +211,7 @@ function UsersPage() {
                   {u.rol === "member" ? (
                     <Select
                       value={u.coordinador_id != null ? String(u.coordinador_id) : "none"}
-                      onValueChange={(v) =>
-                        handleAssign(u.id, v === "none" ? null : Number(v))
-                      }
+                      onValueChange={(v) => handleAssign(u.id, v === "none" ? null : Number(v))}
                       disabled={savingId === u.id}
                     >
                       <SelectTrigger className="h-8 w-[200px]">
