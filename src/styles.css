@@ -1,0 +1,315 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+@import "./styles/fullcalendar.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Status & priority */
+  --color-status-backlog: var(--status-backlog);
+  --color-status-progress: var(--status-progress);
+  --color-status-testing: var(--status-testing);
+  --color-status-pending: var(--status-pending);
+  --color-status-done: var(--status-done);
+  --color-status-cancelled: var(--status-cancelled);
+  --color-priority-low: var(--priority-low);
+  --color-priority-med: var(--priority-med);
+  --color-priority-high: var(--priority-high);
+  --color-priority-critical: var(--priority-critical);
+}
+
+:root {
+  --radius: 0.625rem;
+
+  /* Nexo brand kit — light mode. Page canvas uses the kit's "surface" tone,
+     cards/popovers sit on top in pure white for depth, matching the app's
+     prior background/card relationship. */
+  --background: #F7F9FA;
+  --foreground: #1B2226;
+
+  --card: #FFFFFF;
+  --card-foreground: #1B2226;
+
+  --popover: #FFFFFF;
+  --popover-foreground: #1B2226;
+
+  /* Nexo primary #29AFF5. Foreground is dark (not white): at this
+     lightness, white text on the fill fails WCAG AA — dark neutral-900
+     text keeps every solid-primary button/badge readable. */
+  --primary: #29AFF5;
+  --primary-foreground: #1B2226;
+
+  --secondary: #EEF1F3;
+  --secondary-foreground: #1B2226;
+
+  --muted: #EEF1F3;
+  --muted-foreground: #5C6B74;
+
+  --accent: #EFF9FE;
+  --accent-foreground: #1A7CB0;
+
+  --destructive: #E5484D;
+  --destructive-foreground: #FFFFFF;
+
+  --border: #E1E6E9;
+  --input: #E1E6E9;
+  --ring: #29AFF5;
+
+  --chart-1: #29AFF5; /* primary */
+  --chart-2: #8C5CF2; /* accent purple */
+  --chart-3: #F0A93B; /* warning */
+  --chart-4: #22B573; /* success */
+  --chart-5: #5B6EF5; /* info */
+
+  --sidebar: #F7F9FA;
+  --sidebar-foreground: #1B2226;
+  --sidebar-primary: #29AFF5;
+  --sidebar-primary-foreground: #1B2226;
+  --sidebar-accent: #EFF9FE;
+  --sidebar-accent-foreground: #29AFF5;
+  --sidebar-border: #E1E6E9;
+  --sidebar-ring: #29AFF5;
+
+  --status-backlog: #7C8A93;
+  --status-progress: #29AFF5;
+  --status-testing: #F0A93B;
+  --status-pending: #5B6EF5;
+  --status-done: #22B573;
+  --status-cancelled: #7C8A93;
+
+  --priority-low: #7C8A93;
+  --priority-med: #29AFF5;
+  --priority-high: #F0A93B;
+  --priority-critical: #E5484D;
+}
+
+.dark {
+  /* Nexo brand kit — dark mode. Primary keeps the same hex in both
+     themes; only surfaces/neutrals invert. */
+  --background: #10151A;
+  --foreground: #F7F9FA;
+
+  --card: #1B2226;
+  --card-foreground: #F7F9FA;
+
+  --popover: #1B2226;
+  --popover-foreground: #F7F9FA;
+
+  --primary: #29AFF5;
+  --primary-foreground: #10151A;
+
+  --secondary: #2C363C;
+  --secondary-foreground: #F7F9FA;
+
+  --muted: #2C363C;
+  --muted-foreground: #A3AEB6;
+
+  --accent: #1A2A38;
+  --accent-foreground: #29AFF5;
+
+  --destructive: #E5484D;
+  --destructive-foreground: #FFFFFF;
+
+  --border: #2C363C;
+  --input: #2C363C;
+  --ring: #29AFF5;
+
+  --chart-1: #29AFF5;
+  --chart-2: #8C5CF2;
+  --chart-3: #F0A93B;
+  --chart-4: #22B573;
+  --chart-5: #5B6EF5;
+
+  --sidebar: #1B2226;
+  --sidebar-foreground: #F7F9FA;
+  --sidebar-primary: #29AFF5;
+  --sidebar-primary-foreground: #10151A;
+  --sidebar-accent: #1A2A38;
+  --sidebar-accent-foreground: #29AFF5;
+  --sidebar-border: #2C363C;
+  --sidebar-ring: #29AFF5;
+
+  --status-backlog: #7C8A93;
+  --status-progress: #29AFF5;
+  --status-testing: #F0A93B;
+  --status-pending: #5B6EF5;
+  --status-done: #22B573;
+  --status-cancelled: #7C8A93;
+
+  --priority-low: #7C8A93;
+  --priority-med: #29AFF5;
+  --priority-high: #F0A93B;
+  --priority-critical: #E5484D;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html, body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 25%, transparent);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in { animation: fade-in 0.3s ease-out; }
+
+/* Nexo loading mark — node scales in, three branches draw toward their
+   satellites with a bounce, a brief pulse holds, then the whole mark and
+   caption fade out together. 2.4s loop, from the Nexo Loading brand kit. */
+@keyframes nexo-loader-fade {
+  0%   { opacity: 0; }
+  6%   { opacity: 1; }
+  82%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes nexo-loader-pulse {
+  0%, 55%, 82%, 100% { transform: scale(1); }
+  68.5% { transform: scale(1.06); }
+}
+@keyframes nexo-loader-center {
+  0%   { transform: scale(0.4); animation-timing-function: cubic-bezier(0.33, 1, 0.68, 1); }
+  14%  { transform: scale(1); }
+  100% { transform: scale(1); }
+}
+@keyframes nexo-loader-line1 {
+  0%, 4.4%  { stroke-dashoffset: 1; }
+  30.3%     { stroke-dashoffset: 0; }
+  100%      { stroke-dashoffset: 0; }
+}
+@keyframes nexo-loader-line2 {
+  0%, 11%   { stroke-dashoffset: 1; }
+  37.4%     { stroke-dashoffset: 0; }
+  100%      { stroke-dashoffset: 0; }
+}
+@keyframes nexo-loader-line3 {
+  0%, 17.6% { stroke-dashoffset: 1; }
+  44%       { stroke-dashoffset: 0; }
+  100%      { stroke-dashoffset: 0; }
+}
+@keyframes nexo-loader-node1 {
+  0%, 27.5% { transform: scale(0); animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1); }
+  37.4%     { transform: scale(1); }
+  100%      { transform: scale(1); }
+}
+@keyframes nexo-loader-node2 {
+  0%, 34.1% { transform: scale(0); animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1); }
+  44%       { transform: scale(1); }
+  100%      { transform: scale(1); }
+}
+@keyframes nexo-loader-node3 {
+  0%, 40.7% { transform: scale(0); animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1); }
+  50.6%     { transform: scale(1); }
+  100%      { transform: scale(1); }
+}
+@keyframes nexo-loader-word {
+  0%, 42% { opacity: 0; }
+  60%     { opacity: 1; }
+  82%     { opacity: 1; }
+  100%    { opacity: 0; }
+}
+
+.nexo-loader-group { animation: nexo-loader-fade 2.4s linear infinite, nexo-loader-pulse 2.4s ease-in-out infinite; }
+.nexo-loader-center { transform-box: fill-box; transform-origin: center; animation: nexo-loader-center 2.4s linear infinite; }
+.nexo-loader-line1 { animation: nexo-loader-line1 2.4s linear infinite; }
+.nexo-loader-line2 { animation: nexo-loader-line2 2.4s linear infinite; }
+.nexo-loader-line3 { animation: nexo-loader-line3 2.4s linear infinite; }
+.nexo-loader-node1 { transform-box: fill-box; transform-origin: center; animation: nexo-loader-node1 2.4s linear infinite; }
+.nexo-loader-node2 { transform-box: fill-box; transform-origin: center; animation: nexo-loader-node2 2.4s linear infinite; }
+.nexo-loader-node3 { transform-box: fill-box; transform-origin: center; animation: nexo-loader-node3 2.4s linear infinite; }
+.nexo-loader-word { animation: nexo-loader-word 2.4s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nexo-loader-group, .nexo-loader-center, .nexo-loader-line1, .nexo-loader-line2,
+  .nexo-loader-line3, .nexo-loader-node1, .nexo-loader-node2, .nexo-loader-node3,
+  .nexo-loader-word {
+    animation: none;
+  }
+  .nexo-loader-group, .nexo-loader-center, .nexo-loader-node1, .nexo-loader-node2,
+  .nexo-loader-node3, .nexo-loader-word {
+    opacity: 1;
+    transform: scale(1);
+  }
+  .nexo-loader-line1, .nexo-loader-line2, .nexo-loader-line3 {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* 404 mascot — gentle float and a blinking antenna light. From the Nexo 404
+   brand kit. Shared keyframes, different duration/delay per element. */
+@keyframes nexo-404-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+@keyframes nexo-404-scan {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 1; }
+}
+
+.nexo-404-float-robot { animation: nexo-404-float 3.2s ease-in-out infinite; }
+.nexo-404-float-q1 { animation: nexo-404-float 2.4s ease-in-out infinite; }
+.nexo-404-float-q2 { animation: nexo-404-float 2.8s ease-in-out infinite 0.3s; }
+.nexo-404-scan-dot { animation: nexo-404-scan 1.6s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nexo-404-float-robot, .nexo-404-float-q1, .nexo-404-float-q2, .nexo-404-scan-dot {
+    animation: none;
+  }
+}
