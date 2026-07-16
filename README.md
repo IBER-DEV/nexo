@@ -1,6 +1,6 @@
 # Nexo
 
-[![CI](https://github.com/IBER-DEV/nexo-/actions/workflows/ci.yml/badge.svg)](https://github.com/IBER-DEV/nexo-/actions/workflows/ci.yml)
+[![CI](https://github.com/IBER-DEV/nexo/actions/workflows/ci.yml/badge.svg)](https://github.com/IBER-DEV/nexo/actions/workflows/ci.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
 
 Plataforma open source de gestión de actividades y proyectos para equipos de TI: backlog,
@@ -93,6 +93,12 @@ backend/apps/         Apps Django (activities, users)
 backend/config/       Settings (dev / docker / prod), URLs
 docker-compose.yml    Backend + Postgres para desarrollo local
 ```
+
+## Documentación
+
+- [CLAUDE.md](CLAUDE.md) — contexto técnico, decisiones de arquitectura y gotchas conocidos.
+- [docs/ROADMAP.md](docs/ROADMAP.md) — estrategia open core y fases del producto (Community
+  / Cloud / Enterprise).
 
 ## Contribuir
 
