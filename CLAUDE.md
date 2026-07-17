@@ -45,8 +45,8 @@ python manage.py migrate && python manage.py seed_data && python manage.py runse
 # Backend — Docker (Postgres real, hot-reload)
 docker compose up --build           # localhost:8000
 
-# Tests backend (12 tests: auth, CRUD, visibilidad por rol)
-cd backend && python manage.py test
+# Tests backend (36 tests: auth, CRUD, visibilidad, tenancy, codigo, catalogos)
+docker compose exec -T backend python manage.py test
 ```
 
 Credenciales de prueba tras `seed_data`: `admin@empresa.com` / `demo1234` (admin),
@@ -101,6 +101,20 @@ exige estos checks en verde antes de mergear (ruleset configurado en GitHub).
 - Sonido de interfaz vía `useSound()` (`src/providers/SoundProvider.tsx`, sobre la librería
   `cuelume`) — solo en momentos que lo ameritan (éxito/error de acciones), nunca en hover o
   en algo que se repita muchas veces por sesión.
+
+## Fase 1 — Bloque 1: Multi-tenancy + Maestros (EN PROGRESO — 2026-07-16)
+
+**Estado:** E0, E1, E2 completadas (36 tests OK). E3a-E5 pendientes.
+
+- **E0:** Tests refactorizados en paquete con factories ✅
+- **E1:** App organizations, User/Activity org-scoped, scoping multi-tenant ✅
+- **E2:** Empresa→Cliente, catálogos con org, numero/codigo por org, CRUD ✅
+- **E3a:** WorkflowState/Priority/ActivityType, /workspace/, sync external_mappings (TODO)
+- **E3b:** Frontend dinámico useWorkspace, badges, Kanban (TODO)
+- **E4:** Admin UI maestros, tabs settings (TODO)
+- **E5:** Sync multi-org, segunda org en seed, docs (TODO)
+
+Ver plan detallado en `~/.claude/plans/vamos-a-empezar-la-imperative-pixel.md`.
 
 ## Deuda conocida / pendiente
 
