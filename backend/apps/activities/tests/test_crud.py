@@ -44,4 +44,5 @@ class ActivityCrudTests(APITestCase):
 
     def test_codigo_format(self):
         activity = make_activity(self.admin)
-        self.assertEqual(activity.codigo, f"ACT-{activity.pk:04d}")
+        prefix = self.admin.organization.codigo_prefix
+        self.assertEqual(activity.codigo, f"{prefix}-{activity.numero:04d}")

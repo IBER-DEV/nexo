@@ -1,7 +1,7 @@
 from datetime import date
 from rest_framework import serializers
 from apps.users.models import User
-from .models import Activity, Empresa, Proceso, Aplicacion
+from .models import Activity, Cliente, Proceso, Aplicacion, Stakeholder
 
 
 class DateFromISOField(serializers.DateField):
@@ -23,6 +23,16 @@ class ActivitySerializer(serializers.ModelSerializer):
     responsable_id = serializers.PrimaryKeyRelatedField(
         source="responsable",
         queryset=User.objects.all(),
+    )
+
+    # Catálogos: en el wire viajan como strings (nombre); internamente son FKs
+    # org-scoped con get-or-create. write_only porque la lectura se arma en
+    # to_representation (el FK puede ser NULL).
+    empresa = serializers.CharField(max_length=100, write_only=True)
+    proceso = serializers.CharField(max_length=100, write_only=True)
+    aplicacion = serializers.CharField(max_length=100, write_only=True)
+    stakeholder = serializers.CharField(
+        max_length=100, write_only=True, allow_blank=True, required=False
     )
 
     # camelCase ↔ snake_case date mapping
@@ -69,35 +79,17 @@ class ActivitySerializer(serializers.ModelSerializer):
             "fechaLimite",
         ]
 
-    def validate_empresa(self, value: str) -> str:
+    def _get_or_create_catalog(self, model, value: str):
         value = value.strip()
         if not value:
-            raise serializers.ValidationError("Empresa requerida")
-        existing = Empresa.objects.filter(nombre__iexact=value).first()
-        if existing:
-            return existing.nombre
-        Empresa.objects.create(nombre=value)
-        return value
-
-    def validate_proceso(self, value: str) -> str:
-        value = value.strip()
-        if not value:
-            raise serializers.ValidationError("Proceso requerido")
-        existing = Proceso.objects.filter(nombre__iexact=value).first()
-        if existing:
-            return existing.nombre
-        Proceso.objects.create(nombre=value)
-        return value
-
-    def validate_aplicacion(self, value: str) -> str:
-        value = value.strip()
-        if not value:
-            raise serializers.ValidationError("Aplicacion requerida")
-        existing = Aplicacion.objects.filter(nombre__iexact=value).first()
-        if existing:
-            return existing.nombre
-        Aplicacion.objects.create(nombre=value)
-        return value
+            return None
+        org = self._request_org()
+        if org is None:
+            raise serializers.ValidationError("Usuario sin organización")
+        existing = model.objects.for_org(org).filter(nombre__iexact=value).first()
+        if existing is not None:
+            return existing
+        return model.objects.create(organization=org, nombre=value)
 
     def validate_mes_planeacion(self, value: str | None) -> str | None:
         if value in (None, ""):
@@ -116,6 +108,24 @@ class ActivitySerializer(serializers.ModelSerializer):
         instance = getattr(self, "instance", None)
         request = self.context.get("request")
         user = getattr(request, "user", None) if request is not None else None
+
+        # Strings del wire → FKs de catálogo dentro de la org.
+        if "empresa" in attrs:
+            attrs["cliente"] = self._get_or_create_catalog(Cliente, attrs.pop("empresa"))
+            if attrs["cliente"] is None:
+                raise serializers.ValidationError({"empresa": "Empresa requerida"})
+        if "proceso" in attrs:
+            attrs["proceso"] = self._get_or_create_catalog(Proceso, attrs.pop("proceso"))
+            if attrs["proceso"] is None:
+                raise serializers.ValidationError({"proceso": "Proceso requerido"})
+        if "aplicacion" in attrs:
+            attrs["aplicacion"] = self._get_or_create_catalog(Aplicacion, attrs.pop("aplicacion"))
+            if attrs["aplicacion"] is None:
+                raise serializers.ValidationError({"aplicacion": "Aplicacion requerida"})
+        if "stakeholder" in attrs:
+            attrs["stakeholder"] = self._get_or_create_catalog(
+                Stakeholder, attrs.pop("stakeholder")
+            )
 
         responsable = attrs.get("responsable")
         if responsable is None and instance is not None:
@@ -183,6 +193,14 @@ class ActivitySerializer(serializers.ModelSerializer):
                 attrs["estado"] = Activity.Status.BACKLOG
 
         return attrs
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["empresa"] = instance.cliente.nombre if instance.cliente_id else ""
+        data["proceso"] = instance.proceso.nombre if instance.proceso_id else ""
+        data["aplicacion"] = instance.aplicacion.nombre if instance.aplicacion_id else ""
+        data["stakeholder"] = instance.stakeholder.nombre if instance.stakeholder_id else ""
+        return data
 
     def get_id(self, obj) -> str:
         return obj.codigo

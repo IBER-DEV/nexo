@@ -28,21 +28,25 @@ from apps.activities.sheets_client import (
     write_flowdesk_id,
 )
 from apps.activities.sync_context import pulling
-from apps.activities.sync_utils import get_or_create_responsable, parse_date, parse_pk
+from apps.activities.sync_utils import get_or_create_responsable, parse_date, parse_codigo
 
 REQUIRED_ROW_FIELDS = ("NombreAct", "Empresa", "Proceso", "Aplicacion", "Responsable")
 
 
+def _nombre(catalog_obj) -> str:
+    return catalog_obj.nombre if catalog_obj is not None else ""
+
+
 def _row_changed(instance: Activity, data: dict) -> bool:
     return (
-        instance.empresa != data["empresa"]
-        or instance.proceso != data["proceso"]
-        or instance.aplicacion != data["aplicacion"]
+        _nombre(instance.cliente) != data["empresa"]
+        or _nombre(instance.proceso) != data["proceso"]
+        or _nombre(instance.aplicacion) != data["aplicacion"]
         or instance.proyecto != data["proyecto"]
         or instance.nombre != data["nombre"]
         or instance.descripcion != data["descripcion"]
         or instance.responsable_id != data["responsable_id"]
-        or instance.stakeholder != data["stakeholder"]
+        or _nombre(instance.stakeholder) != data["stakeholder"]
         or instance.estado != data["estado"]
         or instance.fecha_inicio != data["fechaInicio"]
         or instance.fecha_limite != data["fechaLimite"]
@@ -122,10 +126,13 @@ class Command(BaseCommand):
                 }
 
                 flowdesk_id = str(row.get("FlowDeskID") or "").strip()
-                pk_value = parse_pk(flowdesk_id) if flowdesk_id else None
+                numero = parse_codigo(flowdesk_id) if flowdesk_id else None
                 instance = (
-                    Activity.objects.for_org(org).filter(pk=pk_value).first()
-                    if pk_value
+                    Activity.objects.for_org(org)
+                    .select_related("cliente", "proceso", "aplicacion", "stakeholder")
+                    .filter(numero=numero)
+                    .first()
+                    if numero
                     else None
                 )
 

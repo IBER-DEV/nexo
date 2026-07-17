@@ -92,14 +92,14 @@ def read_rows(worksheet: gspread.Worksheet) -> list[dict]:
 
 def activity_to_row(activity) -> dict:
     return {
-        "Empresa": activity.empresa,
-        "Proceso": activity.proceso,
-        "Aplicacion": activity.aplicacion,
+        "Empresa": activity.cliente.nombre if activity.cliente_id else "",
+        "Proceso": activity.proceso.nombre if activity.proceso_id else "",
+        "Aplicacion": activity.aplicacion.nombre if activity.aplicacion_id else "",
         "Proyecto": activity.proyecto,
         "NombreAct": activity.nombre,
         "DescripcionAct": activity.descripcion,
         "Responsable": activity.responsable.nombre,
-        "Stakeholder": activity.stakeholder,
+        "Stakeholder": activity.stakeholder.nombre if activity.stakeholder_id else "",
         "FechaInicio": activity.fecha_inicio.isoformat(),
         "FechaFin": activity.fecha_limite.isoformat(),
         "Fase": estado_to_sheet(activity.estado),

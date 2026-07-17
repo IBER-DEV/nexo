@@ -3,10 +3,16 @@ from datetime import date, timedelta
 
 from django.contrib.auth import get_user_model
 
-from apps.activities.models import Activity
+from apps.activities.models import Activity, Aplicacion, Cliente, Proceso, Stakeholder
 from apps.organizations.models import Organization
 
 User = get_user_model()
+
+
+def _catalog(model, org, nombre):
+    if not nombre:
+        return None
+    return model.objects.get_or_create(organization=org, nombre=nombre)[0]
 
 
 def make_org(slug="test", nombre=None, **extra):
@@ -24,15 +30,18 @@ def make_user(email, nombre, rol="member", password="x", organization=None, **ex
     )
 
 
-def make_activity(responsable, **overrides):
+def make_activity(
+    responsable, empresa="ACME", proceso="Soporte", aplicacion="ERP", stakeholder="TI", **overrides
+):
+    org = overrides.get("organization", responsable.organization)
     defaults = {
-        "organization": responsable.organization,
-        "empresa": "ACME",
-        "proceso": "Soporte",
-        "aplicacion": "ERP",
+        "organization": org,
+        "cliente": _catalog(Cliente, org, empresa),
+        "proceso": _catalog(Proceso, org, proceso),
+        "aplicacion": _catalog(Aplicacion, org, aplicacion),
+        "stakeholder": _catalog(Stakeholder, org, stakeholder),
         "nombre": "Actividad de prueba",
         "descripcion": "",
-        "stakeholder": "TI",
         "fecha_inicio": date.today(),
         "fecha_limite": date.today() + timedelta(days=7),
     }

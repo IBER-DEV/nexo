@@ -11,6 +11,7 @@ from apps.organizations.scoping import OrganizationScopedViewSetMixin
 # Módulos que exponen un DefaultRouter llamado `router`.
 ROUTER_MODULES = [
     "apps.activities.urls",
+    "apps.activities.urls_masters",
 ]
 
 

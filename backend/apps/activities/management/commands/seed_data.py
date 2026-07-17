@@ -8,7 +8,7 @@ from datetime import date, timedelta
 from django.core.management.base import BaseCommand
 from apps.organizations.models import Organization
 from apps.users.models import User
-from apps.activities.models import Activity
+from apps.activities.models import Activity, Aplicacion, Cliente, Proceso, Stakeholder
 
 
 SEED_USERS = [
@@ -143,6 +143,22 @@ class Command(BaseCommand):
                 "pablo.castro@empresa.com",
             ]).update(coordinador=carlos, rol="member")
 
+        self.stdout.write("Seeding catalogs...")
+        clientes = {
+            n: Cliente.objects.get_or_create(organization=org, nombre=n)[0] for n in EMPRESAS
+        }
+        procesos = {
+            n: Proceso.objects.get_or_create(organization=org, nombre=n)[0] for n in PROCESOS
+        }
+        aplicaciones = {
+            n: Aplicacion.objects.get_or_create(organization=org, nombre=n)[0]
+            for n in APLICACIONES
+        }
+        stakeholders = {
+            n: Stakeholder.objects.get_or_create(organization=org, nombre=n)[0]
+            for n in STAKEHOLDERS
+        }
+
         self.stdout.write("Seeding activities...")
         rand = mulberry32(42)
 
@@ -172,13 +188,13 @@ class Command(BaseCommand):
             user = pick(users)
             defaults = {
                 "organization": org,
-                "empresa": pick(EMPRESAS),
-                "proceso": pick(PROCESOS),
-                "aplicacion": pick(APLICACIONES),
+                "cliente": clientes[pick(EMPRESAS)],
+                "proceso": procesos[pick(PROCESOS)],
+                "aplicacion": aplicaciones[pick(APLICACIONES)],
                 "nombre": pick(NOMBRES),
                 "descripcion": "Tarea técnica asignada al equipo de sistemas con seguimiento semanal.",
                 "responsable": user,
-                "stakeholder": pick(STAKEHOLDERS),
+                "stakeholder": stakeholders[pick(STAKEHOLDERS)],
                 "mes_planeacion": mes_planeacion,
                 "semana_planeacion": semana,
                 "prioridad": pick(PRIORITIES),

@@ -42,7 +42,10 @@ def parse_date(value: object) -> date | None:
     return None
 
 
-def parse_pk(value: object) -> int | None:
+def parse_codigo(value: object) -> int | None:
+    """'ACT-0042', 'ACM-7' o '42' → numero de actividad (la organización la
+    aporta el contexto del llamador). Acepta cualquier prefijo para que los
+    códigos legacy y los de otras orgs resuelvan igual."""
     if value is None:
         return None
     text = str(value).strip()
@@ -50,9 +53,8 @@ def parse_pk(value: object) -> int | None:
         return None
     if text.isdigit():
         return int(text)
-    text_up = text.upper()
-    if text_up.startswith("ACT-"):
-        num = text_up.replace("ACT-", "", 1)
+    if "-" in text:
+        _prefix, _, num = text.rpartition("-")
         if num.isdigit():
             return int(num)
     return None
