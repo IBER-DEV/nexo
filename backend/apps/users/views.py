@@ -20,11 +20,12 @@ class UserListView(generics.ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
+        org_users = User.objects.for_org(user.organization)
         if getattr(user, "is_admin", False):
-            return User.objects.filter(is_active=True).select_related("coordinador").order_by("nombre")
+            return org_users.filter(is_active=True).select_related("coordinador").order_by("nombre")
         if getattr(user, "is_coordinator", False):
             team_ids = user.team_user_ids() if hasattr(user, "team_user_ids") else [user.pk]
-            return User.objects.filter(pk__in=team_ids, is_active=True).order_by("nombre")
+            return org_users.filter(pk__in=team_ids, is_active=True).order_by("nombre")
         return User.objects.none()
 
 
@@ -40,8 +41,10 @@ class UserTeamUpdateView(generics.UpdateAPIView):
     """Admin: asignar o quitar coordinador de un miembro."""
 
     permission_classes = [IsAdminRole]
-    queryset = User.objects.filter(is_active=True)
     http_method_names = ["patch"]
+
+    def get_queryset(self):
+        return User.objects.for_org(self.request.user.organization).filter(is_active=True)
 
     def get_serializer_class(self):
         return UserTeamUpdateSerializer

@@ -2,6 +2,8 @@ from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
+from apps.organizations.scoping import OrgManager
+
 
 class Empresa(models.Model):
     nombre = models.CharField(max_length=100, unique=True)
@@ -54,6 +56,11 @@ class Activity(models.Model):
         HIGH = "high", "Alta"
         CRITICAL = "critical", "Crítica"
 
+    organization = models.ForeignKey(
+        "organizations.Organization",
+        on_delete=models.CASCADE,
+        related_name="activities",
+    )
     empresa = models.CharField(max_length=100)
     proceso = models.CharField(max_length=100)
     aplicacion = models.CharField(max_length=100)
@@ -85,6 +92,8 @@ class Activity(models.Model):
     fecha_limite = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    objects = OrgManager()
 
     class Meta:
         verbose_name = "actividad"

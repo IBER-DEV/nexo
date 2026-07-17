@@ -39,6 +39,16 @@ class UserTeamUpdateSerializer(serializers.ModelSerializer):
         model = User
         fields = ["coordinador_id"]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Solo coordinadores de la misma organización que el usuario editado.
+        request = self.context.get("request")
+        org = getattr(getattr(request, "user", None), "organization", None) if request else None
+        if org is not None:
+            self.fields["coordinador_id"].queryset = User.objects.for_org(org).filter(
+                rol=User.Role.COORDINATOR, is_active=True
+            )
+
     def validate(self, attrs):
         user = self.instance
         if user.rol != User.Role.MEMBER:

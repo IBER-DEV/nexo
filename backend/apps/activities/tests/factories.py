@@ -4,16 +4,29 @@ from datetime import date, timedelta
 from django.contrib.auth import get_user_model
 
 from apps.activities.models import Activity
+from apps.organizations.models import Organization
 
 User = get_user_model()
 
 
-def make_user(email, nombre, rol="member", password="x", **extra):
-    return User.objects.create_user(email, nombre, password, rol=rol, **extra)
+def make_org(slug="test", nombre=None, **extra):
+    org, _ = Organization.objects.get_or_create(
+        slug=slug, defaults={"nombre": nombre or slug.title(), **extra}
+    )
+    return org
+
+
+def make_user(email, nombre, rol="member", password="x", organization=None, **extra):
+    if organization is None:
+        organization = make_org()
+    return User.objects.create_user(
+        email, nombre, password, rol=rol, organization=organization, **extra
+    )
 
 
 def make_activity(responsable, **overrides):
     defaults = {
+        "organization": responsable.organization,
         "empresa": "ACME",
         "proceso": "Soporte",
         "aplicacion": "ERP",

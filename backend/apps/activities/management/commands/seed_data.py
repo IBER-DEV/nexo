@@ -6,6 +6,7 @@ Safe to run multiple times (idempotent).
 """
 from datetime import date, timedelta
 from django.core.management.base import BaseCommand
+from apps.organizations.models import Organization
 from apps.users.models import User
 from apps.activities.models import Activity
 
@@ -64,13 +65,20 @@ class Command(BaseCommand):
     help = "Seeds the database with demo users and activities"
 
     def handle(self, *args, **options):
+        self.stdout.write("Seeding organization...")
+        org, org_created = Organization.objects.get_or_create(
+            slug="demo",
+            defaults={"nombre": "Nexo Demo", "codigo_prefix": "ACT"},
+        )
+        self.stdout.write(f"  {'Created' if org_created else 'Exists '} {org.nombre}")
+
         self.stdout.write("Seeding users...")
         users = []
         coordinators_by_email = {}
         for data in SEED_USERS:
             user, created = User.objects.get_or_create(
                 email=data["email"],
-                defaults={"nombre": data["nombre"], "rol": data["rol"]},
+                defaults={"nombre": data["nombre"], "rol": data["rol"], "organization": org},
             )
             if created:
                 user.set_password("demo1234")
@@ -81,6 +89,9 @@ class Command(BaseCommand):
                 if user.rol not in {"admin", "coordinator", "member"}:
                     user.rol = data["rol"]
                     user.save(update_fields=["rol"])
+                if user.organization_id is None:
+                    user.organization = org
+                    user.save(update_fields=["organization"])
                 self.stdout.write(f"  Exists  {user.nombre}")
             users.append(user)
             if user.rol == "coordinator":
@@ -89,7 +100,7 @@ class Command(BaseCommand):
         # Create admin superuser if missing
         admin, created = User.objects.get_or_create(
             email="admin@empresa.com",
-            defaults={"nombre": "Administrador", "rol": "admin"},
+            defaults={"nombre": "Administrador", "rol": "admin", "organization": org},
         )
         if created:
             admin.set_password("demo1234")
@@ -107,6 +118,9 @@ class Command(BaseCommand):
                 changed = True
             if not admin.is_superuser:
                 admin.is_superuser = True
+                changed = True
+            if admin.organization_id is None:
+                admin.organization = org
                 changed = True
             if changed:
                 admin.save()
@@ -157,6 +171,7 @@ class Command(BaseCommand):
 
             user = pick(users)
             defaults = {
+                "organization": org,
                 "empresa": pick(EMPRESAS),
                 "proceso": pick(PROCESOS),
                 "aplicacion": pick(APLICACIONES),

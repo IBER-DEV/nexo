@@ -29,6 +29,24 @@ class ActivitySerializer(serializers.ModelSerializer):
     fechaInicio = DateFromISOField(source="fecha_inicio")
     fechaLimite = DateFromISOField(source="fecha_limite")
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Segunda línea de defensa multi-tenant: los pk escribibles solo
+        # aceptan objetos de la organización del request (o la pasada
+        # explícitamente por flujos internos como el sync de AppSheet).
+        org = self._request_org()
+        if org is not None:
+            self.fields["responsable_id"].queryset = User.objects.for_org(org).filter(
+                is_active=True
+            )
+
+    def _request_org(self):
+        if "organization" in self.context:
+            return self.context["organization"]
+        request = self.context.get("request")
+        user = getattr(request, "user", None) if request is not None else None
+        return getattr(user, "organization", None)
+
     class Meta:
         model = Activity
         fields = [

@@ -17,6 +17,7 @@ version — deleting an activity is still a manual action on either side.
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
+from apps.organizations.models import Organization
 from apps.activities.models import Activity
 from apps.activities.serializers import ActivitySerializer
 from apps.activities.sheets_client import (
@@ -57,9 +58,25 @@ class Command(BaseCommand):
             action="store_true",
             help="No escribe cambios en Nexo ni en la Sheet, solo reporta lo que haria",
         )
+        parser.add_argument(
+            "--org",
+            help="Slug de la organización destino; opcional si solo existe una",
+        )
+
+    def _resolve_org(self, slug: str | None) -> Organization:
+        if slug:
+            org = Organization.objects.filter(slug=slug).first()
+            if org is None:
+                raise CommandError(f"No existe una organización con slug '{slug}'")
+            return org
+        orgs = list(Organization.objects.filter(is_active=True)[:2])
+        if len(orgs) == 1:
+            return orgs[0]
+        raise CommandError("Hay varias organizaciones: especifica --org <slug>")
 
     def handle(self, *args, **options):
         dry_run = options["dry_run"]
+        org = self._resolve_org(options.get("org"))
 
         try:
             worksheet = get_worksheet()
@@ -88,7 +105,7 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.WARNING(f"Fila {row['_row']}: campos requeridos incompletos, omitida"))
                     continue
 
-                responsable = get_or_create_responsable(responsable_name)
+                responsable = get_or_create_responsable(responsable_name, organization=org)
 
                 data = {
                     "empresa": empresa,
@@ -106,19 +123,29 @@ class Command(BaseCommand):
 
                 flowdesk_id = str(row.get("FlowDeskID") or "").strip()
                 pk_value = parse_pk(flowdesk_id) if flowdesk_id else None
-                instance = Activity.objects.filter(pk=pk_value).first() if pk_value else None
+                instance = (
+                    Activity.objects.for_org(org).filter(pk=pk_value).first()
+                    if pk_value
+                    else None
+                )
 
                 if instance and not _row_changed(instance, data):
                     unchanged += 1
                     continue
 
-                serializer = ActivitySerializer(instance, data=data, partial=bool(instance))
+                serializer = ActivitySerializer(
+                    instance,
+                    data=data,
+                    partial=bool(instance),
+                    context={"organization": org},
+                )
                 if not serializer.is_valid():
                     skipped += 1
                     self.stdout.write(self.style.WARNING(f"Fila {row['_row']}: {serializer.errors}"))
                     continue
 
-                activity = serializer.save()
+                save_kwargs = {} if instance else {"organization": org}
+                activity = serializer.save(**save_kwargs)
 
                 if instance:
                     updated += 1
