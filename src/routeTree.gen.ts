@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as LandingRouteImport } from './routes/landing'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppUsersRouteImport } from './routes/_app/users'
@@ -22,6 +23,11 @@ import { Route as AppActivitiesRouteImport } from './routes/_app/activities'
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LandingRoute = LandingRouteImport.update({
+  id: '/landing',
+  path: '/landing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -66,6 +72,7 @@ const AppActivitiesRoute = AppActivitiesRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
+  '/landing': typeof LandingRoute
   '/login': typeof LoginRoute
   '/activities': typeof AppActivitiesRoute
   '/kanban': typeof AppKanbanRoute
@@ -75,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/users': typeof AppUsersRoute
 }
 export interface FileRoutesByTo {
+  '/landing': typeof LandingRoute
   '/login': typeof LoginRoute
   '/activities': typeof AppActivitiesRoute
   '/kanban': typeof AppKanbanRoute
@@ -87,6 +95,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
+  '/landing': typeof LandingRoute
   '/login': typeof LoginRoute
   '/_app/activities': typeof AppActivitiesRoute
   '/_app/kanban': typeof AppKanbanRoute
@@ -100,6 +109,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/landing'
     | '/login'
     | '/activities'
     | '/kanban'
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/users'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/landing'
     | '/login'
     | '/activities'
     | '/kanban'
@@ -120,6 +131,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_app'
+    | '/landing'
     | '/login'
     | '/_app/activities'
     | '/_app/kanban'
@@ -132,6 +144,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
+  LandingRoute: typeof LandingRoute
   LoginRoute: typeof LoginRoute
 }
 
@@ -142,6 +155,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/landing': {
+      id: '/landing'
+      path: '/landing'
+      fullPath: '/landing'
+      preLoaderRoute: typeof LandingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app': {
@@ -227,6 +247,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
+  LandingRoute: LandingRoute,
   LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport

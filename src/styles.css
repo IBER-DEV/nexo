@@ -313,3 +313,39 @@
     animation: none;
   }
 }
+/* ---------------------------------------------------------------------------
+   Landing page (marketing) — tokens del diseño "Tech Minimalist Dark".
+   Solo generan utilidades (bg-ink, border-hairline, animate-spin-slow, …)
+   usadas en src/components/landing y src/routes/landing.tsx. No tocan la app.
+--------------------------------------------------------------------------- */
+@theme {
+  --color-ink: #030712;
+  --color-surface: #0b0f19;
+  --color-hairline: #1f2937;
+
+  --animate-spin-slow: spin-slow 14s linear infinite;
+  --animate-pulse-glow: pulse-glow 2.6s ease-in-out infinite;
+
+  @keyframes spin-slow {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes pulse-glow {
+    0%,
+    100% {
+      box-shadow:
+        0 0 24px 0 rgb(16 185 129 / 0.45),
+        0 0 64px -8px rgb(99 102 241 / 0.35);
+    }
+    50% {
+      box-shadow:
+        0 0 44px 4px rgb(16 185 129 / 0.7),
+        0 0 96px -4px rgb(99 102 241 / 0.55);
+    }
+  }
+}
