@@ -19,17 +19,11 @@ import { CalendarIcon, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import {
-  PRIORITIES,
-  PRIORITY_LABEL,
-  STATUSES,
-  STATUS_LABEL,
-  type Activity,
-  type ActivityInput,
-} from "@/lib/types";
+import type { Activity, ActivityInput } from "@/lib/types";
 import { activitiesService } from "@/services/activitiesService";
 import { usersService } from "@/services/usersService";
 import { useAuth } from "@/providers/AuthProvider";
+import { useWorkspace } from "@/providers/WorkspaceProvider";
 
 const schema = z.object({
   empresa: z.string().min(1, "Requerido"),
@@ -41,8 +35,9 @@ const schema = z.object({
   stakeholder: z.string().min(1, "Requerido"),
   mes_planeacion: z.string().regex(/^\d{4}-\d{2}$/, "Formato YYYY-MM"),
   semana_planeacion: z.number().int().min(1).max(5),
-  prioridad: z.enum(["low", "medium", "high", "critical"]),
-  estado: z.enum(["backlog", "in_progress", "testing", "pending_client", "done", "cancelled"]),
+  prioridad_id: z.number({ error: "Requerido" }).int().positive("Requerido"),
+  estado_id: z.number({ error: "Requerido" }).int().positive("Requerido"),
+  tipo_id: z.number().int().positive().nullable(),
   fechaInicio: z.date(),
   fechaLimite: z.date(),
 });
@@ -59,6 +54,8 @@ export function ActivityForm({
   onCancel: () => void;
 }) {
   const { user, isAdmin, isCoordinator } = useAuth();
+  const { activeStates, activePriorities, activeTypes, initialState, defaultPriority } =
+    useWorkspace();
   const canPickUsers = isAdmin || isCoordinator;
 
   const { data: fetchedUsers = [] } = useQuery({
@@ -104,8 +101,10 @@ export function ActivityForm({
       stakeholder: defaultValues?.stakeholder ?? "",
       mes_planeacion: defaultMes,
       semana_planeacion: defaultSemana,
-      prioridad: (defaultValues?.prioridad as FormValues["prioridad"]) ?? "medium",
-      estado: (defaultValues?.estado as FormValues["estado"]) ?? "backlog",
+      prioridad_id:
+        defaultValues?.prioridad_id ?? defaultPriority?.id ?? (undefined as unknown as number),
+      estado_id: defaultValues?.estado_id ?? initialState?.id ?? (undefined as unknown as number),
+      tipo_id: defaultValues?.tipo_id ?? null,
       fechaInicio: defaultInicio,
       fechaLimite: defaultLimite,
     },
@@ -122,8 +121,9 @@ export function ActivityForm({
       stakeholder: v.stakeholder,
       mes_planeacion: v.mes_planeacion,
       semana_planeacion: v.semana_planeacion,
-      prioridad: v.prioridad,
-      estado: v.estado,
+      prioridad_id: v.prioridad_id,
+      estado_id: v.estado_id,
+      tipo_id: v.tipo_id,
       fechaInicio: v.fechaInicio.toISOString(),
       fechaLimite: v.fechaLimite.toISOString(),
     });
@@ -231,16 +231,19 @@ export function ActivityForm({
         <div className="grid grid-cols-2 gap-4">
           <Field label="Prioridad">
             <Select
-              value={form.watch("prioridad")}
-              onValueChange={(v: FormValues["prioridad"]) => form.setValue("prioridad", v)}
+              value={String(form.watch("prioridad_id") ?? "")}
+              onValueChange={(v) => form.setValue("prioridad_id", parseInt(v, 10))}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {PRIORITIES.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    {PRIORITY_LABEL[p]}
+                {activePriorities.map((p) => (
+                  <SelectItem key={p.id} value={String(p.id)}>
+                    <span className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full" style={{ background: p.color }} />
+                      {p.nombre}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -248,16 +251,19 @@ export function ActivityForm({
           </Field>
           <Field label="Estado">
             <Select
-              value={form.watch("estado")}
-              onValueChange={(v: FormValues["estado"]) => form.setValue("estado", v)}
+              value={String(form.watch("estado_id") ?? "")}
+              onValueChange={(v) => form.setValue("estado_id", parseInt(v, 10))}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {STATUS_LABEL[s]}
+                {activeStates.map((s) => (
+                  <SelectItem key={s.id} value={String(s.id)}>
+                    <span className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full" style={{ background: s.color }} />
+                      {s.nombre}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -265,6 +271,27 @@ export function ActivityForm({
           </Field>
         </div>
       </div>
+
+      {activeTypes.length > 0 && (
+        <Field label="Tipo (opcional)">
+          <Select
+            value={form.watch("tipo_id") != null ? String(form.watch("tipo_id")) : "none"}
+            onValueChange={(v) => form.setValue("tipo_id", v === "none" ? null : parseInt(v, 10))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Sin tipo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Sin tipo</SelectItem>
+              {activeTypes.map((t) => (
+                <SelectItem key={t.id} value={String(t.id)}>
+                  {t.nombre}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+      )}
 
       <div className="grid sm:grid-cols-2 gap-4">
         <Field label="Fecha inicio">

@@ -15,15 +15,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ChevronLeft, ChevronRight, CalendarRange } from "lucide-react";
-import {
-  PRIORITIES,
-  PRIORITY_LABEL,
-  STATUSES,
-  STATUS_LABEL,
-  type Activity,
-  type ActivityPriority,
-  type ActivityStatus,
-} from "@/lib/types";
+import type { Activity } from "@/lib/types";
+import { useWorkspace } from "@/providers/WorkspaceProvider";
 import { cn } from "@/lib/utils";
 
 type GroupBy = "responsable" | "estado" | "aplicacion";
@@ -36,20 +29,6 @@ type CronogramaViewProps = {
 };
 
 const DAY_MS = 86_400_000;
-const STATUS_VAR: Record<ActivityStatus, string> = {
-  backlog: "var(--muted-foreground)",
-  in_progress: "var(--status-progress)",
-  testing: "var(--status-testing)",
-  pending_client: "var(--status-pending)",
-  done: "var(--status-done)",
-  cancelled: "var(--muted-foreground)",
-};
-const PRIORITY_VAR: Record<ActivityPriority, string> = {
-  low: "var(--priority-low)",
-  medium: "var(--priority-med)",
-  high: "var(--priority-high)",
-  critical: "var(--priority-critical)",
-};
 
 function startOfDay(d: Date) {
   const x = new Date(d);
@@ -87,6 +66,7 @@ function shiftMonth(value: string, delta: number) {
 }
 
 export function CronogramaView({ month, onMonthChange, showHeader = true }: CronogramaViewProps) {
+  const { activeStates, activePriorities, stateById, priorityById } = useWorkspace();
   const [localMonth, setLocalMonth] = useState(() => formatMonth(new Date()));
   const isControlled = typeof month === "string";
   const activeMonth = isControlled ? month : localMonth;
@@ -96,8 +76,8 @@ export function CronogramaView({ month, onMonthChange, showHeader = true }: Cron
   const [groupBy, setGroupBy] = useState<GroupBy>("responsable");
   const [scale, setScale] = useState<Scale>("days");
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<ActivityStatus | "all">("all");
-  const [priorityFilter, setPriorityFilter] = useState<ActivityPriority | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<number | "all">("all");
+  const [priorityFilter, setPriorityFilter] = useState<number | "all">("all");
 
   const { data, isLoading } = useQuery({
     queryKey: ["activities-plan", activeMonth, week],
@@ -120,8 +100,8 @@ export function CronogramaView({ month, onMonthChange, showHeader = true }: Cron
     const weekValue = week === "all" ? null : Number(week);
     return list.filter((a) => {
       if (weekValue && a.semana_planeacion !== weekValue) return false;
-      if (statusFilter !== "all" && a.estado !== statusFilter) return false;
-      if (priorityFilter !== "all" && a.prioridad !== priorityFilter) return false;
+      if (statusFilter !== "all" && a.estado_id !== statusFilter) return false;
+      if (priorityFilter !== "all" && a.prioridad_id !== priorityFilter) return false;
       if (!q) return true;
       return (
         a.nombre.toLowerCase().includes(q) ||
@@ -139,14 +119,14 @@ export function CronogramaView({ month, onMonthChange, showHeader = true }: Cron
         groupBy === "responsable"
           ? a.responsable
           : groupBy === "estado"
-            ? STATUS_LABEL[a.estado]
+            ? (stateById[a.estado_id]?.nombre ?? "—")
             : a.aplicacion;
       const arr = map.get(key) ?? [];
       arr.push(a);
       map.set(key, arr);
     }
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [filtered, groupBy]);
+  }, [filtered, groupBy, stateById]);
 
   const today = startOfDay(new Date());
   const todayOffset = Math.round((today.getTime() - rangeStart.getTime()) / DAY_MS);
@@ -232,33 +212,33 @@ export function CronogramaView({ month, onMonthChange, showHeader = true }: Cron
           className="max-w-xs"
         />
         <Select
-          value={statusFilter}
-          onValueChange={(v) => setStatusFilter(v as ActivityStatus | "all")}
+          value={String(statusFilter)}
+          onValueChange={(v) => setStatusFilter(v === "all" ? "all" : Number(v))}
         >
           <SelectTrigger className="w-40">
             <SelectValue placeholder="Estado" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Estado: Todos</SelectItem>
-            {STATUSES.map((s) => (
-              <SelectItem key={s} value={s}>
-                {STATUS_LABEL[s]}
+            {activeStates.map((s) => (
+              <SelectItem key={s.id} value={String(s.id)}>
+                {s.nombre}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
         <Select
-          value={priorityFilter}
-          onValueChange={(v) => setPriorityFilter(v as ActivityPriority | "all")}
+          value={String(priorityFilter)}
+          onValueChange={(v) => setPriorityFilter(v === "all" ? "all" : Number(v))}
         >
           <SelectTrigger className="w-44">
             <SelectValue placeholder="Prioridad" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Prioridad: Todas</SelectItem>
-            {PRIORITIES.map((p) => (
-              <SelectItem key={p} value={p}>
-                {PRIORITY_LABEL[p]}
+            {activePriorities.map((p) => (
+              <SelectItem key={p.id} value={String(p.id)}>
+                {p.nombre}
               </SelectItem>
             ))}
           </SelectContent>
@@ -406,8 +386,9 @@ export function CronogramaView({ month, onMonthChange, showHeader = true }: Cron
                     </div>
                     {items.map((a) => {
                       const bar = barFor(a);
-                      const color = STATUS_VAR[a.estado];
-                      const priorityColor = PRIORITY_VAR[a.prioridad];
+                      const color = stateById[a.estado_id]?.color ?? "var(--muted-foreground)";
+                      const priorityColor =
+                        priorityById[a.prioridad_id]?.color ?? "var(--muted-foreground)";
                       const weekTag = a.semana_planeacion ? `S${a.semana_planeacion}` : null;
                       return (
                         <div key={a.id} className="h-10 border-b relative group">
@@ -466,8 +447,8 @@ export function CronogramaView({ month, onMonthChange, showHeader = true }: Cron
                                     </p>
                                     <p className="text-xs">Responsable: {a.responsable}</p>
                                     <p className="text-xs">
-                                      Estado: {STATUS_LABEL[a.estado]} · Prioridad:{" "}
-                                      {PRIORITY_LABEL[a.prioridad]}
+                                      Estado: {stateById[a.estado_id]?.nombre ?? "—"} · Prioridad:{" "}
+                                      {priorityById[a.prioridad_id]?.nombre ?? "—"}
                                     </p>
                                     <p className="text-xs">
                                       {fmtFull(new Date(a.fechaInicio))} →{" "}

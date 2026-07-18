@@ -54,6 +54,7 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/providers/AuthProvider";
 import { useSound } from "@/providers/SoundProvider";
+import { useWorkspace } from "@/providers/WorkspaceProvider";
 
 export const Route = createFileRoute("/_app/planeacion")({
   head: () => ({
@@ -70,6 +71,7 @@ const WEEKS = [1, 2, 3, 4, 5];
 function PlaneacionPage() {
   const { canAccessPlanning } = useAuth();
   const { play } = useSound();
+  const { isDone, isOpen, isCancelled } = useWorkspace();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [month, setMonth] = useState(() => format(new Date(), "yyyy-MM"));
@@ -117,14 +119,13 @@ function PlaneacionPage() {
   const monthStats = useMemo(() => {
     const list = data ?? [];
     const now = Date.now();
-    const done = list.filter((a) => a.estado === "done").length;
+    const done = list.filter((a) => isDone(a.estado_id)).length;
     const overdue = list.filter(
-      (a) =>
-        new Date(a.fechaLimite).getTime() < now && a.estado !== "done" && a.estado !== "cancelled",
+      (a) => new Date(a.fechaLimite).getTime() < now && isOpen(a.estado_id),
     ).length;
-    const pending = list.length - done - list.filter((a) => a.estado === "cancelled").length;
+    const pending = list.length - done - list.filter((a) => isCancelled(a.estado_id)).length;
     return { total: list.length, done, pending, overdue };
-  }, [data]);
+  }, [data, isDone, isOpen, isCancelled]);
 
   if (!canAccessPlanning) {
     return null;
@@ -333,8 +334,7 @@ function PlaneacionPage() {
                           {items.map((activity) => {
                             const vencida =
                               new Date(activity.fechaLimite).getTime() < Date.now() &&
-                              activity.estado !== "done" &&
-                              activity.estado !== "cancelled";
+                              isOpen(activity.estado_id);
                             return (
                               <div
                                 key={activity.id}
@@ -354,8 +354,8 @@ function PlaneacionPage() {
                                   </p>
                                 </div>
                                 <div className="hidden lg:flex items-center gap-2 shrink-0">
-                                  <PriorityBadge priority={activity.prioridad} />
-                                  <StatusBadge status={activity.estado} />
+                                  <PriorityBadge prioridadId={activity.prioridad_id} />
+                                  <StatusBadge estadoId={activity.estado_id} />
                                 </div>
                                 <div
                                   className={`text-xs tabular-nums hidden md:block shrink-0 ${vencida ? "text-destructive font-medium" : "text-muted-foreground"}`}

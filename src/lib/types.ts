@@ -1,12 +1,55 @@
-export type ActivityStatus =
-  | "backlog"
-  | "in_progress"
-  | "testing"
-  | "pending_client"
-  | "done"
-  | "cancelled";
+export type WorkflowCategoria = "todo" | "active" | "done" | "cancelled";
 
-export type ActivityPriority = "low" | "medium" | "high" | "critical";
+export interface WorkflowState {
+  id: number;
+  nombre: string;
+  slug: string;
+  color: string;
+  orden: number;
+  categoria: WorkflowCategoria;
+  is_initial: boolean;
+  mostrar_en_kanban: boolean;
+  sheet_phase: string;
+  is_active: boolean;
+}
+
+export interface Priority {
+  id: number;
+  nombre: string;
+  slug: string;
+  color: string;
+  orden: number;
+  is_default: boolean;
+  is_active: boolean;
+}
+
+export interface ActivityType {
+  id: number;
+  nombre: string;
+  slug: string;
+  color: string;
+  orden: number;
+  is_active?: boolean;
+}
+
+export interface WorkspaceOrganization {
+  id: number;
+  nombre: string;
+  slug: string;
+  codigo_prefix: string;
+  timezone: string;
+  locale: string;
+  currency: string;
+}
+
+export interface WorkspaceConfig {
+  organization: WorkspaceOrganization | null;
+  workflow_states: WorkflowState[];
+  priorities: Priority[];
+  activity_types: ActivityType[];
+  version: string;
+  schema_version: number;
+}
 
 export interface Activity {
   pk: number;
@@ -21,8 +64,9 @@ export interface Activity {
   stakeholder: string;
   mes_planeacion: string | null; // YYYY-MM
   semana_planeacion: number | null; // 1-5
-  prioridad: ActivityPriority;
-  estado: ActivityStatus;
+  prioridad_id: number;
+  estado_id: number;
+  tipo_id: number | null;
   fechaInicio: string; // ISO date
   fechaLimite: string; // ISO date
 }
@@ -37,8 +81,9 @@ export interface ActivityInput {
   stakeholder: string;
   mes_planeacion: string;
   semana_planeacion: number;
-  prioridad: ActivityPriority;
-  estado: ActivityStatus;
+  prioridad_id: number;
+  estado_id: number;
+  tipo_id?: number | null;
   fechaInicio: string;
   fechaLimite: string;
 }
@@ -67,30 +112,3 @@ export const ROLE_LABEL: Record<UserRole, string> = {
   coordinator: "Coordinador",
   member: "Miembro",
 };
-
-export const STATUS_LABEL: Record<ActivityStatus, string> = {
-  backlog: "Backlog",
-  in_progress: "En progreso",
-  testing: "En pruebas",
-  pending_client: "Pendiente cliente",
-  done: "Finalizado",
-  cancelled: "Cancelado",
-};
-
-export const PRIORITY_LABEL: Record<ActivityPriority, string> = {
-  low: "Baja",
-  medium: "Media",
-  high: "Alta",
-  critical: "Crítica",
-};
-
-export const STATUSES: ActivityStatus[] = [
-  "backlog",
-  "in_progress",
-  "testing",
-  "pending_client",
-  "done",
-  "cancelled",
-];
-
-export const PRIORITIES: ActivityPriority[] = ["low", "medium", "high", "critical"];

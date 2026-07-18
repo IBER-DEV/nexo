@@ -7,15 +7,8 @@ import interactionPlugin from "@fullcalendar/interaction";
 import type { DatesSetArg, EventDropArg, EventInput } from "@fullcalendar/core";
 import esLocale from "@fullcalendar/core/locales/es";
 import { activitiesService } from "@/services/activitiesService";
-import {
-  PRIORITIES,
-  PRIORITY_LABEL,
-  STATUSES,
-  STATUS_LABEL,
-  type Activity,
-  type ActivityPriority,
-  type ActivityStatus,
-} from "@/lib/types";
+import type { Activity } from "@/lib/types";
+import { useWorkspace } from "@/providers/WorkspaceProvider";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -31,22 +24,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-
-const STATUS_VAR: Record<ActivityStatus, string> = {
-  backlog: "var(--status-backlog)",
-  in_progress: "var(--status-progress)",
-  testing: "var(--status-testing)",
-  pending_client: "var(--status-pending)",
-  done: "var(--status-done)",
-  cancelled: "var(--status-cancelled)",
-};
-
-const PRIORITY_VAR: Record<ActivityPriority, string> = {
-  low: "var(--priority-low)",
-  medium: "var(--priority-med)",
-  high: "var(--priority-high)",
-  critical: "var(--priority-critical)",
-};
 
 type CalendarViewProps = {
   month?: string;
@@ -130,8 +107,10 @@ function getInitials(name: string): string {
     .join("");
 }
 
-/** Cada actividad se muestra solo en su fecha de inicio; el límite va en tooltip/badge. */
-function activityToEvent(activity: Activity): EventInput | null {
+/** Cada actividad se muestra solo en su fecha de inicio; el límite va en tooltip/badge.
+ * El color del estado viaja como CSS var inline en vez de una clase fija
+ * (fc-act-{estado}) — el maestro de estados es configurable por org. */
+function activityToEvent(activity: Activity, stateColor: string): EventInput | null {
   const start = parseActivityDate(activity.fechaInicio);
   if (!start) return null;
 
@@ -140,8 +119,11 @@ function activityToEvent(activity: Activity): EventInput | null {
     title: activity.nombre,
     start: asISODate(start),
     allDay: true,
-    classNames: [`fc-act-${activity.estado}`, `fc-priority-${activity.prioridad}`],
     extendedProps: { activity },
+    display: "block",
+    backgroundColor: `color-mix(in oklab, ${stateColor} 20%, transparent)`,
+    borderColor: stateColor,
+    textColor: stateColor,
   };
 }
 
@@ -178,8 +160,9 @@ export function CalendarView({ month, onMonthChange, onEdit }: CalendarViewProps
   const [mounted, setMounted] = useState(false);
   const [visibleRange, setVisibleRange] = useState<{ start: Date; end: Date } | null>(null);
 
-  const [statusFilter, setStatusFilter] = useState<ActivityStatus | "all">("all");
-  const [priorityFilter, setPriorityFilter] = useState<ActivityPriority | "all">("all");
+  const { activeStates, activePriorities, stateById, priorityById } = useWorkspace();
+  const [statusFilter, setStatusFilter] = useState<number | "all">("all");
+  const [priorityFilter, setPriorityFilter] = useState<number | "all">("all");
   const [responsableFilter, setResponsableFilter] = useState<string>("all");
 
   const isControlled = typeof month === "string";
@@ -216,8 +199,8 @@ export function CalendarView({ month, onMonthChange, onEdit }: CalendarViewProps
   const filtered = useMemo(() => {
     const list = data ?? [];
     return list.filter((a) => {
-      if (statusFilter !== "all" && a.estado !== statusFilter) return false;
-      if (priorityFilter !== "all" && a.prioridad !== priorityFilter) return false;
+      if (statusFilter !== "all" && a.estado_id !== statusFilter) return false;
+      if (priorityFilter !== "all" && a.prioridad_id !== priorityFilter) return false;
       if (responsableFilter !== "all" && a.responsable !== responsableFilter) return false;
       if (visibleRange && !overlapsVisibleRange(a, visibleRange.start, visibleRange.end))
         return false;
@@ -226,8 +209,10 @@ export function CalendarView({ month, onMonthChange, onEdit }: CalendarViewProps
   }, [data, statusFilter, priorityFilter, responsableFilter, visibleRange]);
 
   const events = useMemo(() => {
-    return filtered.map(activityToEvent).filter((event): event is EventInput => event !== null);
-  }, [filtered]);
+    return filtered
+      .map((a) => activityToEvent(a, stateById[a.estado_id]?.color ?? "var(--muted-foreground)"))
+      .filter((event): event is EventInput => event !== null);
+  }, [filtered, stateById]);
 
   const activeFilterCount = [statusFilter, priorityFilter, responsableFilter].filter(
     (f) => f !== "all",
@@ -307,19 +292,19 @@ export function CalendarView({ month, onMonthChange, onEdit }: CalendarViewProps
       <Card className="p-3">
         <div className="flex flex-wrap items-center gap-2">
           <Select
-            value={statusFilter}
-            onValueChange={(v) => setStatusFilter(v as ActivityStatus | "all")}
+            value={String(statusFilter)}
+            onValueChange={(v) => setStatusFilter(v === "all" ? "all" : Number(v))}
           >
             <SelectTrigger className="h-8 w-[150px] text-xs">
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos los estados</SelectItem>
-              {STATUSES.map((s) => (
-                <SelectItem key={s} value={s}>
+              {activeStates.map((s) => (
+                <SelectItem key={s.id} value={String(s.id)}>
                   <span className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full" style={{ background: STATUS_VAR[s] }} />
-                    {STATUS_LABEL[s]}
+                    <span className="h-2 w-2 rounded-full" style={{ background: s.color }} />
+                    {s.nombre}
                   </span>
                 </SelectItem>
               ))}
@@ -327,22 +312,19 @@ export function CalendarView({ month, onMonthChange, onEdit }: CalendarViewProps
           </Select>
 
           <Select
-            value={priorityFilter}
-            onValueChange={(v) => setPriorityFilter(v as ActivityPriority | "all")}
+            value={String(priorityFilter)}
+            onValueChange={(v) => setPriorityFilter(v === "all" ? "all" : Number(v))}
           >
             <SelectTrigger className="h-8 w-[150px] text-xs">
               <SelectValue placeholder="Prioridad" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas las prioridades</SelectItem>
-              {PRIORITIES.map((p) => (
-                <SelectItem key={p} value={p}>
+              {activePriorities.map((p) => (
+                <SelectItem key={p.id} value={String(p.id)}>
                   <span className="flex items-center gap-2">
-                    <span
-                      className="h-2 w-2 rounded-full"
-                      style={{ background: PRIORITY_VAR[p] }}
-                    />
-                    {PRIORITY_LABEL[p]}
+                    <span className="h-2 w-2 rounded-full" style={{ background: p.color }} />
+                    {p.nombre}
                   </span>
                 </SelectItem>
               ))}
@@ -459,7 +441,8 @@ export function CalendarView({ month, onMonthChange, onEdit }: CalendarViewProps
                   return <span className="fc-event-title">{arg.event.title}</span>;
                 }
 
-                const priorityColor = PRIORITY_VAR[activity.prioridad];
+                const priorityColor =
+                  priorityById[activity.prioridad_id]?.color ?? "var(--muted-foreground)";
                 const initials = getInitials(activity.responsable);
                 const spanDays = getSpanDays(activity.fechaInicio, activity.fechaLimite);
                 const deadlineBadge = formatDeadlineBadge(
@@ -493,9 +476,13 @@ export function CalendarView({ month, onMonthChange, onEdit }: CalendarViewProps
                         <span className="text-muted-foreground">Responsable</span>
                         <span className="font-medium">{activity.responsable}</span>
                         <span className="text-muted-foreground">Estado</span>
-                        <span className="font-medium">{STATUS_LABEL[activity.estado]}</span>
+                        <span className="font-medium">
+                          {stateById[activity.estado_id]?.nombre ?? "—"}
+                        </span>
                         <span className="text-muted-foreground">Prioridad</span>
-                        <span className="font-medium">{PRIORITY_LABEL[activity.prioridad]}</span>
+                        <span className="font-medium">
+                          {priorityById[activity.prioridad_id]?.nombre ?? "—"}
+                        </span>
                         <span className="text-muted-foreground">Inicio</span>
                         <span className="font-medium">{formatDateShort(activity.fechaInicio)}</span>
                         <span className="text-muted-foreground">Límite</span>
@@ -575,13 +562,10 @@ export function CalendarView({ month, onMonthChange, onEdit }: CalendarViewProps
       {/* Legend */}
       <div className="space-y-2 px-1">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-          {STATUSES.map((status) => (
-            <div key={status} className="flex items-center gap-1.5 text-[11px]">
-              <span
-                className="h-2 w-2 rounded-full shrink-0"
-                style={{ background: STATUS_VAR[status] }}
-              />
-              <span className="text-muted-foreground">{STATUS_LABEL[status]}</span>
+          {activeStates.map((state) => (
+            <div key={state.id} className="flex items-center gap-1.5 text-[11px]">
+              <span className="h-2 w-2 rounded-full shrink-0" style={{ background: state.color }} />
+              <span className="text-muted-foreground">{state.nombre}</span>
             </div>
           ))}
         </div>
