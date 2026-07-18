@@ -1,0 +1,50 @@
+{% comment %}
+Layout compartido de los correos transaccionales de Nexo. Tablas + estilos
+inline a propósito: es el único subset de HTML/CSS que Outlook desktop (motor
+Word) y el resto de clientes de correo renderizan de forma consistente — no
+usar flexbox/grid ni <style> externo aquí. Colores tomados de src/styles.css
+(--primary/--background/--foreground/--muted-foreground/--border, tema
+claro) porque los clientes de correo no soportan custom properties.
+{% endcomment %}
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Nexo{% endblock %}</title>
+  </head>
+  <body style="margin:0; padding:0; background-color:#F7F9FA; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F7F9FA; padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px; width:100%; background-color:#FFFFFF; border:1px solid #E1E6E9; border-radius:16px; overflow:hidden;">
+            <tr>
+              <td style="padding:32px 32px 0 32px;" align="center">
+                <table role="presentation" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="width:40px; height:40px; background-color:#29AFF5; border-radius:12px; text-align:center; vertical-align:middle;">
+                      <span style="color:#FFFFFF; font-size:18px; font-weight:700; line-height:40px;">N</span>
+                    </td>
+                    <td style="padding-left:10px; font-size:18px; font-weight:600; color:#1B2226;">Nexo</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:28px 32px 32px 32px; color:#1B2226; font-size:15px; line-height:1.6;">
+                {% block content %}{% endblock %}
+              </td>
+            </tr>
+          </table>
+          <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px; width:100%;">
+            <tr>
+              <td style="padding:20px 8px; text-align:center; color:#5C6B74; font-size:12px;">
+                {% block footer %}Nexo · Gestión de actividades TI{% endblock %}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

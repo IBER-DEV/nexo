@@ -9,9 +9,9 @@ from .models import Organization
 
 class OrganizationAddForm(forms.ModelForm):
     """Solo para el alta: además de los campos del modelo, deja elegir la
-    plantilla de flujo con la que arranca la organización — la
-    "onboarding" real hoy es este formulario (no hay signup self-service
-    todavía; ver docs/ROADMAP.md, Fase 1 punto 4)."""
+    plantilla de flujo con la que arranca la organización. Vía de alta
+    alterna al signup self-service (`POST /api/v1/auth/signup/`) — útil para
+    orgs internas/soporte; ver docs/roadmap/release-plan.md, Fase 1 punto 4."""
 
     template = forms.ChoiceField(
         choices=TEMPLATE_CHOICES,

@@ -26,6 +26,17 @@ class PasswordResetFlowTests(APITestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn("/reset-password?uid=", mail.outbox[0].body)
 
+    def test_reset_email_has_html_alternative_with_link(self):
+        self.client.post(
+            "/api/v1/auth/password/forgot/", {"email": self.user.email}, format="json"
+        )
+        message = mail.outbox[0]
+        self.assertEqual(len(message.alternatives), 1)
+        html_body, mimetype = message.alternatives[0]
+        self.assertEqual(mimetype, "text/html")
+        self.assertIn("/reset-password?uid=", html_body)
+        self.assertIn("Restablecer contraseña", html_body)
+
     def test_forgot_does_not_leak_user_existence(self):
         res_existing = self.client.post(
             "/api/v1/auth/password/forgot/", {"email": self.user.email}, format="json"

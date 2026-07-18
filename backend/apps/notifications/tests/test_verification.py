@@ -30,6 +30,16 @@ class SignupEmailTests(APITestCase):
         res = self.client.post("/api/v1/auth/signup/", signup_payload(), format="json")
         self.assertFalse(res.data["user"]["email_verified"])
 
+    def test_verification_email_has_html_alternative_with_link(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post("/api/v1/auth/signup/", signup_payload(), format="json")
+        message = mail.outbox[0]
+        self.assertEqual(len(message.alternatives), 1)
+        html_body, mimetype = message.alternatives[0]
+        self.assertEqual(mimetype, "text/html")
+        self.assertIn("/verify-email?token=", html_body)
+        self.assertIn("Confirmar mi correo", html_body)
+
 
 class EmailVerifyViewTests(APITestCase):
     def setUp(self):

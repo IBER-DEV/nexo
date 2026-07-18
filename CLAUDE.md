@@ -1,8 +1,9 @@
 # CLAUDE.md
 
 Contexto de proyecto para Claude Code. Léelo al empezar cualquier sesión nueva — evita
-re-descubrir decisiones ya tomadas. El roadmap de negocio (fases, monetización) vive en
-[docs/ROADMAP.md](docs/ROADMAP.md); este archivo es sobre el código.
+re-descubrir decisiones ya tomadas. El roadmap (producto, arquitectura, monetización, plan de
+entrega) vive en [docs/ROADMAP.md](docs/ROADMAP.md) — es un índice a `docs/roadmap/*.md` y
+`docs/adr/`; este archivo es sobre el código en su estado actual.
 
 ## Qué es Nexo
 
@@ -137,8 +138,8 @@ dinámicamente vía `useWorkspace()` (`GET /workspace/`, bootstrap en una sola l
 Catálogos (Cliente/Proceso/Aplicación/Stakeholder) tienen dueño; el código de actividad es
 por organización (`{prefijo}-0001`). Admin de todo esto en Configuración → Maestros/
 Organización. Detalle de decisiones y las 7 etapas (E0-E5) en
-`~/.claude/plans/vamos-a-empezar-la-imperative-pixel.md`; contexto de negocio y
-diferenciadores detectados en el camino, en `docs/ROADMAP.md`.
+`~/.claude/plans/vamos-a-empezar-la-imperative-pixel.md`; diferenciadores de producto
+detectados en el camino, en `docs/roadmap/product.md`.
 
 **Plantillas de flujo** (`backend/apps/activities/workflow_templates/*.json`, cargadas por
 `org_templates.py`): al crear una `Organization` (desde el admin de Django o desde el signup
@@ -180,8 +181,8 @@ al dashboard. **Invitaciones a un segundo usuario quedan fuera**, para cuando ha
   `first_activity_created`.
 
 Detalle completo y decisiones confirmadas con el usuario en
-`~/.claude/plans/vamos-a-empezar-la-imperative-pixel.md`; contexto de negocio en
-`docs/ROADMAP.md`, Fase 1 punto 4.
+`~/.claude/plans/vamos-a-empezar-la-imperative-pixel.md`; estado del punto en
+`docs/roadmap/release-plan.md`.
 
 ## Deuda conocida / pendiente
 
