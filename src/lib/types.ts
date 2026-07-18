@@ -29,7 +29,7 @@ export interface ActivityType {
   slug: string;
   color: string;
   orden: number;
-  is_active?: boolean;
+  is_active: boolean;
 }
 
 export interface WorkspaceOrganization {
@@ -40,6 +40,20 @@ export interface WorkspaceOrganization {
   timezone: string;
   locale: string;
   currency: string;
+}
+
+/** Payload completo de GET/PATCH /api/v1/organization/ (solo admin). */
+export interface OrganizationDetail extends WorkspaceOrganization {
+  plan: string;
+  appsheet_spreadsheet_id: string;
+  appsheet_worksheet_name: string;
+}
+
+/** Catálogo simple con dueño (Cliente, Proceso, Aplicación, Stakeholder). */
+export interface Catalog {
+  id: number;
+  nombre: string;
+  is_active: boolean;
 }
 
 export interface WorkspaceConfig {
