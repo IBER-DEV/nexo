@@ -120,6 +120,20 @@ export interface User {
   coordinador_id?: number | null;
   coordinador_nombre?: string | null;
   email_verified: boolean;
+  is_active: boolean;
+}
+
+/** Código de acceso a la organización (Bloque C — ver ADR 0002). */
+export interface AccessCode {
+  id: number;
+  codigo: string;
+  rol: UserRole;
+  expires_at: string | null;
+  max_usos: number | null;
+  usos: number;
+  is_active: boolean;
+  created_at: string;
+  created_by_nombre: string | null;
 }
 
 export const ROLE_LABEL: Record<UserRole, string> = {

@@ -184,13 +184,32 @@ Detalle completo y decisiones confirmadas con el usuario en
 `~/.claude/plans/vamos-a-empezar-la-imperative-pixel.md`; estado del punto en
 `docs/roadmap/release-plan.md`.
 
+## Fase 1 — Punto 4, Bloque C: Gestión de miembros y acceso (COMPLETADO — 2026-07-18)
+
+Incorporar miembros NO usa invitaciones por correo (diseño descartado antes de construirse —
+ver ADR 0002): el Owner/Admin genera **códigos de acceso** (`OrganizationAccessCode`: rol,
+expiración opcional, máx. usos, contador, activo) en Usuarios y equipos, y quien se registra
+elige "Tengo un código" en `/signup` (el mismo `POST /auth/signup/` con dos modos excluyentes:
+`nombre_org`+`template` XOR `access_code`).
+
+- **Regla dura nueva**: unirse a una organización existente pasa SIEMPRE por
+  `apps/organizations/membership.py::add_member()` — ningún mecanismo escribe
+  `user.organization`/`user.rol` directo. `add_member` rechaza `rol=owner` (fundar es otro
+  caso: solo `signup.register()` crea Owners). El canje (`redeem_access_code`) usa
+  `select_for_update` para que `max_usos` no se supere en carrera.
+- Gestión de equipo vía `PATCH /api/v1/users/{pk}/` (extendido): `rol` e `is_active` además de
+  `coordinador_id`. El Owner es intocable desde ahí y nadie se edita a sí mismo; degradar a un
+  coordinador limpia el `coordinador` de su equipo. La lista de usuarios del admin ahora
+  **incluye desactivados** (para reactivarlos) — consumidores tipo selector de responsable
+  deben filtrar `is_active` (ya hecho en `ActivityForm`).
+- `GET /auth/access-codes/resolve/?codigo=` es público (preview "Te unirás a X como Y") — la
+  entropía del código (~59 bits, alfabeto sin caracteres ambiguos) hace inviable enumerar.
+
 ## Deuda conocida / pendiente
 
 - Sin tests de frontend (solo backend tiene suite).
 - Catálogos (Cliente/Proceso/Aplicación/Stakeholder) son tablas tipadas fijas — un catálogo
   nuevo (Proveedor, Sucursal...) requiere migración. Un modelo genérico tipo EAV lo evitaría;
   decisión consciente de no hacerlo sin un caso de cliente real (ver ROADMAP, Fase 1 punto 3).
-- Invitaciones al equipo (Bloque C del signup) no están construidas — el único usuario de una
-  organización nueva es su Owner; agregar miembros sigue siendo tarea del admin de Django.
 - `.agents/skills/` en el repo es una librería de referencia para asistentes de IA, no
   código del proyecto — está en `.gitignore` a propósito.

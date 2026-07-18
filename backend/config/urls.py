@@ -8,6 +8,7 @@ urlpatterns = [
         path("users/", include("apps.users.urls_users")),
         path("activities/", include("apps.activities.urls")),
         path("organization/", include("apps.organizations.urls")),
+        path("access-codes/", include("apps.organizations.urls_access_codes")),
         path("", include("apps.activities.urls_masters")),
     ])),
 ]

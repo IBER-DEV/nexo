@@ -11,6 +11,11 @@ from apps.activities.org_templates import TEMPLATES
 from apps.notifications.emails import send_password_reset_email, send_verification_email
 from apps.notifications.tokens import read_verification_token
 from apps.organizations.funnel import track
+from apps.organizations.membership import (
+    MembershipError,
+    register_with_code,
+    resolve_access_code,
+)
 from apps.organizations.serializers import OrganizationSerializer
 from apps.organizations.signup import SignupError
 from apps.organizations.signup import register as signup_register
@@ -67,14 +72,22 @@ class SignupView(APIView):
         data = serializer.validated_data
 
         try:
-            org, user = signup_register(
-                email=data["email"],
-                password=data["password"],
-                nombre=data["nombre"],
-                nombre_org=data["nombre_org"],
-                template_key=data["template"],
-            )
-        except SignupError as exc:
+            if data.get("access_code"):
+                org, user = register_with_code(
+                    email=data["email"],
+                    password=data["password"],
+                    nombre=data["nombre"],
+                    codigo=data["access_code"],
+                )
+            else:
+                org, user = signup_register(
+                    email=data["email"],
+                    password=data["password"],
+                    nombre=data["nombre"],
+                    nombre_org=data["nombre_org"],
+                    template_key=data["template"],
+                )
+        except (SignupError, MembershipError) as exc:
             return response.Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
         refresh = RefreshToken.for_user(user)
@@ -86,6 +99,27 @@ class SignupView(APIView):
                 "organization": OrganizationSerializer(org).data,
             },
             status=status.HTTP_201_CREATED,
+        )
+
+
+class AccessCodeResolveView(APIView):
+    """Preview público del modo 'Tengo un código': a quién te unirías y con
+    qué rol, sin consumir usos. La entropía del código (~59 bits) hace
+    inviable la enumeración."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        codigo = request.query_params.get("codigo", "")
+        try:
+            code = resolve_access_code(codigo)
+        except MembershipError as exc:
+            return response.Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return response.Response(
+            {
+                "organization_nombre": code.organization.nombre,
+                "rol": code.rol,
+            }
         )
 
 
@@ -186,7 +220,8 @@ class UserListView(generics.ListAPIView):
         user = self.request.user
         org_users = User.objects.for_org(user.organization)
         if getattr(user, "is_admin", False):
-            return org_users.filter(is_active=True).select_related("coordinador").order_by("nombre")
+            # Incluye desactivados: el admin necesita verlos para reactivarlos.
+            return org_users.select_related("coordinador").order_by("nombre")
         if getattr(user, "is_coordinator", False):
             team_ids = user.team_user_ids() if hasattr(user, "team_user_ids") else [user.pk]
             return org_users.filter(pk__in=team_ids, is_active=True).order_by("nombre")
@@ -208,7 +243,8 @@ class UserTeamUpdateView(generics.UpdateAPIView):
     http_method_names = ["patch"]
 
     def get_queryset(self):
-        return User.objects.for_org(self.request.user.organization).filter(is_active=True)
+        # Sin filtrar is_active: reactivar a un desactivado es un PATCH más.
+        return User.objects.for_org(self.request.user.organization)
 
     def get_serializer_class(self):
         return UserTeamUpdateSerializer

@@ -8,13 +8,11 @@ export interface SignupTemplate {
   recommended_for: string[];
 }
 
-export interface SignupInput {
-  email: string;
-  password: string;
-  nombre: string;
-  nombre_org: string;
-  template: string;
-}
+/** Dos modos mutuamente excluyentes: fundar una organización nueva
+ * (nombre_org + template) o unirse a una existente con un código. */
+export type SignupInput =
+  | { email: string; password: string; nombre: string; nombre_org: string; template: string }
+  | { email: string; password: string; nombre: string; access_code: string };
 
 export interface SignupResult {
   access: string;

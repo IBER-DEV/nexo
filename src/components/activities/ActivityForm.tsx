@@ -65,7 +65,9 @@ export function ActivityForm({
     enabled: canPickUsers,
   });
 
-  const users = canPickUsers ? fetchedUsers : user ? [user] : [];
+  // El backend ahora incluye desactivados en la lista de admin (para poder
+  // reactivarlos en Usuarios) — acá solo se asignan actividades a activos.
+  const users = canPickUsers ? fetchedUsers.filter((u) => u.is_active) : user ? [user] : [];
 
   const { data: meta } = useQuery({
     queryKey: ["activities-meta"],

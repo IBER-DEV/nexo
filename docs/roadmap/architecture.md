@@ -10,6 +10,10 @@ documenta las de tamaño medio directamente.
 
 - [0001 — ¿Qué es una unidad de trabajo en Nexo?](../adr/0001-unidad-de-trabajo-en-nexo.md) —
   `Activity` vs. un concepto más amplio que cubra automatizaciones/IA/integraciones futuras.
+- [0002 — Membership: dominio como servicio, no (todavía) como tabla](../adr/0002-membership-como-servicio-no-como-tabla.md) —
+  pertenecer a una organización se modela con un servicio de dominio (`add_member()` como
+  único punto de entrada, mecanismo de incorporación intercambiable); la tabla física
+  `Membership` se difiere hasta multi-org Enterprise.
 
 ## Multi-tenancy: row-level, no middleware ni schema-per-tenant
 
@@ -62,6 +66,16 @@ un admin cambia maestros, sin esperar un reload manual del usuario.
 mapeo hardcodeado de 4 fases — deja la puerta abierta a Jira/Azure DevOps mañana sin migrar el
 modelo. El pull de Sheets conserva el estado actual si comparte fase con otro más genérico
 (evita degradar `en pruebas` a `en progreso` en cada sync).
+
+## Membership y códigos de acceso, no invitaciones por correo
+
+Incorporar a alguien a una organización pasa por un único servicio de dominio
+(`apps/organizations/membership.py::add_member`) — ningún mecanismo escribe
+`user.organization`/`user.rol` directamente. El primer mecanismo es el código de acceso
+(`OrganizationAccessCode`: rol, expiración opcional, máximo de usos, contador,
+activo/inactivo) — sin depender de la entrega de un correo. El diseño de invitaciones por
+email se descartó antes de implementarse; el razonamiento completo y el punto de reapertura
+(multi-org / segundo mecanismo) están en el ADR 0002.
 
 ## Bitácora técnica
 
