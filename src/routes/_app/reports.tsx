@@ -15,7 +15,7 @@ import {
   Area,
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
-import { STATUS_LABEL } from "@/lib/types";
+import { useWorkspace } from "@/providers/WorkspaceProvider";
 import { useAuth } from "@/providers/AuthProvider";
 import { useEffect } from "react";
 
@@ -31,6 +31,7 @@ export const Route = createFileRoute("/_app/reports")({
 
 function ReportsPage() {
   const { canAccessPlanning } = useAuth();
+  const { stateById, isDone } = useWorkspace();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -77,17 +78,17 @@ function ReportsPage() {
     }).length;
     const cerradas = data.filter((a) => {
       const t = new Date(a.fechaLimite);
-      return a.estado === "done" && t.getMonth() === m && t.getFullYear() === y;
+      return isDone(a.estado_id) && t.getMonth() === m && t.getFullYear() === y;
     }).length;
     trend.push({ name: d.toLocaleDateString("es", { month: "short" }), abiertas, cerradas });
   }
 
   const porEstado = Object.entries(
-    data.reduce<Record<string, number>>((acc, a) => {
-      acc[a.estado] = (acc[a.estado] || 0) + 1;
+    data.reduce<Record<number, number>>((acc, a) => {
+      acc[a.estado_id] = (acc[a.estado_id] || 0) + 1;
       return acc;
     }, {}),
-  ).map(([key, value]) => ({ name: STATUS_LABEL[key as keyof typeof STATUS_LABEL], value }));
+  ).map(([key, value]) => ({ name: stateById[Number(key)]?.nombre ?? "—", value }));
 
   return (
     <div className="space-y-6">

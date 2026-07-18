@@ -21,10 +21,10 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { STATUS_LABEL } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/activities/StatusBadge";
 import { PriorityBadge } from "@/components/activities/PriorityBadge";
+import { useWorkspace } from "@/providers/WorkspaceProvider";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -53,6 +53,7 @@ const CHART_COLORS = [
 function DashboardPage() {
   const { isAdmin, isCoordinator } = useAuth();
   const canSeeTeamBreakdown = isAdmin || isCoordinator;
+  const { stateById, isDone, isOpen } = useWorkspace();
   const { data, isLoading } = useQuery({
     queryKey: ["activities"],
     queryFn: () => activitiesService.list(),
@@ -77,15 +78,12 @@ function DashboardPage() {
 
   const now = Date.now();
   const total = data.length;
-  const pendientes = data.filter((a) =>
-    ["backlog", "in_progress", "testing", "pending_client"].includes(a.estado),
-  ).length;
-  const finalizadas = data.filter((a) => a.estado === "done").length;
+  const pendientes = data.filter((a) => isOpen(a.estado_id)).length;
+  const finalizadas = data.filter((a) => isDone(a.estado_id)).length;
   const vencidas = data.filter(
-    (a) =>
-      new Date(a.fechaLimite).getTime() < now && a.estado !== "done" && a.estado !== "cancelled",
+    (a) => new Date(a.fechaLimite).getTime() < now && isOpen(a.estado_id),
   ).length;
-  const backlog = data.filter((a) => a.estado === "backlog").length;
+  const backlog = data.filter((a) => stateById[a.estado_id]?.categoria === "todo").length;
 
   // Por responsable
   const porResponsable = Object.entries(
@@ -99,11 +97,11 @@ function DashboardPage() {
 
   // Por estado
   const porEstado = Object.entries(
-    data.reduce<Record<string, number>>((acc, a) => {
-      acc[a.estado] = (acc[a.estado] || 0) + 1;
+    data.reduce<Record<number, number>>((acc, a) => {
+      acc[a.estado_id] = (acc[a.estado_id] || 0) + 1;
       return acc;
     }, {}),
-  ).map(([key, value]) => ({ name: STATUS_LABEL[key as keyof typeof STATUS_LABEL], value }));
+  ).map(([key, value]) => ({ name: stateById[Number(key)]?.nombre ?? "—", value }));
 
   // Por aplicación
   const porApp = Object.entries(
@@ -126,7 +124,7 @@ function DashboardPage() {
     }).length;
     const finalizadas = data.filter((a) => {
       const t = new Date(a.fechaLimite).getTime();
-      return a.estado === "done" && t >= start.getTime() && t < end.getTime();
+      return isDone(a.estado_id) && t >= start.getTime() && t < end.getTime();
     }).length;
     semanas.push({ name: `S${8 - i}`, creadas, finalizadas });
   }
@@ -356,8 +354,8 @@ function DashboardPage() {
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <PriorityBadge priority={a.prioridad} />
-                <StatusBadge status={a.estado} />
+                <PriorityBadge prioridadId={a.prioridad_id} />
+                <StatusBadge estadoId={a.estado_id} />
                 <span className="text-xs text-muted-foreground tabular-nums hidden md:inline">
                   {format(new Date(a.fechaLimite), "d MMM", { locale: es })}
                 </span>

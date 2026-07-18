@@ -61,29 +61,74 @@ Detalle completo con verificación: ver el artifact publicado en esa sesión, o 
 
 ## Fase 1 — Fundaciones SaaS (habilita el plan Cloud)
 
-**Estado: 🔜 Siguiente — sin diseñar todavía.** Esto es lo que hay que planear en detalle
-antes de escribir código (usar Plan mode).
+**Estado: 🚧 En progreso.** Bloque 1 (multi-tenancy + maestros configurables) completado —
+ver detalle abajo. Bloques 2-4 (signup, billing, hosting) sin diseñar todavía.
 
-Es el ~60% del esfuerzo total de toda la estrategia. Orden sugerido:
+Es el ~60% del esfuerzo total de toda la estrategia. Orden:
 
-1. **Multi-tenancy** — el cambio estructural más profundo, y el que hay que resolver
-   primero porque todo lo demás depende de él. Hoy el modelo asume una sola empresa:
-   `Activity`, `User`, catálogos (`Empresa`, `Proceso`, `Aplicacion`), todo es global. Hace
-   falta un modelo `Organization` y FK en prácticamente todos los modelos. Row-level tenancy
-   con un middleware que filtre por org es lo pragmático a esta escala — schema-per-tenant
-   sería sobreingeniería.
-2. **Signup self-service + onboarding** — hoy los usuarios los crea un admin (`seed_data`,
+1. **Multi-tenancy + maestros configurables** — ✅ **Completado (2026-07-17).** El cambio
+   estructural más profundo, y el que había que resolver primero porque todo lo demás
+   depende de él.
+   - Modelo `Organization` (tenant) con FK en `User`/`Activity`/catálogos; scoping en tres
+     capas (manager `for_org`, mixin de ViewSet, querysets de serializer) — decisión
+     explícita: row-level tenancy con filtrado a nivel de vista/serializer, NO middleware
+     (con JWT, `request.user` solo existe dentro de DRF) ni schema-per-tenant
+     (sobreingeniería a esta escala).
+   - **Diferenciador nuevo detectado durante el diseño**: el flujo de gestión (estados,
+     prioridades, catálogos) estaba hardcodeado en 4 capas paralelas (enums Python, filtros,
+     `types.ts`, mapeo AppSheet de 4 fases fijas) — invisible para el negocio pero bloqueaba
+     vender a equipos que no operan como TI clásico (mesa de ayuda, agile puro, etc.).
+     Resuelto con maestros configurables por organización: `WorkflowState` (categoría
+     todo/active/done/cancelled + flags, no enum fijo), `Priority`, `ActivityType`, catálogos
+     con dueño. Bootstrap en una sola llamada (`GET /workspace/`, versionado para invalidar
+     caché del frontend).
+   - El sync AppSheet (mapeo Fase↔estado) pasó de 4 fases hardcodeadas a
+     `external_mappings` (JSON por estado) — deja la puerta abierta a Jira/Azure DevOps
+     mañana sin migrar el modelo, y ya soporta múltiples organizaciones (`--org <slug>` o
+     iteración automática sobre las que tengan spreadsheet propio).
+   - Código de actividad (`ACT-0001`) pasó a ser por organización (`{prefijo}-0001`) en vez
+     de una secuencia global — con 100+ orgs nadie debía ver `ACT-98342` como su primera
+     actividad. Encapsulado en `SequenceService` para poder cambiar de estrategia sin tocar
+     el dominio si la concurrencia lo exige.
+   - Ver plan completo y decisiones de diseño en
+     `~/.claude/plans/vamos-a-empezar-la-imperative-pixel.md`.
+2. **Plantillas de flujo al onboarding** (pendiente) — al crear una organización, elegir un
+   preset de maestros ("TI clásico" = el flujo actual de 6 estados, "Kanban simple" = 3-4
+   estados, "Mesa de ayuda"...). Barato de construir ahora que los maestros son datos —
+   diferenciador frente a Jira, donde configurar un workflow es notoriamente doloroso.
+3. **Catálogos genéricos / campos personalizados** (pendiente, deuda consciente) — hoy
+   Cliente/Proceso/Aplicación/Stakeholder son tablas tipadas fijas; un catálogo nuevo
+   (Proveedor, Sucursal, Equipo...) requiere migración. Un modelo EAV (Catalog/CatalogItem)
+   lo evitaría, pero para el MVP los FKs tipados ganan en simplicidad e integridad — no
+   revisar sin un caso de cliente real que lo pida.
+4. **Signup self-service + onboarding** — hoy los usuarios los crea un admin (`seed_data`,
    admin de Django). Cloud necesita registro público, verificación de email, invitaciones al
-   equipo.
-3. **Billing** — Stripe (Checkout + Customer Portal ahorran la mayor parte del trabajo),
-   webhook que activa/suspende la organización según estado de pago.
-4. **Hosting del backend** — el frontend ya despliega a Cloudflare (no tocar, ver
+   equipo, selección de plantilla de flujo (ver punto 2), términos/privacidad, rate limiting.
+5. **Billing** — Stripe (Checkout + Customer Portal ahorran la mayor parte del trabajo),
+   webhook que activa/suspende la organización según estado de pago. `Organization.plan` y
+   `Organization.feature_flags` ya existen desde el Bloque 1 — la lógica de límites por plan
+   se diseña aquí.
+6. **Hosting del backend** — el frontend ya despliega a Cloudflare (no tocar, ver
    CLAUDE.md); el backend dockerizado puede ir a Railway/Render/Fly.io para empezar. Falta:
    email transaccional (Resend/Postmark), monitoreo (Sentry), backups automáticos de
    Postgres.
 
 La base de Fase 0 (imagen Docker, `gunicorn`, `whitenoise`, settings por entorno) es
 exactamente el punto de partida de este hosting.
+
+**Decisión de producto pendiente — el concepto núcleo**: hoy el corazón del producto es
+`Activity`. Vale la pena evaluar, antes de estabilizar una API pública, si el producto debe
+girar alrededor de un concepto más amplio ("unidad de trabajo") que abarque automatizaciones,
+IA e integraciones sin sentirse limitado por la palabra "actividad" — anotado para no
+perderlo, no bloquea nada del Bloque 1.
+
+**Diferenciadores confirmados con investigación de mercado (2026-07-17)**: (a) sync
+bidireccional con Google Sheets — Jira/Asana/Monday solo lo logran con middleware de pago
+(Unito, ~$10+/usuario extra) o exports unidireccionales enterprise, nadie lo tiene nativo;
+(b) producto en español nativo; (c) flujos configurables sin la complejidad de administración
+de Jira ("configurable en 5 minutos"); (d) plantillas de flujo por tipo de equipo TI (punto 2
+arriba); (e) mapeo a sistemas externos genérico (`external_mappings`) — la puerta a integrar
+Jira/Azure DevOps ya está en el modelo de datos, no es una promesa de roadmap sin base.
 
 ## Fase 2 — Enterprise
 
@@ -109,3 +154,9 @@ para no tener que re-explicarla en la próxima sesión.
   Workers (ver CLAUDE.md para el porqué técnico).
 - **2026-07-16** — Fase 0 completada; Fase 1 arranca por multi-tenancy antes que billing o
   signup, porque todo lo demás depende de ese modelo de datos.
+- **2026-07-17** — Fase 1, Bloque 1 completado: multi-tenancy + maestros configurables
+  (estados/prioridades/tipos por organización, ya no enums fijos). Detectado durante el
+  diseño que esto era, además, un diferenciador de producto no contemplado originalmente —
+  ver detalle en la sección de Fase 1 arriba. Decisión tomada de no meter RBAC configurable
+  en este bloque (queda para Fase 2) para no mezclar dos cambios estructurales grandes a la
+  vez.

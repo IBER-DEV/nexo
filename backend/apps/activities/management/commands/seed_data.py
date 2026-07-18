@@ -6,8 +6,19 @@ Safe to run multiple times (idempotent).
 """
 from datetime import date, timedelta
 from django.core.management.base import BaseCommand
+from apps.organizations.models import Organization
 from apps.users.models import User
-from apps.activities.models import Activity
+from apps.activities.master_defaults import create_default_masters
+from apps.activities.models import (
+    Activity,
+    ActivityType,
+    Aplicacion,
+    Cliente,
+    Priority,
+    Proceso,
+    Stakeholder,
+    WorkflowState,
+)
 
 
 SEED_USERS = [
@@ -42,8 +53,6 @@ NOMBRES = [
     "Tablero KPI gerencial",
     "Parche crítico de seguridad",
 ]
-STATUSES = [s[0] for s in Activity.Status.choices]
-PRIORITIES = [p[0] for p in Activity.Priority.choices]
 
 
 def mulberry32(seed):
@@ -64,13 +73,20 @@ class Command(BaseCommand):
     help = "Seeds the database with demo users and activities"
 
     def handle(self, *args, **options):
+        self.stdout.write("Seeding organization...")
+        org, org_created = Organization.objects.get_or_create(
+            slug="demo",
+            defaults={"nombre": "Nexo Demo", "codigo_prefix": "ACT"},
+        )
+        self.stdout.write(f"  {'Created' if org_created else 'Exists '} {org.nombre}")
+
         self.stdout.write("Seeding users...")
         users = []
         coordinators_by_email = {}
         for data in SEED_USERS:
             user, created = User.objects.get_or_create(
                 email=data["email"],
-                defaults={"nombre": data["nombre"], "rol": data["rol"]},
+                defaults={"nombre": data["nombre"], "rol": data["rol"], "organization": org},
             )
             if created:
                 user.set_password("demo1234")
@@ -81,6 +97,9 @@ class Command(BaseCommand):
                 if user.rol not in {"admin", "coordinator", "member"}:
                     user.rol = data["rol"]
                     user.save(update_fields=["rol"])
+                if user.organization_id is None:
+                    user.organization = org
+                    user.save(update_fields=["organization"])
                 self.stdout.write(f"  Exists  {user.nombre}")
             users.append(user)
             if user.rol == "coordinator":
@@ -89,7 +108,7 @@ class Command(BaseCommand):
         # Create admin superuser if missing
         admin, created = User.objects.get_or_create(
             email="admin@empresa.com",
-            defaults={"nombre": "Administrador", "rol": "admin"},
+            defaults={"nombre": "Administrador", "rol": "admin", "organization": org},
         )
         if created:
             admin.set_password("demo1234")
@@ -107,6 +126,9 @@ class Command(BaseCommand):
                 changed = True
             if not admin.is_superuser:
                 admin.is_superuser = True
+                changed = True
+            if admin.organization_id is None:
+                admin.organization = org
                 changed = True
             if changed:
                 admin.save()
@@ -128,6 +150,27 @@ class Command(BaseCommand):
                 "sofia.mendoza@empresa.com",
                 "pablo.castro@empresa.com",
             ]).update(coordinador=carlos, rol="member")
+
+        self.stdout.write("Seeding workflow masters...")
+        create_default_masters(org, WorkflowState, Priority, ActivityType)
+        states = {s.slug: s for s in WorkflowState.objects.for_org(org)}
+        priorities = {p.slug: p for p in Priority.objects.for_org(org)}
+
+        self.stdout.write("Seeding catalogs...")
+        clientes = {
+            n: Cliente.objects.get_or_create(organization=org, nombre=n)[0] for n in EMPRESAS
+        }
+        procesos = {
+            n: Proceso.objects.get_or_create(organization=org, nombre=n)[0] for n in PROCESOS
+        }
+        aplicaciones = {
+            n: Aplicacion.objects.get_or_create(organization=org, nombre=n)[0]
+            for n in APLICACIONES
+        }
+        stakeholders = {
+            n: Stakeholder.objects.get_or_create(organization=org, nombre=n)[0]
+            for n in STAKEHOLDERS
+        }
 
         self.stdout.write("Seeding activities...")
         rand = mulberry32(42)
@@ -157,17 +200,18 @@ class Command(BaseCommand):
 
             user = pick(users)
             defaults = {
-                "empresa": pick(EMPRESAS),
-                "proceso": pick(PROCESOS),
-                "aplicacion": pick(APLICACIONES),
+                "organization": org,
+                "cliente": clientes[pick(EMPRESAS)],
+                "proceso": procesos[pick(PROCESOS)],
+                "aplicacion": aplicaciones[pick(APLICACIONES)],
                 "nombre": pick(NOMBRES),
                 "descripcion": "Tarea técnica asignada al equipo de sistemas con seguimiento semanal.",
                 "responsable": user,
-                "stakeholder": pick(STAKEHOLDERS),
+                "stakeholder": stakeholders[pick(STAKEHOLDERS)],
                 "mes_planeacion": mes_planeacion,
                 "semana_planeacion": semana,
-                "prioridad": pick(PRIORITIES),
-                "estado": pick(STATUSES),
+                "prioridad": priorities[pick(list(priorities))],
+                "estado": states[pick(list(states))],
                 "fecha_inicio": inicio,
                 "fecha_limite": limite,
             }
@@ -179,7 +223,104 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f"\nDone. {created_count} activities created (existing ones untouched)."
         ))
+
+        acme_created_count = self._seed_acme(today)
+
+        self.stdout.write(self.style.SUCCESS(
+            f"Done. {acme_created_count} Acme Ltd activities created (existing ones untouched)."
+        ))
         self.stdout.write("\nLogin credentials:")
-        self.stdout.write("  admin@empresa.com / demo1234  (superuser)")
+        self.stdout.write("  admin@empresa.com / demo1234  (superuser, org 'demo')")
         self.stdout.write("  ana.garcia@empresa.com / demo1234")
+        self.stdout.write("  admin@acme.com / demo1234  (superuser, org 'acme' — flujo propio)")
         self.stdout.write("  (all team users use password: demo1234)")
+
+    def _seed_acme(self, today: date) -> int:
+        """Segunda organización de demo: prefijo y flujo de estados propios
+        (4, no 6) para probar aislamiento y Kanban dinámico a mano."""
+        self.stdout.write("\nSeeding second organization (Acme Ltd)...")
+        acme, acme_created = Organization.objects.get_or_create(
+            slug="acme",
+            defaults={"nombre": "Acme Ltd", "codigo_prefix": "ACM"},
+        )
+        self.stdout.write(f"  {'Created' if acme_created else 'Exists '} {acme.nombre}")
+
+        acme_admin, created = User.objects.get_or_create(
+            email="admin@acme.com",
+            defaults={"nombre": "Admin Acme", "rol": "admin", "organization": acme},
+        )
+        if created:
+            acme_admin.set_password("demo1234")
+            acme_admin.is_staff = True
+            acme_admin.is_superuser = True
+            acme_admin.save()
+            self.stdout.write("  Created admin@acme.com (superuser)")
+
+        # slug, nombre, categoria, color, orden, is_initial, mostrar_en_kanban
+        ACME_STATES = [
+            ("pendiente", "Pendiente", "todo", "#7C8A93", 0, True, True),
+            ("en-curso", "En curso", "active", "#29AFF5", 1, False, True),
+            ("hecho", "Hecho", "done", "#22B573", 2, False, True),
+            ("descartado", "Descartado", "cancelled", "#E5484D", 3, False, False),
+        ]
+        for slug, nombre, categoria, color, orden, is_initial, mostrar in ACME_STATES:
+            WorkflowState.objects.get_or_create(
+                organization=acme,
+                slug=slug,
+                defaults={
+                    "nombre": nombre,
+                    "categoria": categoria,
+                    "color": color,
+                    "orden": orden,
+                    "is_initial": is_initial,
+                    "mostrar_en_kanban": mostrar,
+                },
+            )
+        ACME_PRIORITIES = [
+            ("baja", "Baja", "#7C8A93", 0, False),
+            ("normal", "Normal", "#29AFF5", 1, True),
+            ("alta", "Alta", "#E5484D", 2, False),
+        ]
+        for slug, nombre, color, orden, is_default in ACME_PRIORITIES:
+            Priority.objects.get_or_create(
+                organization=acme,
+                slug=slug,
+                defaults={"nombre": nombre, "color": color, "orden": orden, "is_default": is_default},
+            )
+
+        acme_states = {s.slug: s for s in WorkflowState.objects.for_org(acme)}
+        acme_priorities = {p.slug: p for p in Priority.objects.for_org(acme)}
+        acme_cliente = Cliente.objects.get_or_create(organization=acme, nombre="Acme Corp")[0]
+        acme_proceso = Proceso.objects.get_or_create(organization=acme, nombre="Operaciones")[0]
+        acme_app = Aplicacion.objects.get_or_create(organization=acme, nombre="Sistema Interno")[0]
+
+        ACME_ACTIVITIES = [
+            ("Configurar VPN para equipo remoto", "pendiente"),
+            ("Renovar certificado SSL", "en-curso"),
+            ("Migrar correo a Google Workspace", "hecho"),
+            ("Documentar proceso de onboarding", "pendiente"),
+            ("Revisar accesos de exempleados", "descartado"),
+        ]
+        created_count = 0
+        for i, (nombre, estado_slug) in enumerate(ACME_ACTIVITIES, start=1):
+            pk = 9000 + i
+            inicio = today - timedelta(days=i * 3)
+            defaults = {
+                "organization": acme,
+                "cliente": acme_cliente,
+                "proceso": acme_proceso,
+                "aplicacion": acme_app,
+                "nombre": nombre,
+                "descripcion": "",
+                "responsable": acme_admin,
+                "mes_planeacion": inicio.strftime("%Y-%m"),
+                "semana_planeacion": 1,
+                "prioridad": acme_priorities["normal"],
+                "estado": acme_states[estado_slug],
+                "fecha_inicio": inicio,
+                "fecha_limite": inicio + timedelta(days=14),
+            }
+            activity, created = Activity.objects.get_or_create(pk=pk, defaults=defaults)
+            if created:
+                created_count += 1
+        return created_count

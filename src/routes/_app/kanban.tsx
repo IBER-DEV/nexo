@@ -17,8 +17,8 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import type { Activity, ActivityStatus } from "@/lib/types";
-import { STATUS_LABEL } from "@/lib/types";
+import type { Activity, WorkflowState } from "@/lib/types";
+import { useWorkspace } from "@/providers/WorkspaceProvider";
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -36,16 +36,10 @@ export const Route = createFileRoute("/_app/kanban")({
   component: KanbanPage,
 });
 
-const COLUMNS: { id: ActivityStatus; title: string; accent: string }[] = [
-  { id: "backlog", title: "Backlog", accent: "var(--status-backlog)" },
-  { id: "in_progress", title: "En progreso", accent: "var(--status-progress)" },
-  { id: "testing", title: "En pruebas", accent: "var(--status-testing)" },
-  { id: "done", title: "Finalizado", accent: "var(--status-done)" },
-];
-
 function KanbanPage() {
   const qc = useQueryClient();
   const { play } = useSound();
+  const { kanbanStates } = useWorkspace();
   const { data, isLoading } = useQuery({
     queryKey: ["activities"],
     queryFn: () => activitiesService.list(),
@@ -55,12 +49,13 @@ function KanbanPage() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const byColumn = useMemo(() => {
-    const map: Record<string, Activity[]> = { backlog: [], in_progress: [], testing: [], done: [] };
+    const map: Record<number, Activity[]> = {};
+    kanbanStates.forEach((s) => (map[s.id] = []));
     (data ?? []).forEach((a) => {
-      if (map[a.estado]) map[a.estado].push(a);
+      if (map[a.estado_id]) map[a.estado_id].push(a);
     });
     return map;
-  }, [data]);
+  }, [data, kanbanStates]);
 
   const active = data?.find((a) => a.id === activeId) ?? null;
 
@@ -68,13 +63,14 @@ function KanbanPage() {
   const onDragEnd = async (e: DragEndEvent) => {
     setActiveId(null);
     const dragId = String(e.active.id);
-    const overCol = e.over?.id as ActivityStatus | undefined;
-    if (!overCol) return;
+    const overStateId = e.over ? Number(e.over.id) : undefined;
+    if (!overStateId) return;
     const item = data?.find((a) => a.id === dragId);
-    if (!item || item.estado === overCol) return;
-    await activitiesService.update(item.pk, { estado: overCol });
+    if (!item || item.estado_id === overStateId) return;
+    await activitiesService.update(item.pk, { estado_id: overStateId });
     qc.invalidateQueries({ queryKey: ["activities"] });
-    toast.success(`Movida a ${STATUS_LABEL[overCol]}`);
+    const target = kanbanStates.find((s) => s.id === overStateId);
+    toast.success(`Movida a ${target?.nombre ?? "otro estado"}`);
     play("chime");
   };
 
@@ -86,22 +82,16 @@ function KanbanPage() {
       />
 
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-          {COLUMNS.map((c) => (
-            <Skeleton key={c.id} className="h-96 rounded-xl" />
+        <div className="flex gap-4 overflow-x-auto">
+          {kanbanStates.map((s) => (
+            <Skeleton key={s.id} className="h-96 w-72 shrink-0 rounded-xl" />
           ))}
         </div>
       ) : (
         <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            {COLUMNS.map((col) => (
-              <KanbanColumn
-                key={col.id}
-                id={col.id}
-                title={col.title}
-                accent={col.accent}
-                items={byColumn[col.id] ?? []}
-              />
+          <div className="flex gap-4 overflow-x-auto pb-2">
+            {kanbanStates.map((state) => (
+              <KanbanColumn key={state.id} state={state} items={byColumn[state.id] ?? []} />
             ))}
           </div>
           <DragOverlay>{active ? <KanbanCard activity={active} dragging /> : null}</DragOverlay>
@@ -111,27 +101,17 @@ function KanbanPage() {
   );
 }
 
-function KanbanColumn({
-  id,
-  title,
-  accent,
-  items,
-}: {
-  id: ActivityStatus;
-  title: string;
-  accent: string;
-  items: Activity[];
-}) {
-  const { setNodeRef, isOver } = useDroppable({ id });
+function KanbanColumn({ state, items }: { state: WorkflowState; items: Activity[] }) {
+  const { setNodeRef, isOver } = useDroppable({ id: state.id });
   return (
     <Card
       ref={setNodeRef}
-      className={`p-3 flex flex-col gap-3 min-h-[60vh] transition-colors ${isOver ? "ring-2 ring-primary/40" : ""}`}
+      className={`p-3 flex flex-col gap-3 min-h-[60vh] w-72 shrink-0 transition-colors ${isOver ? "ring-2 ring-primary/40" : ""}`}
     >
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full" style={{ background: accent }} />
-          <h3 className="text-sm font-semibold">{title}</h3>
+          <span className="h-2 w-2 rounded-full" style={{ background: state.color }} />
+          <h3 className="text-sm font-semibold">{state.nombre}</h3>
           <span className="text-xs text-muted-foreground tabular-nums">{items.length}</span>
         </div>
       </div>
@@ -174,7 +154,7 @@ function KanbanCard({ activity, dragging = false }: { activity: Activity; draggi
       </div>
       <p className="text-sm font-medium line-clamp-2 mb-3">{activity.nombre}</p>
       <div className="flex items-center justify-between gap-2">
-        <PriorityBadge priority={activity.prioridad} />
+        <PriorityBadge prioridadId={activity.prioridad_id} />
         <Avatar className="h-6 w-6">
           <AvatarFallback className="bg-primary/15 text-primary text-[10px]">
             {iniciales}

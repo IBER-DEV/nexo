@@ -5,6 +5,7 @@ import { Topbar } from "@/components/layout/Topbar";
 import { NexoLoader } from "@/components/brand/NexoLoader";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
+import { WorkspaceProvider, useWorkspace } from "@/providers/WorkspaceProvider";
 
 export const Route = createFileRoute("/_app")({
   component: AppLayout,
@@ -41,6 +42,24 @@ function AppLayout() {
   }, [isAuthenticated, minTimeElapsed]);
 
   if (!ready) {
+    return <NexoLoader />;
+  }
+
+  return (
+    <WorkspaceProvider>
+      <WorkspaceGate pathname={pathname} />
+    </WorkspaceProvider>
+  );
+}
+
+// Los maestros (estados/prioridades/tipos) son datos que el resto del layout
+// asume disponibles de forma síncrona (badges, Kanban, formularios) — se
+// esperan aquí, antes de montar la app, en vez de manejar `undefined` en
+// cada consumidor.
+function WorkspaceGate({ pathname }: { pathname: string }) {
+  const { isLoading } = useWorkspace();
+
+  if (isLoading) {
     return <NexoLoader />;
   }
 

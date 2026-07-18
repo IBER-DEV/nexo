@@ -5,23 +5,31 @@ from rest_framework.response import Response
 from django.db import transaction
 from django.db.models import Q
 from openpyxl import load_workbook
-from .models import Activity, Empresa, Proceso, Aplicacion
+from apps.organizations.scoping import OrganizationScopedViewSetMixin
+from .models import Activity
 from .serializers import ActivitySerializer
 from .filters import ActivityFilter
-from .sync_utils import normalize_header, parse_date, parse_pk, get_or_create_responsable
+from .models import Cliente, Proceso, Aplicacion, Stakeholder
+from .sync_utils import normalize_header, parse_date, parse_codigo, get_or_create_responsable
 
 
-class ActivityViewSet(viewsets.ModelViewSet):
-    queryset = Activity.objects.select_related("responsable", "created_by").order_by("-pk")
+class ActivityViewSet(OrganizationScopedViewSetMixin, viewsets.ModelViewSet):
+    queryset = Activity.objects.all()
     serializer_class = ActivitySerializer
     permission_classes = [permissions.IsAuthenticated]
     filterset_class = ActivityFilter
-    search_fields = ["nombre", "empresa", "aplicacion", "responsable__nombre", "mes_planeacion"]
+    search_fields = [
+        "nombre",
+        "cliente__nombre",
+        "aplicacion__nombre",
+        "responsable__nombre",
+        "mes_planeacion",
+    ]
     ordering_fields = [
         "pk",
         "nombre",
-        "prioridad",
-        "estado",
+        ("prioridad__orden", "prioridad"),
+        ("estado__orden", "estado"),
         "fecha_limite",
         "fecha_inicio",
         "mes_planeacion",
@@ -30,7 +38,25 @@ class ActivityViewSet(viewsets.ModelViewSet):
     http_method_names = ["get", "post", "patch", "delete", "head", "options"]
 
     def get_queryset(self):
-        base_qs = Activity.objects.select_related("responsable", "created_by").order_by("-pk")
+        # Primero el aislamiento por organización (mixin), después el scoping
+        # por rol dentro de la org.
+        base_qs = (
+            super()
+            .get_queryset()
+            .select_related(
+                "responsable",
+                "created_by",
+                "organization",
+                "cliente",
+                "proceso",
+                "aplicacion",
+                "stakeholder",
+                "estado",
+                "prioridad",
+                "tipo",
+            )
+            .order_by("-pk")
+        )
         user = self.request.user
         if getattr(user, "is_admin", False):
             return base_qs
@@ -40,31 +66,46 @@ class ActivityViewSet(viewsets.ModelViewSet):
         return base_qs.filter(Q(responsable=user) | Q(created_by=user)).distinct()
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        serializer.save(
+            created_by=self.request.user,
+            organization=self.request.user.organization,
+        )
 
     @action(detail=False, methods=["get"], url_path="meta")
     def meta(self, request):
-        is_admin = getattr(request.user, "is_admin", False)
-        activities = self.get_queryset()
-        if is_admin:
-            empresas = Empresa.objects.values_list("nombre", flat=True).order_by("nombre")
-            procesos = Proceso.objects.values_list("nombre", flat=True).order_by("nombre")
-            aplicaciones = Aplicacion.objects.values_list("nombre", flat=True).order_by("nombre")
-        else:
-            empresas = activities.values_list("empresa", flat=True).distinct().order_by("empresa")
-            procesos = activities.values_list("proceso", flat=True).distinct().order_by("proceso")
-            aplicaciones = activities.values_list("aplicacion", flat=True).distinct().order_by("aplicacion")
-        payload = {
-            "empresas": list(empresas),
-            "procesos": list(procesos),
-            "aplicaciones": list(aplicaciones),
-            "stakeholders": list(
-                activities.exclude(stakeholder="")
-                .values_list("stakeholder", flat=True)
+        org = request.user.organization
+
+        def catalog_names(model):
+            return list(
+                model.objects.for_org(org)
+                .filter(is_active=True)
+                .values_list("nombre", flat=True)
+                .order_by("nombre")
+            )
+
+        def visible_names(field):
+            return list(
+                self.get_queryset()
+                .exclude(**{field: None})
+                .values_list(f"{field}__nombre", flat=True)
                 .distinct()
-                .order_by("stakeholder")
-            ),
-        }
+                .order_by(f"{field}__nombre")
+            )
+
+        if getattr(request.user, "is_admin", False):
+            payload = {
+                "empresas": catalog_names(Cliente),
+                "procesos": catalog_names(Proceso),
+                "aplicaciones": catalog_names(Aplicacion),
+                "stakeholders": catalog_names(Stakeholder),
+            }
+        else:
+            payload = {
+                "empresas": visible_names("cliente"),
+                "procesos": visible_names("proceso"),
+                "aplicaciones": visible_names("aplicacion"),
+                "stakeholders": visible_names("stakeholder"),
+            }
         return Response(payload)
 
     @action(
@@ -88,6 +129,7 @@ class ActivityViewSet(viewsets.ModelViewSet):
 
         expected_headers = {
             "empresa": "empresa",
+            "cliente": "empresa",
             "proceso": "proceso",
             "aplicacion": "aplicacion",
             "nombre actividad": "nombre",
@@ -160,7 +202,11 @@ class ActivityViewSet(viewsets.ModelViewSet):
                     errors.append({"row": row_index, "error": "Campos requeridos incompletos"})
                     continue
 
-                responsable = get_or_create_responsable(responsable_name, requesting_user=request.user)
+                responsable = get_or_create_responsable(
+                    responsable_name,
+                    organization=request.user.organization,
+                    requesting_user=request.user,
+                )
 
                 data = {
                     "empresa": str(empresa).strip(),
@@ -179,8 +225,14 @@ class ActivityViewSet(viewsets.ModelViewSet):
                 if semana_planeacion:
                     data["semana_planeacion"] = semana_planeacion
 
-                pk_value = parse_pk(row[id_index]) if id_index is not None else None
-                instance = Activity.objects.filter(pk=pk_value).first() if pk_value else None
+                numero = parse_codigo(row[id_index]) if id_index is not None else None
+                instance = (
+                    Activity.objects.for_org(request.user.organization)
+                    .filter(numero=numero)
+                    .first()
+                    if numero
+                    else None
+                )
                 serializer = ActivitySerializer(
                     instance,
                     data=data,
@@ -193,6 +245,8 @@ class ActivityViewSet(viewsets.ModelViewSet):
                     continue
 
                 save_kwargs = {}
+                if instance is None:
+                    save_kwargs["organization"] = request.user.organization
                 if instance is None and request.user and request.user.is_authenticated:
                     save_kwargs["created_by"] = request.user
                 elif instance is not None and instance.created_by_id is None and request.user and request.user.is_authenticated:

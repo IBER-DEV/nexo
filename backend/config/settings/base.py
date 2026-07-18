@@ -24,6 +24,7 @@ THIRD_PARTY_APPS = [
     "django_filters",
 ]
 LOCAL_APPS = [
+    "apps.organizations",
     "apps.users",
     "apps.activities",
 ]

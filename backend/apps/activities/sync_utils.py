@@ -42,7 +42,10 @@ def parse_date(value: object) -> date | None:
     return None
 
 
-def parse_pk(value: object) -> int | None:
+def parse_codigo(value: object) -> int | None:
+    """'ACT-0042', 'ACM-7' o '42' → numero de actividad (la organización la
+    aporta el contexto del llamador). Acepta cualquier prefijo para que los
+    códigos legacy y los de otras orgs resuelvan igual."""
     if value is None:
         return None
     text = str(value).strip()
@@ -50,24 +53,30 @@ def parse_pk(value: object) -> int | None:
         return None
     if text.isdigit():
         return int(text)
-    text_up = text.upper()
-    if text_up.startswith("ACT-"):
-        num = text_up.replace("ACT-", "", 1)
+    if "-" in text:
+        _prefix, _, num = text.rpartition("-")
         if num.isdigit():
             return int(num)
     return None
 
 
-def get_or_create_responsable(name: object, requesting_user: User | None = None) -> User | None:
-    """Looks up a User by display name, auto-creating a passwordless account
-    if none exists yet — matches the behavior already used by the Excel import."""
+def get_or_create_responsable(
+    name: object, organization=None, requesting_user: User | None = None
+) -> User | None:
+    """Looks up a User by display name within the organization, auto-creating
+    a passwordless account if none exists yet — matches the behavior already
+    used by the Excel import."""
+    if organization is None:
+        raise ValueError("get_or_create_responsable requiere una organización")
     if not name:
         return None
     responsable_name = str(name).strip()
     if not responsable_name:
         return None
 
-    responsable = User.objects.filter(nombre__iexact=responsable_name).first()
+    responsable = (
+        User.objects.for_org(organization).filter(nombre__iexact=responsable_name).first()
+    )
     if responsable:
         return responsable
 
@@ -81,7 +90,7 @@ def get_or_create_responsable(name: object, requesting_user: User | None = None)
         suffix += 1
         email = f"{seed}{suffix}@empresa.com"
 
-    responsable = User(email=email, nombre=responsable_name)
+    responsable = User(email=email, nombre=responsable_name, organization=organization)
     if requesting_user is not None and getattr(requesting_user, "is_coordinator", False):
         responsable.coordinador = requesting_user
     responsable.set_unusable_password()

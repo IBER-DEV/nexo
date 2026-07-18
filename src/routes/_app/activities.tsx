@@ -47,14 +47,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ActivityForm } from "@/components/activities/ActivityForm";
-import {
-  PRIORITIES,
-  PRIORITY_LABEL,
-  STATUSES,
-  STATUS_LABEL,
-  type Activity,
-  type ActivityInput,
-} from "@/lib/types";
+import type { Activity, ActivityInput } from "@/lib/types";
+import { useWorkspace } from "@/providers/WorkspaceProvider";
 import {
   ArrowUpDown,
   CalendarIcon,
@@ -98,6 +92,7 @@ function ActivitiesPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const { play } = useSound();
+  const { activeStates, activePriorities, stateById, priorityById, isOpen } = useWorkspace();
   const { q: urlQ } = Route.useSearch();
   const { data, isLoading } = useQuery({
     queryKey: ["activities"],
@@ -135,8 +130,8 @@ function ActivitiesPage() {
     if (!data) return [] as Activity[];
     const q = search.toLowerCase().trim();
     let rows = data.filter((a) => {
-      if (filterEstado !== "all" && a.estado !== filterEstado) return false;
-      if (filterPrioridad !== "all" && a.prioridad !== filterPrioridad) return false;
+      if (filterEstado !== "all" && String(a.estado_id) !== filterEstado) return false;
+      if (filterPrioridad !== "all" && String(a.prioridad_id) !== filterPrioridad) return false;
       if (filterResponsable !== "all" && a.responsable !== filterResponsable) return false;
       const inicio = dateOnly(new Date(a.fechaInicio));
       if (filterInicioDesde && inicio < dateOnly(filterInicioDesde)) return false;
@@ -150,14 +145,23 @@ function ActivitiesPage() {
         return false;
       return true;
     });
-    const priOrder = { low: 0, medium: 1, high: 2, critical: 3 };
     rows = [...rows].sort((a, b) => {
       const dir = sort.dir === "asc" ? 1 : -1;
-      if (sort.key === "prioridad") return (priOrder[a.prioridad] - priOrder[b.prioridad]) * dir;
+      if (sort.key === "prioridad") {
+        const oa = priorityById[a.prioridad_id]?.orden ?? 0;
+        const ob = priorityById[b.prioridad_id]?.orden ?? 0;
+        return (oa - ob) * dir;
+      }
+      if (sort.key === "estado") {
+        const oa = stateById[a.estado_id]?.orden ?? 0;
+        const ob = stateById[b.estado_id]?.orden ?? 0;
+        return (oa - ob) * dir;
+      }
       if (sort.key === "fechaLimite")
         return (new Date(a.fechaLimite).getTime() - new Date(b.fechaLimite).getTime()) * dir;
-      const va = String(a[sort.key]).toLowerCase();
-      const vb = String(b[sort.key]).toLowerCase();
+      const key = sort.key as "id" | "nombre" | "responsable";
+      const va = String(a[key]).toLowerCase();
+      const vb = String(b[key]).toLowerCase();
       return va.localeCompare(vb) * dir;
     });
     return rows;
@@ -170,6 +174,8 @@ function ActivitiesPage() {
     filterInicioDesde,
     filterInicioHasta,
     sort,
+    priorityById,
+    stateById,
   ]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -203,8 +209,8 @@ function ActivitiesPage() {
       a.nombre,
       a.responsable,
       a.stakeholder,
-      PRIORITY_LABEL[a.prioridad],
-      STATUS_LABEL[a.estado],
+      priorityById[a.prioridad_id]?.nombre ?? "",
+      stateById[a.estado_id]?.nombre ?? "",
       format(new Date(a.fechaInicio), "yyyy-MM-dd"),
       format(new Date(a.fechaLimite), "yyyy-MM-dd"),
     ]);
@@ -298,9 +304,9 @@ function ActivitiesPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los estados</SelectItem>
-                {STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {STATUS_LABEL[s]}
+                {activeStates.map((s) => (
+                  <SelectItem key={s.id} value={String(s.id)}>
+                    {s.nombre}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -317,9 +323,9 @@ function ActivitiesPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas</SelectItem>
-                {PRIORITIES.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    {PRIORITY_LABEL[p]}
+                {activePriorities.map((p) => (
+                  <SelectItem key={p.id} value={String(p.id)}>
+                    {p.nombre}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -421,9 +427,7 @@ function ActivitiesPage() {
                 )}
                 {paged.map((a) => {
                   const vencida =
-                    new Date(a.fechaLimite).getTime() < Date.now() &&
-                    a.estado !== "done" &&
-                    a.estado !== "cancelled";
+                    new Date(a.fechaLimite).getTime() < Date.now() && isOpen(a.estado_id);
                   return (
                     <TableRow key={a.id} className="hover:bg-muted/30">
                       <TableCell className="font-mono text-xs text-muted-foreground">

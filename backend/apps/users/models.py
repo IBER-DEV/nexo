@@ -2,8 +2,10 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.core.exceptions import ValidationError
 from django.db import models
 
+from apps.organizations.scoping import OrgQuerySet
 
-class UserManager(BaseUserManager):
+
+class UserManager(BaseUserManager.from_queryset(OrgQuerySet)):
     def create_user(self, email, nombre, password=None, **extra):
         if not email:
             raise ValueError("El email es obligatorio")
@@ -28,6 +30,15 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     email = models.EmailField(unique=True)
     nombre = models.CharField(max_length=200)
+    # Null solo para superusuarios de plataforma (operan vía el admin de
+    # Django); todo usuario del API pertenece a una organización.
+    organization = models.ForeignKey(
+        "organizations.Organization",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="users",
+    )
     rol = models.CharField(max_length=20, choices=Role.choices, default=Role.MEMBER)
     coordinador = models.ForeignKey(
         "self",
