@@ -6,6 +6,7 @@ Safe to run multiple times (idempotent).
 """
 from datetime import date, timedelta
 from django.core.management.base import BaseCommand
+from django.db import connection
 from apps.organizations.models import Organization
 from apps.users.models import User
 from apps.activities.org_templates import apply_template
@@ -234,6 +235,24 @@ class Command(BaseCommand):
         self.stdout.write("  ana.garcia@empresa.com / demo1234")
         self.stdout.write("  admin@acme.com / demo1234  (superuser, org 'acme' — flujo propio)")
         self.stdout.write("  (all team users use password: demo1234)")
+
+        self._fix_activity_id_sequence()
+
+    def _fix_activity_id_sequence(self) -> None:
+        """Los `pk=i` explícitos de arriba (y los `pk=9000+i` de Acme) dejan
+        la secuencia de Postgres del id de Activity atrasada — el próximo
+        INSERT sin pk explícito (cualquier actividad creada normalmente
+        desde la API) intentaría reusar un id ya ocupado y volaría con
+        IntegrityError. SQLite no tiene este problema (calcula MAX(rowid)+1
+        en cada insert), así que esto solo aplica a Postgres."""
+        if connection.vendor != "postgresql":
+            return
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT setval(pg_get_serial_sequence('activities_activity', 'id'), "
+                "COALESCE((SELECT MAX(id) FROM activities_activity), 1), "
+                "(SELECT MAX(id) FROM activities_activity) IS NOT NULL)"
+            )
 
     def _seed_acme(self, today: date) -> int:
         """Segunda organización de demo: plantilla "kanban_simple" (4

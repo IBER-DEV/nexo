@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { setTokens, clearTokens, getAccessToken } from "@/lib/api";
 import type { User } from "@/lib/types";
 import { usersService } from "@/services/usersService";
@@ -38,6 +39,7 @@ function loadStoredUser(): User | null {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(() => loadStoredUser());
+  const qc = useQueryClient();
   const isAuthenticated = !!user && !!getAccessToken();
   const isAdmin = user?.rol === "admin";
   const isCoordinator = user?.rol === "coordinator";
@@ -47,10 +49,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const handler = () => {
       localStorage.removeItem(USER_KEY);
       setUser(null);
+      // Sin esto, React Query sigue sirviendo (workspace, actividades,
+      // usuarios...) del usuario/organización anterior hasta que cada query
+      // refetchee por su cuenta — con staleTime: Infinity en workspace,
+      // eso podía no pasar nunca sin un refresh manual.
+      qc.clear();
     };
     window.addEventListener("auth:logout", handler);
     return () => window.removeEventListener("auth:logout", handler);
-  }, []);
+  }, [qc]);
 
   useEffect(() => {
     if (!getAccessToken()) return;
@@ -88,6 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       );
     }
     const data = (await res.json()) as { access: string; refresh: string; user: User };
+    qc.clear(); // descarta cualquier caché de una sesión/organización anterior
     setTokens(data.access, data.refresh);
     localStorage.setItem(USER_KEY, JSON.stringify(data.user));
     setUser(data.user);
@@ -97,6 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearTokens();
     localStorage.removeItem(USER_KEY);
     setUser(null);
+    qc.clear();
   };
 
   return (
