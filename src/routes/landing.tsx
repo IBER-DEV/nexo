@@ -7,6 +7,7 @@ import Navbar from "@/components/landing/Navbar";
 import Hero from "@/components/landing/Hero";
 import BoardSimulator from "@/components/landing/BoardSimulator";
 import RoleSelector from "@/components/landing/RoleSelector";
+import NexoEngine from "@/components/landing/NexoEngine";
 import Roadmap from "@/components/landing/Roadmap";
 import Pricing from "@/components/landing/Pricing";
 import Footer from "@/components/landing/Footer";
@@ -73,6 +74,7 @@ function LandingPage() {
         <Hero />
         <BoardSimulator />
         <RoleSelector />
+        <NexoEngine />
         <Roadmap />
         <Pricing />
       </main>

@@ -7,6 +7,7 @@ import { NEXO_REPO_URL, NexoBrandMark } from "./NexoBrandMark";
 const LINKS = [
   { label: "Funciones", href: "#features" },
   { label: "Demo interactiva", href: "#demo" },
+  { label: "Motor", href: "#engine" },
   { label: "Roadmap", href: "#roadmap" },
   { label: "Precios", href: "#pricing" },
 ];
