@@ -430,7 +430,7 @@ function ActivitiesPage() {
                     new Date(a.fechaLimite).getTime() < Date.now() && isOpen(a.estado_id);
                   return (
                     <TableRow key={a.id} className="hover:bg-muted/30">
-                      <TableCell className="font-mono text-xs text-muted-foreground">
+                      <TableCell className="font-mono text-xs font-semibold text-primary">
                         {a.id}
                       </TableCell>
                       <TableCell className="text-sm">{a.empresa}</TableCell>

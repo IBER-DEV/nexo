@@ -211,6 +211,31 @@
 }
 .animate-fade-in { animation: fade-in 0.3s ease-out; }
 
+/* Dashboard "pulse band" — la firma visual de Nexo: un punto que recorre
+   el sparkline de progreso semanal real, como si el equipo tuviera latido. */
+@keyframes dot-move {
+  from { left: 0%; }
+  to { left: calc(100% - 10px); }
+}
+.pulse-dot { animation: dot-move 5s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-dot { animation: none; left: calc(50% - 5px); }
+}
+
+/* Glow ambiental compartido por todas las páginas de la app (ver _app.tsx)
+   — el mismo lenguaje visual del pulso, como una firma de marca constante
+   detrás del contenido, no solo en el dashboard. */
+@keyframes ambient-glow-pulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
+.ambient-glow { animation: ambient-glow-pulse 5s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-glow { animation: none; opacity: 0.75; }
+}
+
 /* Nexo loading mark — node scales in, three branches draw toward their
    satellites with a bounce, a brief pulse holds, then the whole mark and
    caption fade out together. 2.4s loop, from the Nexo Loading brand kit. */

@@ -107,6 +107,7 @@ function KanbanColumn({ state, items }: { state: WorkflowState; items: Activity[
     <Card
       ref={setNodeRef}
       className={`p-3 flex flex-col gap-3 min-h-[60vh] w-72 shrink-0 transition-colors ${isOver ? "ring-2 ring-primary/40" : ""}`}
+      style={{ borderTop: `3px solid ${state.color}` }}
     >
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
@@ -149,7 +150,7 @@ function KanbanCard({ activity, dragging = false }: { activity: Activity; draggi
       className={`group bg-card border border-border rounded-lg p-3 hover:border-primary/40 hover:shadow-sm transition-all cursor-grab active:cursor-grabbing ${dragging ? "shadow-xl ring-2 ring-primary/50" : ""}`}
     >
       <div className="flex items-start justify-between gap-2 mb-2">
-        <span className="text-[10px] font-mono text-muted-foreground">{activity.id}</span>
+        <span className="text-[10px] font-mono font-semibold text-primary">{activity.id}</span>
         <GripVertical className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
       </div>
       <p className="text-sm font-medium line-clamp-2 mb-3">{activity.nombre}</p>

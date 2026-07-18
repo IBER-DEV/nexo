@@ -41,16 +41,7 @@ import { MetricCard } from "@/components/dashboard/MetricCard";
 import type { Activity, ActivityInput } from "@/lib/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import {
-  CalendarPlus,
-  Upload,
-  Pencil,
-  Trash2,
-  ListTodo,
-  CheckCircle2,
-  Clock,
-  AlertTriangle,
-} from "lucide-react";
+import { CalendarPlus, Upload, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/providers/AuthProvider";
 import { useSound } from "@/providers/SoundProvider";
@@ -202,82 +193,60 @@ function PlaneacionPage() {
       <PageHeader
         title="Planeación semanal"
         description="Organiza el mes en semanas y gestiona las actividades"
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <Tabs
-              value={view}
-              onValueChange={(v) => setView(v as "semanas" | "cronograma" | "calendario")}
-            >
-              <TabsList>
-                <TabsTrigger value="semanas">Semanas</TabsTrigger>
-                <TabsTrigger value="cronograma">Cronograma</TabsTrigger>
-                <TabsTrigger value="calendario">Calendario</TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
-              <Upload className="h-4 w-4" /> Importar Excel
-            </Button>
-            <Button
-              className="gap-2"
-              onClick={() => openNew(1)}
-              data-cuelume-press
-              data-cuelume-release
-            >
-              <CalendarPlus className="h-4 w-4" /> Nueva actividad
-            </Button>
-          </div>
-        }
       />
 
-      <div key={view} className="animate-fade-in">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Tabs
+          value={view}
+          onValueChange={(v) => setView(v as "semanas" | "cronograma" | "calendario")}
+        >
+          <TabsList>
+            <TabsTrigger value="semanas">Semanas</TabsTrigger>
+            <TabsTrigger value="cronograma">Cronograma</TabsTrigger>
+            <TabsTrigger value="calendario">Calendario</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => setImportOpen(true)}>
+            <Upload className="h-4 w-4" /> Importar Excel
+          </Button>
+          <Button
+            size="sm"
+            className="gap-2"
+            onClick={() => openNew(1)}
+            data-cuelume-press
+            data-cuelume-release
+          >
+            <CalendarPlus className="h-4 w-4" /> Nueva actividad
+          </Button>
+        </div>
+      </div>
+
+      <div key={view} className="animate-fade-in space-y-6">
         {view === "semanas" ? (
           <>
-            <Card className="p-4">
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="min-w-[220px]">
-                  <label className="text-xs text-muted-foreground">Mes</label>
-                  <Input
-                    type="month"
-                    value={month}
-                    onChange={(e) => setMonth(e.target.value)}
-                    className="h-9"
-                  />
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {weeksToShow
-                    .filter((week) => weekExistsInMonth(month, week))
-                    .map((week) => weekRangeLabel(month, week))
-                    .join(" · ")}
-                </div>
-              </div>
-            </Card>
+            <div className="flex flex-wrap items-center gap-3">
+              <Input
+                type="month"
+                value={month}
+                onChange={(e) => setMonth(e.target.value)}
+                className="h-9 w-44"
+                aria-label="Mes"
+              />
+              <span className="text-xs text-muted-foreground">
+                {weeksToShow
+                  .filter((week) => weekExistsInMonth(month, week))
+                  .map((week) => weekRangeLabel(month, week))
+                  .join(" · ")}
+              </span>
+            </div>
 
             {!isLoading && monthStats.total > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <MetricCard
-                  label="Actividades del mes"
-                  value={monthStats.total}
-                  icon={ListTodo}
-                  accent="primary"
-                />
-                <MetricCard
-                  label="Completadas"
-                  value={monthStats.done}
-                  icon={CheckCircle2}
-                  accent="success"
-                />
-                <MetricCard
-                  label="Pendientes"
-                  value={monthStats.pending}
-                  icon={Clock}
-                  accent="info"
-                />
-                <MetricCard
-                  label="Vencidas"
-                  value={monthStats.overdue}
-                  icon={AlertTriangle}
-                  accent="danger"
-                />
+                <MetricCard label="Actividades del mes" value={monthStats.total} accent="primary" />
+                <MetricCard label="Completadas" value={monthStats.done} accent="success" />
+                <MetricCard label="Pendientes" value={monthStats.pending} accent="info" />
+                <MetricCard label="Vencidas" value={monthStats.overdue} accent="danger" />
               </div>
             )}
 
@@ -338,47 +307,46 @@ function PlaneacionPage() {
                             return (
                               <div
                                 key={activity.id}
-                                className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2 hover:bg-muted/30"
+                                className="group relative rounded-lg border border-border p-3 hover:bg-muted/30 transition-colors"
                               >
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-mono text-muted-foreground">
-                                      {activity.id}
-                                    </span>
-                                    <span className="text-sm font-medium truncate">
-                                      {activity.nombre}
-                                    </span>
-                                  </div>
-                                  <p className="text-xs text-muted-foreground mt-0.5">
-                                    {activity.responsable} · {activity.aplicacion}
-                                  </p>
+                                <div className="flex items-center gap-2 pr-14">
+                                  <span className="text-[10px] font-mono font-semibold text-primary shrink-0">
+                                    {activity.id}
+                                  </span>
+                                  <span className="text-sm font-medium truncate min-w-0">
+                                    {activity.nombre}
+                                  </span>
                                 </div>
-                                <div className="hidden lg:flex items-center gap-2 shrink-0">
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  {activity.responsable} · {activity.aplicacion}
+                                </p>
+                                <div className="flex items-center gap-1.5 flex-wrap mt-2">
                                   <PriorityBadge prioridadId={activity.prioridad_id} />
                                   <StatusBadge estadoId={activity.estado_id} />
                                 </div>
-                                <div
-                                  className={`text-xs tabular-nums hidden md:block shrink-0 ${vencida ? "text-destructive font-medium" : "text-muted-foreground"}`}
+                                <p
+                                  className={`text-[11px] tabular-nums mt-2 ${vencida ? "text-destructive font-medium" : "text-muted-foreground"}`}
                                 >
                                   {format(new Date(activity.fechaInicio), "d MMM", { locale: es })}{" "}
                                   -{" "}
                                   {format(new Date(activity.fechaLimite), "d MMM", { locale: es })}
-                                </div>
-                                <div className="flex items-center gap-1 shrink-0">
+                                </p>
+                                <div className="absolute top-2 right-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                   <Button
                                     size="icon"
                                     variant="ghost"
+                                    className="h-7 w-7"
                                     onClick={() => openEdit(activity)}
                                   >
-                                    <Pencil className="h-4 w-4" />
+                                    <Pencil className="h-3.5 w-3.5" />
                                   </Button>
                                   <Button
                                     size="icon"
                                     variant="ghost"
-                                    className="text-destructive"
+                                    className="h-7 w-7 text-destructive"
                                     onClick={() => setDeleting(activity)}
                                   >
-                                    <Trash2 className="h-4 w-4" />
+                                    <Trash2 className="h-3.5 w-3.5" />
                                   </Button>
                                 </div>
                               </div>
