@@ -30,6 +30,21 @@ class SignupEmailTests(APITestCase):
         res = self.client.post("/api/v1/auth/signup/", signup_payload(), format="json")
         self.assertFalse(res.data["user"]["email_verified"])
 
+    def test_email_provider_failure_does_not_break_signup(self):
+        """Regresión (encontrado en QA real con Resend caído/mal configurado):
+        el envío es best-effort — un proveedor 403 no puede tumbar un
+        registro ya confirmado."""
+        with mock.patch(
+            "apps.notifications.receivers.send_verification_email",
+            side_effect=RuntimeError("proveedor caído"),
+        ):
+            with self.captureOnCommitCallbacks(execute=True):
+                res = self.client.post(
+                    "/api/v1/auth/signup/", signup_payload(), format="json"
+                )
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED, res.data)
+        self.assertTrue(User.objects.filter(email=signup_payload()["email"]).exists())
+
     def test_verification_email_has_html_alternative_with_link(self):
         with self.captureOnCommitCallbacks(execute=True):
             self.client.post("/api/v1/auth/signup/", signup_payload(), format="json")

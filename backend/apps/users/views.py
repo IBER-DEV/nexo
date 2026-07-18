@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib.auth.tokens import default_token_generator
 from django.utils import timezone
 from django.utils.encoding import DjangoUnicodeDecodeError, force_str
@@ -30,6 +32,8 @@ from .serializers import (
     PasswordResetConfirmSerializer,
 )
 from .permissions import IsAdminOrCoordinator, IsAdminRole
+
+logger = logging.getLogger(__name__)
 
 RESEND_THROTTLE_SECONDS = 60
 
@@ -167,7 +171,14 @@ class ResendVerificationView(APIView):
                     {"detail": f"Espera {wait}s antes de reenviar."},
                     status=status.HTTP_429_TOO_MANY_REQUESTS,
                 )
-        send_verification_email(user)
+        try:
+            send_verification_email(user)
+        except Exception:
+            logger.exception("Fallo el reenvío de verificación a %s", user.email)
+            return response.Response(
+                {"detail": "No pudimos enviar el correo ahora mismo. Intenta más tarde."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
         return response.Response({"detail": "Correo de verificación reenviado."})
 
 
