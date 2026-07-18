@@ -27,10 +27,18 @@ class ActivitySerializer(serializers.ModelSerializer):
 
     # Catálogos: en el wire viajan como strings (nombre); internamente son FKs
     # org-scoped con get-or-create. write_only porque la lectura se arma en
-    # to_representation (el FK puede ser NULL).
-    empresa = serializers.CharField(max_length=100, write_only=True)
-    proceso = serializers.CharField(max_length=100, write_only=True)
-    aplicacion = serializers.CharField(max_length=100, write_only=True)
+    # to_representation (el FK puede ser NULL). Los cuatro son opcionales:
+    # no toda organización maneja el concepto de "empresa cliente" o
+    # necesita separar por proceso/aplicación.
+    empresa = serializers.CharField(
+        max_length=100, write_only=True, allow_blank=True, required=False
+    )
+    proceso = serializers.CharField(
+        max_length=100, write_only=True, allow_blank=True, required=False
+    )
+    aplicacion = serializers.CharField(
+        max_length=100, write_only=True, allow_blank=True, required=False
+    )
     stakeholder = serializers.CharField(
         max_length=100, write_only=True, allow_blank=True, required=False
     )
@@ -135,19 +143,15 @@ class ActivitySerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         user = getattr(request, "user", None) if request is not None else None
 
-        # Strings del wire → FKs de catálogo dentro de la org.
+        # Strings del wire → FKs de catálogo dentro de la org. Los cuatro
+        # aceptan vacío ("" o ausente): no toda organización usa estos
+        # conceptos — se guardan como NULL en ese caso.
         if "empresa" in attrs:
             attrs["cliente"] = self._get_or_create_catalog(Cliente, attrs.pop("empresa"))
-            if attrs["cliente"] is None:
-                raise serializers.ValidationError({"empresa": "Empresa requerida"})
         if "proceso" in attrs:
             attrs["proceso"] = self._get_or_create_catalog(Proceso, attrs.pop("proceso"))
-            if attrs["proceso"] is None:
-                raise serializers.ValidationError({"proceso": "Proceso requerido"})
         if "aplicacion" in attrs:
             attrs["aplicacion"] = self._get_or_create_catalog(Aplicacion, attrs.pop("aplicacion"))
-            if attrs["aplicacion"] is None:
-                raise serializers.ValidationError({"aplicacion": "Aplicacion requerida"})
         if "stakeholder" in attrs:
             attrs["stakeholder"] = self._get_or_create_catalog(
                 Stakeholder, attrs.pop("stakeholder")
