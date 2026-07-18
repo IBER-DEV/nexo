@@ -8,7 +8,7 @@ from datetime import date, timedelta
 from django.core.management.base import BaseCommand
 from apps.organizations.models import Organization
 from apps.users.models import User
-from apps.activities.master_defaults import create_default_masters
+from apps.activities.org_templates import apply_template
 from apps.activities.models import (
     Activity,
     ActivityType,
@@ -152,7 +152,7 @@ class Command(BaseCommand):
             ]).update(coordinador=carlos, rol="member")
 
         self.stdout.write("Seeding workflow masters...")
-        create_default_masters(org, WorkflowState, Priority, ActivityType)
+        apply_template(org, "ti_clasico", WorkflowState, Priority, ActivityType)
         states = {s.slug: s for s in WorkflowState.objects.for_org(org)}
         priorities = {p.slug: p for p in Priority.objects.for_org(org)}
 
@@ -236,8 +236,9 @@ class Command(BaseCommand):
         self.stdout.write("  (all team users use password: demo1234)")
 
     def _seed_acme(self, today: date) -> int:
-        """Segunda organización de demo: prefijo y flujo de estados propios
-        (4, no 6) para probar aislamiento y Kanban dinámico a mano."""
+        """Segunda organización de demo: plantilla "kanban_simple" (4
+        estados, no 6) para probar aislamiento, Kanban dinámico y las
+        plantillas de flujo a mano."""
         self.stdout.write("\nSeeding second organization (Acme Ltd)...")
         acme, acme_created = Organization.objects.get_or_create(
             slug="acme",
@@ -256,37 +257,7 @@ class Command(BaseCommand):
             acme_admin.save()
             self.stdout.write("  Created admin@acme.com (superuser)")
 
-        # slug, nombre, categoria, color, orden, is_initial, mostrar_en_kanban
-        ACME_STATES = [
-            ("pendiente", "Pendiente", "todo", "#7C8A93", 0, True, True),
-            ("en-curso", "En curso", "active", "#29AFF5", 1, False, True),
-            ("hecho", "Hecho", "done", "#22B573", 2, False, True),
-            ("descartado", "Descartado", "cancelled", "#E5484D", 3, False, False),
-        ]
-        for slug, nombre, categoria, color, orden, is_initial, mostrar in ACME_STATES:
-            WorkflowState.objects.get_or_create(
-                organization=acme,
-                slug=slug,
-                defaults={
-                    "nombre": nombre,
-                    "categoria": categoria,
-                    "color": color,
-                    "orden": orden,
-                    "is_initial": is_initial,
-                    "mostrar_en_kanban": mostrar,
-                },
-            )
-        ACME_PRIORITIES = [
-            ("baja", "Baja", "#7C8A93", 0, False),
-            ("normal", "Normal", "#29AFF5", 1, True),
-            ("alta", "Alta", "#E5484D", 2, False),
-        ]
-        for slug, nombre, color, orden, is_default in ACME_PRIORITIES:
-            Priority.objects.get_or_create(
-                organization=acme,
-                slug=slug,
-                defaults={"nombre": nombre, "color": color, "orden": orden, "is_default": is_default},
-            )
+        apply_template(acme, "kanban_simple", WorkflowState, Priority, ActivityType)
 
         acme_states = {s.slug: s for s in WorkflowState.objects.for_org(acme)}
         acme_priorities = {p.slug: p for p in Priority.objects.for_org(acme)}

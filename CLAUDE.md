@@ -45,7 +45,7 @@ python manage.py migrate && python manage.py seed_data && python manage.py runse
 # Backend — Docker (Postgres real, hot-reload)
 docker compose up --build           # localhost:8000
 
-# Tests backend (67 tests: auth, CRUD, visibilidad, tenancy, maestros, sync, organización)
+# Tests backend (83 tests: auth, CRUD, visibilidad, tenancy, maestros, sync, organización, plantillas)
 docker compose exec -T backend python manage.py test
 
 # Sync AppSheet (Google Sheets) — requiere GOOGLE_SHEETS_CREDENTIALS_JSON configurado
@@ -140,13 +140,22 @@ Organización. Detalle de decisiones y las 7 etapas (E0-E5) en
 `~/.claude/plans/vamos-a-empezar-la-imperative-pixel.md`; contexto de negocio y
 diferenciadores detectados en el camino, en `docs/ROADMAP.md`.
 
+**Plantillas de flujo** (`backend/apps/activities/workflow_templates/*.json`, cargadas por
+`org_templates.py`): al crear una `Organization` desde el admin de Django, un campo
+"Plantilla de flujo" aplica un preset (`ti_clasico`/`kanban_simple`/`mesa_ayuda`) vía
+`apply_template()` — la misma función que usa `seed_data`. Las plantillas son datos (JSON
+versionado en git con metadata `version`/`display_name`/`recommended_for`), no tuplas en
+Python — agregar una nueva es agregar un archivo, el loader la descubre por `glob` y valida
+sus invariantes al arrancar (ver `workflow_templates/README.md`). `apply_template` **copia**
+las filas a la org (nunca una referencia compartida) y solo se llama al crear; editar una org
+existente no reaplica nada. Es el "onboarding" real hasta que exista signup self-service (ver
+ROADMAP, Fase 1 punto 4).
+
 ## Deuda conocida / pendiente
 
 - Sin tests de frontend (solo backend tiene suite).
 - Catálogos (Cliente/Proceso/Aplicación/Stakeholder) son tablas tipadas fijas — un catálogo
   nuevo (Proveedor, Sucursal...) requiere migración. Un modelo genérico tipo EAV lo evitaría;
   decisión consciente de no hacerlo sin un caso de cliente real (ver ROADMAP, Fase 1 punto 3).
-- Sin plantillas de flujo al crear una organización (siempre parte de cero en maestros) —
-  ver ROADMAP, Fase 1 punto 2.
 - `.agents/skills/` en el repo es una librería de referencia para asistentes de IA, no
   código del proyecto — está en `.gitignore` a propósito.

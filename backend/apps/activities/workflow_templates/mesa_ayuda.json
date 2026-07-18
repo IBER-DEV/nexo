@@ -1,0 +1,82 @@
+{
+  "slug": "mesa_ayuda",
+  "version": 1,
+  "display_name": "Mesa de ayuda",
+  "description": "Flujo de service desk: nuevo, en atención, esperando al cliente, resuelto, cerrado, cancelado — con tipos de ticket (incidente, solicitud, consulta, problema).",
+  "recommended_for": ["Soporte", "Service desk", "Atención al cliente"],
+  "is_system": true,
+  "states": [
+    {
+      "slug": "nuevo",
+      "nombre": "Nuevo",
+      "categoria": "todo",
+      "color": "#7C8A93",
+      "orden": 0,
+      "is_initial": true,
+      "mostrar_en_kanban": true,
+      "sheet_phase": ""
+    },
+    {
+      "slug": "en-atencion",
+      "nombre": "En atención",
+      "categoria": "active",
+      "color": "#29AFF5",
+      "orden": 1,
+      "is_initial": false,
+      "mostrar_en_kanban": true,
+      "sheet_phase": ""
+    },
+    {
+      "slug": "esperando-cliente",
+      "nombre": "Esperando al cliente",
+      "categoria": "active",
+      "color": "#5B6EF5",
+      "orden": 2,
+      "is_initial": false,
+      "mostrar_en_kanban": true,
+      "sheet_phase": ""
+    },
+    {
+      "slug": "resuelto",
+      "nombre": "Resuelto",
+      "categoria": "done",
+      "color": "#22B573",
+      "orden": 3,
+      "is_initial": false,
+      "mostrar_en_kanban": true,
+      "sheet_phase": ""
+    },
+    {
+      "slug": "cerrado",
+      "nombre": "Cerrado",
+      "categoria": "done",
+      "color": "#7C8A93",
+      "orden": 4,
+      "is_initial": false,
+      "mostrar_en_kanban": false,
+      "sheet_phase": ""
+    },
+    {
+      "slug": "cancelado",
+      "nombre": "Cancelado",
+      "categoria": "cancelled",
+      "color": "#E5484D",
+      "orden": 5,
+      "is_initial": false,
+      "mostrar_en_kanban": false,
+      "sheet_phase": ""
+    }
+  ],
+  "priorities": [
+    { "slug": "baja", "nombre": "Baja", "color": "#7C8A93", "orden": 0, "is_default": false },
+    { "slug": "media", "nombre": "Media", "color": "#29AFF5", "orden": 1, "is_default": true },
+    { "slug": "alta", "nombre": "Alta", "color": "#F0A93B", "orden": 2, "is_default": false },
+    { "slug": "urgente", "nombre": "Urgente", "color": "#E5484D", "orden": 3, "is_default": false }
+  ],
+  "types": [
+    { "slug": "incidente", "nombre": "Incidente", "color": "#E5484D", "orden": 0 },
+    { "slug": "solicitud", "nombre": "Solicitud", "color": "#29AFF5", "orden": 1 },
+    { "slug": "consulta", "nombre": "Consulta", "color": "#5B6EF5", "orden": 2 },
+    { "slug": "problema", "nombre": "Problema", "color": "#F0A93B", "orden": 3 }
+  ]
+}

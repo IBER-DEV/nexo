@@ -92,10 +92,30 @@ Es el ~60% del esfuerzo total de toda la estrategia. Orden:
      el dominio si la concurrencia lo exige.
    - Ver plan completo y decisiones de diseño en
      `~/.claude/plans/vamos-a-empezar-la-imperative-pixel.md`.
-2. **Plantillas de flujo al onboarding** (pendiente) — al crear una organización, elegir un
-   preset de maestros ("TI clásico" = el flujo actual de 6 estados, "Kanban simple" = 3-4
-   estados, "Mesa de ayuda"...). Barato de construir ahora que los maestros son datos —
-   diferenciador frente a Jira, donde configurar un workflow es notoriamente doloroso.
+2. **Plantillas de flujo al onboarding** — ✅ **Completado (2026-07-17).** Tres presets como
+   **archivos de datos** (JSON, no Python) en `backend/apps/activities/workflow_templates/`:
+   **TI clásico** (los 6 estados de siempre), **Kanban simple** (4: pendiente/en curso/hecho/
+   descartado — usado por la org "Acme Ltd" del seed) y **Mesa de ayuda** (6, estilo service
+   desk, con tipos de ticket incidente/solicitud/consulta/problema).
+   - Decisión explícita (feedback de revisión): las plantillas NO son tuplas hardcodeadas en
+     un módulo Python — son archivos `.json` versionados en git, con metadata
+     (`version`, `display_name`, `description`, `recommended_for`, `is_system`). Agregar una
+     plantilla nueva = agregar un archivo; `org_templates.py` (el loader) las descubre por
+     `glob` al arrancar y valida sus invariantes (1 estado inicial, ≥1 estado `done`, 1
+     prioridad default, slugs únicos) fallando ruidosamente si una plantilla está mal
+     formada. Ver `workflow_templates/README.md` para el esquema completo — es también la
+     base de un futuro marketplace de plantillas de la comunidad (`is_system: false`).
+   - Aplicar una plantilla **copia** sus filas como estados/prioridades/tipos propios de la
+     organización — nunca hay una referencia compartida entre orgs ni con el archivo de la
+     plantilla; una org es 100% dueña de sus maestros apenas se crea
+     (`apps.activities.org_templates.apply_template`, usado por `seed_data` y por el admin).
+   - El "onboarding" real hoy es el admin de Django (el punto 4 — signup self-service — sigue
+     sin construirse): un campo "Plantilla de flujo" en el alta de `Organization` aplica el
+     preset elegido justo después de crear la org (`OrganizationAdmin.save_model`), y solo en
+     el alta — editar una org existente no reaplica ni pisa nada. Sigue siendo "nombre → elegir
+     plantilla → crear", sin pasos adicionales.
+   - Cuando exista signup self-service (punto 4), el mismo `apply_template` se reutiliza ahí
+     — el mecanismo no depende de dónde se crea la organización.
 3. **Catálogos genéricos / campos personalizados** (pendiente, deuda consciente) — hoy
    Cliente/Proceso/Aplicación/Stakeholder son tablas tipadas fijas; un catálogo nuevo
    (Proveedor, Sucursal, Equipo...) requiere migración. Un modelo EAV (Catalog/CatalogItem)
@@ -134,7 +154,6 @@ Jira/Azure DevOps ya está en el modelo de datos, no es una promesa de roadmap s
 
 **Estado: 💤 No empezar todavía.** Se construye contra el primer contrato real, no por
 adelantado — llegan solos si Community/Cloud funcionan.
-
 - SSO/SAML (`python3-saml` o Keycloak como broker), SCIM para provisioning
 - Audit log: tabla append-only de quién-hizo-qué (el patrón de los `signals` de
   `apps/activities` para el sync de AppSheet es el mismo mecanismo, ya probado)
@@ -160,3 +179,15 @@ para no tener que re-explicarla en la próxima sesión.
   ver detalle en la sección de Fase 1 arriba. Decisión tomada de no meter RBAC configurable
   en este bloque (queda para Fase 2) para no mezclar dos cambios estructurales grandes a la
   vez.
+- **2026-07-17** — Identidad visual del dashboard (banda de pulso, conclusiones calculadas
+  sobre datos reales, carga por persona) y sección "NEXO ENGINE" en la landing, basados en el
+  brand kit de Claude Design del usuario. En NEXO ENGINE, de 9 capacidades listadas solo 3
+  se marcan "Disponible" (Open Source, Google Sheets, API REST) — el resto queda como
+  "Roadmap" explícito, siguiendo la misma disciplina de no prometer fechas que ya usan
+  Roadmap.tsx y Pricing.tsx.
+- **2026-07-17** — Fase 1 punto 2 (plantillas de flujo) completado: 3 presets
+  (`ti_clasico`/`kanban_simple`/`mesa_ayuda`) aplicables al crear una organización desde el
+  admin de Django — el "onboarding" real hasta que exista signup self-service (punto 4).
+  Rediseñado tras revisión: plantillas como archivos JSON versionables (no Python), copiadas
+  (nunca referenciadas) a cada organización, aplicadas solo al crear — sienta la base para un
+  futuro marketplace de plantillas de la comunidad sin tocar el modelo de datos.
