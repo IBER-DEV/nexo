@@ -109,7 +109,7 @@ export interface ActivityMetaOptions {
   stakeholders: string[];
 }
 
-export type UserRole = "admin" | "coordinator" | "member";
+export type UserRole = "owner" | "admin" | "coordinator" | "member";
 
 export interface User {
   id: number;
@@ -119,9 +119,11 @@ export interface User {
   iniciales: string;
   coordinador_id?: number | null;
   coordinador_nombre?: string | null;
+  email_verified: boolean;
 }
 
 export const ROLE_LABEL: Record<UserRole, string> = {
+  owner: "Owner",
   admin: "Administrador",
   coordinator: "Coordinador",
   member: "Miembro",

@@ -1,5 +1,9 @@
+from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
+from apps.activities.org_templates import DEFAULT_TEMPLATE, TEMPLATE_CHOICES
+
 from .models import User
 
 
@@ -7,6 +11,7 @@ class UserSerializer(serializers.ModelSerializer):
     iniciales = serializers.ReadOnlyField()
     coordinador_id = serializers.IntegerField(read_only=True, allow_null=True)
     coordinador_nombre = serializers.SerializerMethodField()
+    email_verified = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -18,6 +23,7 @@ class UserSerializer(serializers.ModelSerializer):
             "iniciales",
             "coordinador_id",
             "coordinador_nombre",
+            "email_verified",
         ]
         read_only_fields = ["id", "iniciales"]
 
@@ -25,6 +31,9 @@ class UserSerializer(serializers.ModelSerializer):
         if obj.coordinador_id:
             return obj.coordinador.nombre
         return None
+
+    def get_email_verified(self, obj: User) -> bool:
+        return obj.email_verified_at is not None
 
 
 class UserTeamUpdateSerializer(serializers.ModelSerializer):
@@ -68,6 +77,37 @@ class UserTeamUpdateSerializer(serializers.ModelSerializer):
         instance.full_clean()
         instance.save()
         return instance
+
+
+class SignupSerializer(serializers.Serializer):
+    """Formulario mínimo del signup self-service: Email, Contraseña, Tu
+    nombre, Nombre de organización, Plantilla → Entrar."""
+
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True, trim_whitespace=False)
+    nombre = serializers.CharField(max_length=200)
+    nombre_org = serializers.CharField(max_length=200)
+    template = serializers.ChoiceField(
+        choices=TEMPLATE_CHOICES, default=DEFAULT_TEMPLATE
+    )
+
+    def validate_password(self, value: str) -> str:
+        validate_password(value)
+        return value
+
+
+class PasswordForgotSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    uid = serializers.CharField()
+    token = serializers.CharField()
+    new_password = serializers.CharField(write_only=True, trim_whitespace=False)
+
+    def validate_new_password(self, value: str) -> str:
+        validate_password(value)
+        return value
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):

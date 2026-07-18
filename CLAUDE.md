@@ -141,15 +141,47 @@ Organización. Detalle de decisiones y las 7 etapas (E0-E5) en
 diferenciadores detectados en el camino, en `docs/ROADMAP.md`.
 
 **Plantillas de flujo** (`backend/apps/activities/workflow_templates/*.json`, cargadas por
-`org_templates.py`): al crear una `Organization` desde el admin de Django, un campo
-"Plantilla de flujo" aplica un preset (`ti_clasico`/`kanban_simple`/`mesa_ayuda`) vía
-`apply_template()` — la misma función que usa `seed_data`. Las plantillas son datos (JSON
-versionado en git con metadata `version`/`display_name`/`recommended_for`), no tuplas en
-Python — agregar una nueva es agregar un archivo, el loader la descubre por `glob` y valida
-sus invariantes al arrancar (ver `workflow_templates/README.md`). `apply_template` **copia**
-las filas a la org (nunca una referencia compartida) y solo se llama al crear; editar una org
-existente no reaplica nada. Es el "onboarding" real hasta que exista signup self-service (ver
-ROADMAP, Fase 1 punto 4).
+`org_templates.py`): al crear una `Organization` (desde el admin de Django o desde el signup
+self-service), un campo/paso "Plantilla de flujo" aplica un preset
+(`ti_clasico`/`kanban_simple`/`mesa_ayuda`) vía `apply_template()` — la misma función que usa
+`seed_data`. Las plantillas son datos (JSON versionado en git con metadata
+`version`/`display_name`/`recommended_for`), no tuplas en Python — agregar una nueva es
+agregar un archivo, el loader la descubre por `glob` y valida sus invariantes al arrancar (ver
+`workflow_templates/README.md`). `apply_template` **copia** las filas a la org (nunca una
+referencia compartida) y solo se llama al crear; editar una org existente no reaplica nada.
+
+## Fase 1 — Punto 4: Signup self-service (COMPLETADO — 2026-07-18)
+
+Registro público sin intervención humana: `POST /api/v1/auth/signup/` (email, password, tu
+nombre, nombre de organización, plantilla) crea `Organization` + aplica la plantilla + crea el
+primer `User` como `rol=owner`, todo en una transacción (`apps/organizations/signup.py`), y
+responde con tokens JWT para auto-login inmediato. Alcance: Identidad completa
+(signup/login/logout/forgot/reset) + Organización (nombre→slug→plantilla) + auto-login directo
+al dashboard. **Invitaciones a un segundo usuario quedan fuera**, para cuando haya un caso real.
+
+- **Rol `owner`**: nuevo valor en `User.Role`, con `UniqueConstraint` (máximo un owner activo
+  por org). `Organization.owner` es una propiedad derivada (busca al `User` con ese rol), no
+  un FK — RBAC completo (Owner/Admin/Manager/Member/Viewer) sigue siendo Fase 2.
+- **Idempotencia**: el ancla es el email (`unique=True`), no el nombre de la organización —
+  nombres duplicados se resuelven con sufijo de slug (`acme`, `acme-2`); un doble-submit con el
+  mismo email nunca duplica una organización.
+- **Verificación de email no bloqueante**: banner persistente tras el login, nunca gatea el
+  flujo. Token stateless (`django.core.signing.TimestampSigner`); reset de contraseña reutiliza
+  `default_token_generator` de Django en vez de un segundo esquema de firma.
+- **Email transaccional** (primera integración del proyecto): Resend vía `django-anymail`,
+  `EMAIL_BACKEND` de consola por defecto en dev/tests, Resend solo en `prod.py` — ver variables
+  nuevas en `backend/.env.example`.
+- **Dominio separado del proveedor**: `SignupService.register()` nunca importa nada de correo;
+  al confirmar la transacción emite un signal Django (`user_registered`,
+  `apps/organizations/signals.py`) que la app nueva `apps/notifications/` escucha para enviar
+  el correo real — mismo patrón que `apps/activities/signals.py` usa para el push a Sheets.
+- **Funnel de producto** (`apps/organizations/funnel.py`): `logger.info` estructurado, no un
+  modelo en DB — eventos `signup_started`/`signup_completed`/`email_sent`/`email_confirmed`/
+  `first_activity_created`.
+
+Detalle completo y decisiones confirmadas con el usuario en
+`~/.claude/plans/vamos-a-empezar-la-imperative-pixel.md`; contexto de negocio en
+`docs/ROADMAP.md`, Fase 1 punto 4.
 
 ## Deuda conocida / pendiente
 
@@ -157,5 +189,7 @@ ROADMAP, Fase 1 punto 4).
 - Catálogos (Cliente/Proceso/Aplicación/Stakeholder) son tablas tipadas fijas — un catálogo
   nuevo (Proveedor, Sucursal...) requiere migración. Un modelo genérico tipo EAV lo evitaría;
   decisión consciente de no hacerlo sin un caso de cliente real (ver ROADMAP, Fase 1 punto 3).
+- Invitaciones al equipo (Bloque C del signup) no están construidas — el único usuario de una
+  organización nueva es su Owner; agregar miembros sigue siendo tarea del admin de Django.
 - `.agents/skills/` en el repo es una librería de referencia para asistentes de IA, no
   código del proyecto — está en `.gitignore` a propósito.

@@ -3,15 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Mail, Lock, ArrowRight } from "lucide-react";
 import { NexoMark } from "@/components/brand/NexoMark";
 import { useState } from "react";
@@ -34,7 +25,6 @@ function LoginPage() {
   const [email, setEmail] = useState("admin@empresa.com");
   const [password, setPassword] = useState("demo1234");
   const [loading, setLoading] = useState(false);
-  const [forgotOpen, setForgotOpen] = useState(false);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,13 +95,9 @@ function LoginPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Contraseña</Label>
-                <button
-                  type="button"
-                  className="text-xs text-primary hover:underline"
-                  onClick={() => setForgotOpen(true)}
-                >
+                <Link to="/forgot-password" className="text-xs text-primary hover:underline">
                   ¿Olvidaste tu contraseña?
-                </button>
+                </Link>
               </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -141,27 +127,18 @@ function LoginPage() {
             Demo · <code className="font-mono">admin@empresa.com</code> /{" "}
             <code className="font-mono">demo1234</code>
           </p>
+          <p className="mt-2 text-center text-xs text-muted-foreground">
+            ¿No tienes cuenta?{" "}
+            <Link to="/signup" className="text-primary hover:underline">
+              Crear una
+            </Link>
+          </p>
         </Card>
 
         <p className="mt-6 text-center text-xs text-muted-foreground">
           © {new Date().getFullYear()} Nexo · Gestión de actividades TI
         </p>
       </div>
-
-      <AlertDialog open={forgotOpen} onOpenChange={setForgotOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Recuperar contraseña</AlertDialogTitle>
-            <AlertDialogDescription>
-              Nexo no tiene recuperación automática por correo en esta versión. Contacta al
-              administrador del área de sistemas para que restablezca tu acceso.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction>Entendido</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

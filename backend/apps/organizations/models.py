@@ -57,3 +57,10 @@ class Organization(models.Model):
         if name in self.feature_flags:
             return bool(self.feature_flags[name])
         return bool(PLAN_DEFAULT_FLAGS.get(self.plan, {}).get(name, False))
+
+    @property
+    def owner(self):
+        """El usuario con rol=owner de esta organización (o None). Derivado,
+        no un FK propio: evita el bootstrap circular de una Organization que
+        necesitaría existir antes que el User que apunta a ella."""
+        return self.users.filter(rol="owner", is_active=True).first()

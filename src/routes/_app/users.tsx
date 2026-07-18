@@ -203,7 +203,7 @@ function UsersPage() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={u.rol === "admin" ? "default" : "secondary"}>
+                  <Badge variant={u.rol === "admin" || u.rol === "owner" ? "default" : "secondary"}>
                     {ROLE_LABEL[u.rol]}
                   </Badge>
                 </TableCell>

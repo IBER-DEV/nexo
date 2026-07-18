@@ -3,6 +3,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { NexoLoader } from "@/components/brand/NexoLoader";
+import { EmailVerificationBanner } from "@/components/layout/EmailVerificationBanner";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { WorkspaceProvider, useWorkspace } from "@/providers/WorkspaceProvider";
@@ -68,6 +69,7 @@ function WorkspaceGate({ pathname }: { pathname: string }) {
       <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
         <SidebarInset className="flex flex-col min-w-0 flex-1">
+          <EmailVerificationBanner />
           <Topbar />
           <main className="relative flex-1 p-4 md:p-6 lg:p-8">
             {/* Glow ambiental — la misma firma visual del pulso del dashboard,

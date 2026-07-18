@@ -61,8 +61,8 @@ Detalle completo con verificación: ver el artifact publicado en esa sesión, o 
 
 ## Fase 1 — Fundaciones SaaS (habilita el plan Cloud)
 
-**Estado: 🚧 En progreso.** Bloque 1 (multi-tenancy + maestros configurables) completado —
-ver detalle abajo. Bloques 2-4 (signup, billing, hosting) sin diseñar todavía.
+**Estado: 🚧 En progreso.** Bloques 1, 2 y 4 (multi-tenancy, plantillas, signup self-service)
+completados — ver detalle abajo. Billing y hosting (puntos 5-6) sin diseñar todavía.
 
 Es el ~60% del esfuerzo total de toda la estrategia. Orden:
 
@@ -109,21 +109,57 @@ Es el ~60% del esfuerzo total de toda la estrategia. Orden:
      organización — nunca hay una referencia compartida entre orgs ni con el archivo de la
      plantilla; una org es 100% dueña de sus maestros apenas se crea
      (`apps.activities.org_templates.apply_template`, usado por `seed_data` y por el admin).
-   - El "onboarding" real hoy es el admin de Django (el punto 4 — signup self-service — sigue
-     sin construirse): un campo "Plantilla de flujo" en el alta de `Organization` aplica el
-     preset elegido justo después de crear la org (`OrganizationAdmin.save_model`), y solo en
-     el alta — editar una org existente no reaplica ni pisa nada. Sigue siendo "nombre → elegir
-     plantilla → crear", sin pasos adicionales.
-   - Cuando exista signup self-service (punto 4), el mismo `apply_template` se reutiliza ahí
-     — el mecanismo no depende de dónde se crea la organización.
+   - El admin de Django sigue siendo una vía de alta (útil para orgs internas/soporte): un
+     campo "Plantilla de flujo" en el alta de `Organization` aplica el preset elegido justo
+     después de crear la org (`OrganizationAdmin.save_model`), y solo en el alta — editar una
+     org existente no reaplica ni pisa nada.
+   - El signup self-service (punto 4, completado) reutiliza exactamente el mismo
+     `apply_template` — el mecanismo nunca dependió de dónde se crea la organización.
 3. **Catálogos genéricos / campos personalizados** (pendiente, deuda consciente) — hoy
    Cliente/Proceso/Aplicación/Stakeholder son tablas tipadas fijas; un catálogo nuevo
    (Proveedor, Sucursal, Equipo...) requiere migración. Un modelo EAV (Catalog/CatalogItem)
    lo evitaría, pero para el MVP los FKs tipados ganan en simplicidad e integridad — no
    revisar sin un caso de cliente real que lo pida.
-4. **Signup self-service + onboarding** — hoy los usuarios los crea un admin (`seed_data`,
-   admin de Django). Cloud necesita registro público, verificación de email, invitaciones al
-   equipo, selección de plantilla de flujo (ver punto 2), términos/privacidad, rate limiting.
+4. **Signup self-service + onboarding** — ✅ **Completado (2026-07-18)**, alcance: Bloque A
+   (Identidad: signup/login/logout/forgot/reset) + Bloque B (Organización: nombre→slug→
+   plantilla→crear) + Bloque D mínimo (auto-login directo al dashboard). **Bloque C
+   (invitaciones al equipo) queda fuera**, para cuando exista un caso real de invitar a un
+   segundo usuario — no bloqueaba el criterio de aceptación de este bloque.
+   - `POST /api/v1/auth/signup/` (público): crea `Organization` + aplica la plantilla elegida
+     (reutiliza `apply_template` sin tocarlo) + crea el primer `User` con `rol=owner`, todo en
+     una sola `@transaction.atomic` (`apps/organizations/signup.py`) — si cualquier paso
+     falla, no queda ni una organización huérfana ni un usuario sin organización. Responde con
+     tokens JWT listos para auto-login (mismo flujo que `/auth/token/`).
+   - **Idempotencia**: el ancla es el email (`unique=True` + `IntegrityError` atrapado), no el
+     nombre de la organización — un doble-submit con el mismo correo nunca duplica una org.
+     Nombres de organización duplicados (dos tenants distintos que se llaman igual) se
+     resuelven con sufijo de slug automático (`acme`, `acme-2`...).
+   - **Rol `owner`**: nuevo valor en `User.Role` (antes solo admin/coordinator/member), con
+     `UniqueConstraint` en DB que garantiza máximo un owner activo por organización.
+     `Organization.owner` es una **propiedad derivada** (busca el `User` con `rol=owner`), no
+     un FK nuevo — evita el bootstrap circular de una organización que necesitaría existir
+     antes que el usuario que apunta a ella. RBAC completo (Owner/Admin/Manager/Member/Viewer)
+     sigue siendo Fase 2; hoy Owner se comporta como Admin, solo con la garantía de unicidad.
+   - **Verificación de email no bloqueante**: registro → organización → auto-login → dashboard
+     con un banner persistente ("Confirma tu correo") que nunca gatea el flujo — se decidió
+     explícitamente NO bloquear por email para no aumentar el abandono del registro. Token
+     stateless (`django.core.signing.TimestampSigner`, 3 días de validez, confirmar dos veces
+     es idempotente). Reset de contraseña reutiliza el mecanismo ya probado de Django
+     (`default_token_generator` + `urlsafe_base64_encode`) en vez de reinventar un segundo
+     esquema de firma.
+   - **Email transaccional**: primera integración real del proyecto (antes no existía nada).
+     Resend vía `django-anymail`, con `EMAIL_BACKEND` de consola por defecto en dev/tests (cero
+     fricción, cero cuenta necesaria para desarrollar) y Resend solo en `prod.py`.
+   - **Dominio separado del proveedor**: `SignupService.register()` nunca importa nada de
+     correo — al confirmar la transacción emite un signal Django (`user_registered`, en
+     `apps/organizations/signals.py`, mismo patrón que el push a Google Sheets de
+     `apps/activities/signals.py`) que un listener en la app nueva `apps/notifications/`
+     escucha para enviar el correo real. Facilita cambiar de proveedor sin tocar el dominio.
+   - **Funnel de producto**: `apps/organizations/funnel.py` — `logger.info` estructurado, no
+     un modelo en base de datos (es v1, para entender el embudo, no para auditoría). Eventos:
+     `signup_started`, `signup_completed`, `email_sent`, `email_confirmed`,
+     `first_activity_created` (este último cierra el embudo real: "Nexo ya le sirvió a este
+     usuario", no solo "se registró").
 5. **Billing** — Stripe (Checkout + Customer Portal ahorran la mayor parte del trabajo),
    webhook que activa/suspende la organización según estado de pago. `Organization.plan` y
    `Organization.feature_flags` ya existen desde el Bloque 1 — la lógica de límites por plan
@@ -191,3 +227,12 @@ para no tener que re-explicarla en la próxima sesión.
   Rediseñado tras revisión: plantillas como archivos JSON versionables (no Python), copiadas
   (nunca referenciadas) a cada organización, aplicadas solo al crear — sienta la base para un
   futuro marketplace de plantillas de la comunidad sin tocar el modelo de datos.
+- **2026-07-18** — Fase 1 punto 4 (signup self-service) completado, alcance Bloque A+B+D
+  mínimo (ver detalle en la sección de Fase 1 arriba); Bloque C (invitaciones) queda
+  explícitamente para después. Decisiones de diseño confirmadas con el usuario antes de
+  implementar: formulario de 5 campos (se agregó "Tu nombre" en vez de derivarlo del email),
+  `Organization.owner` como propiedad derivada en vez de FK nuevo, Resend vía `django-anymail`
+  como proveedor de email (primera integración de correo transaccional del proyecto), y un
+  typo en el email al registrarse queda como limitación conocida de v1 (no hay edición de
+  perfil todavía). Plan detallado en
+  `~/.claude/plans/vamos-a-empezar-la-imperative-pixel.md`.

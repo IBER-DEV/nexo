@@ -91,3 +91,16 @@ def activity_payload(responsable, **overrides):
     }
     data.update(overrides)
     return data
+
+
+def signup_payload(**overrides):
+    """Valid POST body for /api/v1/auth/signup/."""
+    data = {
+        "email": "nuevo@acme.com",
+        "password": "contrasena-larga-123",
+        "nombre": "Nueva Owner",
+        "nombre_org": "Acme",
+        "template": "ti_clasico",
+    }
+    data.update(overrides)
+    return data
