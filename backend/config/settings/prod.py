@@ -21,5 +21,5 @@ SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
-# Envío real de correo vía Resend (dev/docker usan la consola por defecto).
-EMAIL_BACKEND = "anymail.backends.resend.EmailBackend"
+# Envío real de correo vía Postmark (dev/docker usan la consola por defecto).
+EMAIL_BACKEND = "anymail.backends.postmark.EmailBackend"
