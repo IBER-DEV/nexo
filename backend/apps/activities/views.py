@@ -28,8 +28,8 @@ class ActivityViewSet(OrganizationScopedViewSetMixin, viewsets.ModelViewSet):
     ordering_fields = [
         "pk",
         "nombre",
-        "prioridad",
-        "estado",
+        ("prioridad__orden", "prioridad"),
+        ("estado__orden", "estado"),
         "fecha_limite",
         "fecha_inicio",
         "mes_planeacion",
@@ -51,6 +51,9 @@ class ActivityViewSet(OrganizationScopedViewSetMixin, viewsets.ModelViewSet):
                 "proceso",
                 "aplicacion",
                 "stakeholder",
+                "estado",
+                "prioridad",
+                "tipo",
             )
             .order_by("-pk")
         )

@@ -8,7 +8,17 @@ from datetime import date, timedelta
 from django.core.management.base import BaseCommand
 from apps.organizations.models import Organization
 from apps.users.models import User
-from apps.activities.models import Activity, Aplicacion, Cliente, Proceso, Stakeholder
+from apps.activities.master_defaults import create_default_masters
+from apps.activities.models import (
+    Activity,
+    ActivityType,
+    Aplicacion,
+    Cliente,
+    Priority,
+    Proceso,
+    Stakeholder,
+    WorkflowState,
+)
 
 
 SEED_USERS = [
@@ -43,8 +53,6 @@ NOMBRES = [
     "Tablero KPI gerencial",
     "Parche crítico de seguridad",
 ]
-STATUSES = [s[0] for s in Activity.Status.choices]
-PRIORITIES = [p[0] for p in Activity.Priority.choices]
 
 
 def mulberry32(seed):
@@ -143,6 +151,11 @@ class Command(BaseCommand):
                 "pablo.castro@empresa.com",
             ]).update(coordinador=carlos, rol="member")
 
+        self.stdout.write("Seeding workflow masters...")
+        create_default_masters(org, WorkflowState, Priority, ActivityType)
+        states = {s.slug: s for s in WorkflowState.objects.for_org(org)}
+        priorities = {p.slug: p for p in Priority.objects.for_org(org)}
+
         self.stdout.write("Seeding catalogs...")
         clientes = {
             n: Cliente.objects.get_or_create(organization=org, nombre=n)[0] for n in EMPRESAS
@@ -197,8 +210,8 @@ class Command(BaseCommand):
                 "stakeholder": stakeholders[pick(STAKEHOLDERS)],
                 "mes_planeacion": mes_planeacion,
                 "semana_planeacion": semana,
-                "prioridad": pick(PRIORITIES),
-                "estado": pick(STATUSES),
+                "prioridad": priorities[pick(list(priorities))],
+                "estado": states[pick(list(states))],
                 "fecha_inicio": inicio,
                 "fecha_limite": limite,
             }

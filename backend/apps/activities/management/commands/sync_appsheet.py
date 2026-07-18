@@ -21,9 +21,9 @@ from apps.organizations.models import Organization
 from apps.activities.models import Activity
 from apps.activities.serializers import ActivitySerializer
 from apps.activities.sheets_client import (
-    estado_to_flowdesk,
     get_worksheet,
     read_rows,
+    resolve_state_from_sheet,
     validate_headers,
     write_flowdesk_id,
 )
@@ -47,7 +47,7 @@ def _row_changed(instance: Activity, data: dict) -> bool:
         or instance.descripcion != data["descripcion"]
         or instance.responsable_id != data["responsable_id"]
         or _nombre(instance.stakeholder) != data["stakeholder"]
-        or instance.estado != data["estado"]
+        or instance.estado_id != data["estado_id"]
         or instance.fecha_inicio != data["fechaInicio"]
         or instance.fecha_limite != data["fechaLimite"]
     )
@@ -111,6 +111,21 @@ class Command(BaseCommand):
 
                 responsable = get_or_create_responsable(responsable_name, organization=org)
 
+                flowdesk_id = str(row.get("FlowDeskID") or "").strip()
+                numero = parse_codigo(flowdesk_id) if flowdesk_id else None
+                instance = (
+                    Activity.objects.for_org(org)
+                    .select_related("cliente", "proceso", "aplicacion", "stakeholder", "estado")
+                    .filter(numero=numero)
+                    .first()
+                    if numero
+                    else None
+                )
+
+                estado = resolve_state_from_sheet(
+                    row.get("Fase"), org, current_estado=instance.estado if instance else None
+                )
+
                 data = {
                     "empresa": empresa,
                     "proceso": proceso,
@@ -120,21 +135,10 @@ class Command(BaseCommand):
                     "descripcion": str(row.get("DescripcionAct") or "").strip(),
                     "responsable_id": responsable.pk,
                     "stakeholder": str(row.get("Stakeholder") or "").strip(),
-                    "estado": estado_to_flowdesk(row.get("Fase")),
+                    "estado_id": estado.pk if estado else None,
                     "fechaInicio": fecha_inicio,
                     "fechaLimite": fecha_limite,
                 }
-
-                flowdesk_id = str(row.get("FlowDeskID") or "").strip()
-                numero = parse_codigo(flowdesk_id) if flowdesk_id else None
-                instance = (
-                    Activity.objects.for_org(org)
-                    .select_related("cliente", "proceso", "aplicacion", "stakeholder")
-                    .filter(numero=numero)
-                    .first()
-                    if numero
-                    else None
-                )
 
                 if instance and not _row_changed(instance, data):
                     unchanged += 1

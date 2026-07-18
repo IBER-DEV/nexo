@@ -1,7 +1,7 @@
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.activities.models import Activity
+from apps.activities.models import Activity, WorkflowState
 
 from .factories import activity_payload, make_activity, make_user
 
@@ -29,12 +29,13 @@ class ActivityCrudTests(APITestCase):
 
     def test_partial_update(self):
         activity = make_activity(self.admin)
+        done = WorkflowState.objects.get(organization=self.admin.organization, slug="done")
         res = self.client.patch(
-            f"/api/v1/activities/{activity.pk}/", {"estado": "done"}, format="json"
+            f"/api/v1/activities/{activity.pk}/", {"estado_id": done.pk}, format="json"
         )
         self.assertEqual(res.status_code, status.HTTP_200_OK, res.data)
         activity.refresh_from_db()
-        self.assertEqual(activity.estado, "done")
+        self.assertEqual(activity.estado_id, done.pk)
 
     def test_delete(self):
         activity = make_activity(self.admin)

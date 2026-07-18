@@ -1,5 +1,14 @@
 from django.contrib import admin
-from .models import Activity, Cliente, Proceso, Aplicacion, Stakeholder
+from .models import (
+    Activity,
+    ActivityType,
+    Aplicacion,
+    Cliente,
+    Priority,
+    Proceso,
+    Stakeholder,
+    WorkflowState,
+)
 
 
 @admin.register(Activity)
@@ -47,4 +56,27 @@ class AplicacionAdmin(OrgCatalogAdmin):
 
 @admin.register(Stakeholder)
 class StakeholderAdmin(OrgCatalogAdmin):
+    pass
+
+
+class OrgMasterAdmin(admin.ModelAdmin):
+    list_display = ["nombre", "organization", "color", "orden", "is_active"]
+    list_filter = ["organization", "is_active"]
+    search_fields = ["nombre"]
+    list_per_page = 50
+
+
+@admin.register(WorkflowState)
+class WorkflowStateAdmin(OrgMasterAdmin):
+    list_display = OrgMasterAdmin.list_display + ["categoria", "is_initial", "mostrar_en_kanban"]
+    list_filter = OrgMasterAdmin.list_filter + ["categoria", "is_initial"]
+
+
+@admin.register(Priority)
+class PriorityAdmin(OrgMasterAdmin):
+    list_display = OrgMasterAdmin.list_display + ["is_default"]
+
+
+@admin.register(ActivityType)
+class ActivityTypeAdmin(OrgMasterAdmin):
     pass

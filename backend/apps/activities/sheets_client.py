@@ -30,28 +30,50 @@ SHEET_TO_FIELD = {
 }
 SHEET_COLUMNS = list(SHEET_TO_FIELD.keys()) + [FLOWDESK_ID_COLUMN]
 
-ESTADO_SHEET_TO_FLOWDESK = {
-    "No iniciada": "backlog",
-    "En Proceso": "in_progress",
-    "Finalizada": "done",
-    "Cancelado": "cancelled",
-}
-ESTADO_FLOWDESK_TO_SHEET = {
-    "backlog": "No iniciada",
-    "in_progress": "En Proceso",
-    "testing": "En Proceso",
-    "pending_client": "En Proceso",
+# Fallback cuando un WorkflowState no tiene external_mappings.google_sheets
+# configurado explícitamente — nunca rompe el push.
+DEFAULT_PHASE_BY_CATEGORIA = {
+    "todo": "No iniciada",
+    "active": "En Proceso",
     "done": "Finalizada",
     "cancelled": "Cancelado",
 }
 
 
-def estado_to_sheet(estado: str) -> str:
-    return ESTADO_FLOWDESK_TO_SHEET.get(estado, "No iniciada")
+def estado_to_sheet(estado) -> str:
+    """WorkflowState -> valor de la columna 'Fase'."""
+    return estado.sheet_phase or DEFAULT_PHASE_BY_CATEGORIA.get(estado.categoria, "No iniciada")
 
 
-def estado_to_flowdesk(fase: object) -> str:
-    return ESTADO_SHEET_TO_FLOWDESK.get(str(fase).strip(), "backlog")
+def resolve_state_from_sheet(fase: object, organization, current_estado=None):
+    """Valor de 'Fase' -> WorkflowState de la organización.
+
+    Orden de resolución: (1) match exacto por external_mappings.google_sheets
+    (el de menor `orden` si varios estados comparten fase); (2) si el estado
+    actual de la actividad ya mapea a esa misma fase, conservarlo — evita que
+    un pull degrade estados más específicos (p.ej. 'En pruebas') a uno
+    genérico solo porque comparten la misma fase de la Sheet; (3) fallback
+    por categoría; (4) estado inicial de la organización."""
+    from .models import WorkflowState  # import diferido: evita ciclos con models.py
+
+    fase = str(fase or "").strip()
+    states = WorkflowState.objects.for_org(organization).filter(is_active=True)
+
+    matches = [s for s in states if s.sheet_phase and s.sheet_phase == fase] if fase else []
+    if matches:
+        if current_estado is not None and current_estado in matches:
+            return current_estado
+        return min(matches, key=lambda s: s.orden)
+
+    categoria = next(
+        (cat for cat, phase in DEFAULT_PHASE_BY_CATEGORIA.items() if phase == fase), None
+    )
+    if categoria:
+        by_categoria = states.filter(categoria=categoria).order_by("orden").first()
+        if by_categoria is not None:
+            return by_categoria
+
+    return states.filter(is_initial=True).first()
 
 
 def _client() -> gspread.Client:
@@ -102,7 +124,7 @@ def activity_to_row(activity) -> dict:
         "Stakeholder": activity.stakeholder.nombre if activity.stakeholder_id else "",
         "FechaInicio": activity.fecha_inicio.isoformat(),
         "FechaFin": activity.fecha_limite.isoformat(),
-        "Fase": estado_to_sheet(activity.estado),
+        "Fase": estado_to_sheet(activity.estado),  # activity.estado: WorkflowState
         FLOWDESK_ID_COLUMN: activity.codigo,
     }
 

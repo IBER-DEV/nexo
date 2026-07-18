@@ -1,7 +1,7 @@
 from datetime import date
 from rest_framework import serializers
 from apps.users.models import User
-from .models import Activity, Cliente, Proceso, Aplicacion, Stakeholder
+from .models import Activity, ActivityType, Cliente, Priority, Proceso, Aplicacion, Stakeholder, WorkflowState
 
 
 class DateFromISOField(serializers.DateField):
@@ -35,6 +35,22 @@ class ActivitySerializer(serializers.ModelSerializer):
         max_length=100, write_only=True, allow_blank=True, required=False
     )
 
+    # Maestros configurables por org: viajan por id. required=False porque
+    # el estado se puede auto-calcular desde las fechas y la prioridad tiene
+    # un default por organización (ver validate()).
+    estado_id = serializers.PrimaryKeyRelatedField(
+        source="estado", queryset=WorkflowState.objects.all(), required=False
+    )
+    prioridad_id = serializers.PrimaryKeyRelatedField(
+        source="prioridad", queryset=Priority.objects.all(), required=False
+    )
+    tipo_id = serializers.PrimaryKeyRelatedField(
+        source="tipo",
+        queryset=ActivityType.objects.all(),
+        required=False,
+        allow_null=True,
+    )
+
     # camelCase ↔ snake_case date mapping
     fechaInicio = DateFromISOField(source="fecha_inicio")
     fechaLimite = DateFromISOField(source="fecha_limite")
@@ -47,6 +63,15 @@ class ActivitySerializer(serializers.ModelSerializer):
         org = self._request_org()
         if org is not None:
             self.fields["responsable_id"].queryset = User.objects.for_org(org).filter(
+                is_active=True
+            )
+            self.fields["estado_id"].queryset = WorkflowState.objects.for_org(org).filter(
+                is_active=True
+            )
+            self.fields["prioridad_id"].queryset = Priority.objects.for_org(org).filter(
+                is_active=True
+            )
+            self.fields["tipo_id"].queryset = ActivityType.objects.for_org(org).filter(
                 is_active=True
             )
 
@@ -73,8 +98,9 @@ class ActivitySerializer(serializers.ModelSerializer):
             "stakeholder",
             "mes_planeacion",
             "semana_planeacion",
-            "prioridad",
-            "estado",
+            "prioridad_id",
+            "estado_id",
+            "tipo_id",
             "fechaInicio",
             "fechaLimite",
         ]
@@ -179,18 +205,30 @@ class ActivitySerializer(serializers.ModelSerializer):
         if semana is not None:
             attrs["semana_planeacion"] = semana
 
-        if "estado" not in attrs and ("fecha_inicio" in attrs or "fecha_limite" in attrs):
+        org = self._request_org()
+
+        if "estado" not in attrs and ("fecha_inicio" in attrs or "fecha_limite" in attrs) and org is not None:
             fecha_inicio = attrs.get("fecha_inicio") or (instance.fecha_inicio if instance is not None else None)
             fecha_limite = attrs.get("fecha_limite") or (instance.fecha_limite if instance is not None else None)
             today = date.today()
+            states = WorkflowState.objects.for_org(org).filter(is_active=True)
             if not fecha_limite:
-                attrs["estado"] = Activity.Status.BACKLOG
+                estado = states.filter(is_initial=True).first()
             elif fecha_inicio and fecha_inicio <= today <= fecha_limite:
-                attrs["estado"] = Activity.Status.IN_PROGRESS
+                estado = states.filter(categoria=WorkflowState.Categoria.ACTIVE).order_by("orden").first()
             elif today > fecha_limite:
-                attrs["estado"] = Activity.Status.DONE
+                estado = states.filter(categoria=WorkflowState.Categoria.DONE).order_by("orden").first()
             else:
-                attrs["estado"] = Activity.Status.BACKLOG
+                estado = states.filter(is_initial=True).first()
+            if estado is not None:
+                attrs["estado"] = estado
+
+        # Prioridad: sin default a nivel de modelo (es un maestro), así que
+        # una creación sin prioridad_id explícita toma la de la organización.
+        if instance is None and "prioridad" not in attrs and org is not None:
+            default_priority = Priority.objects.for_org(org).filter(is_default=True, is_active=True).first()
+            if default_priority is not None:
+                attrs["prioridad"] = default_priority
 
         return attrs
 
