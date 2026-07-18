@@ -14,8 +14,10 @@ logger = logging.getLogger(__name__)
 def push_activity_to_sheet(sender, instance, **kwargs):
     if is_pulling():
         return
+    if not instance.organization.has_feature("sheets_sync"):
+        return
     try:
-        worksheet = get_worksheet()
+        worksheet = get_worksheet(instance.organization)
         upsert_row(worksheet, instance)
     except Exception:
         # Best-effort: a misconfigured or unreachable Google Sheet must never
@@ -27,8 +29,10 @@ def push_activity_to_sheet(sender, instance, **kwargs):
 def push_activity_delete_to_sheet(sender, instance, **kwargs):
     if is_pulling():
         return
+    if not instance.organization.has_feature("sheets_sync"):
+        return
     try:
-        worksheet = get_worksheet()
+        worksheet = get_worksheet(instance.organization)
         delete_row(worksheet, instance.codigo)
     except Exception:
         logger.exception("No se pudo eliminar %s de la Google Sheet", instance.codigo)

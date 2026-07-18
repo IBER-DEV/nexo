@@ -67,23 +67,40 @@ class Command(BaseCommand):
             help="Slug de la organización destino; opcional si solo existe una",
         )
 
-    def _resolve_org(self, slug: str | None) -> Organization:
+    def _resolve_orgs(self, slug: str | None) -> list[Organization]:
         if slug:
             org = Organization.objects.filter(slug=slug).first()
             if org is None:
                 raise CommandError(f"No existe una organización con slug '{slug}'")
-            return org
+            return [org]
+        # Sin --org: sincroniza cada org que tenga su propio spreadsheet
+        # configurado. Si ninguna lo tiene (instalación single-org clásica),
+        # cae a la única org activa usando los settings globales.
+        configured = list(
+            Organization.objects.filter(is_active=True).exclude(appsheet_spreadsheet_id="")
+        )
+        if configured:
+            return configured
         orgs = list(Organization.objects.filter(is_active=True)[:2])
         if len(orgs) == 1:
-            return orgs[0]
-        raise CommandError("Hay varias organizaciones: especifica --org <slug>")
+            return orgs
+        raise CommandError(
+            "Hay varias organizaciones sin spreadsheet propio configurado: especifica --org <slug>"
+        )
 
     def handle(self, *args, **options):
         dry_run = options["dry_run"]
-        org = self._resolve_org(options.get("org"))
+        orgs = self._resolve_orgs(options.get("org"))
+        for org in orgs:
+            if not org.has_feature("sheets_sync"):
+                self.stdout.write(self.style.WARNING(f"{org.slug}: sheets_sync deshabilitado, omitida"))
+                continue
+            self.stdout.write(f"— Sincronizando {org.slug} —")
+            self._sync_org(org, dry_run)
 
+    def _sync_org(self, org: Organization, dry_run: bool) -> None:
         try:
-            worksheet = get_worksheet()
+            worksheet = get_worksheet(org)
             validate_headers(worksheet)
             rows = read_rows(worksheet)
         except RuntimeError as exc:

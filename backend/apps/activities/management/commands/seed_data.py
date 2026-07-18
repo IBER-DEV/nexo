@@ -223,7 +223,104 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f"\nDone. {created_count} activities created (existing ones untouched)."
         ))
+
+        acme_created_count = self._seed_acme(today)
+
+        self.stdout.write(self.style.SUCCESS(
+            f"Done. {acme_created_count} Acme Ltd activities created (existing ones untouched)."
+        ))
         self.stdout.write("\nLogin credentials:")
-        self.stdout.write("  admin@empresa.com / demo1234  (superuser)")
+        self.stdout.write("  admin@empresa.com / demo1234  (superuser, org 'demo')")
         self.stdout.write("  ana.garcia@empresa.com / demo1234")
+        self.stdout.write("  admin@acme.com / demo1234  (superuser, org 'acme' — flujo propio)")
         self.stdout.write("  (all team users use password: demo1234)")
+
+    def _seed_acme(self, today: date) -> int:
+        """Segunda organización de demo: prefijo y flujo de estados propios
+        (4, no 6) para probar aislamiento y Kanban dinámico a mano."""
+        self.stdout.write("\nSeeding second organization (Acme Ltd)...")
+        acme, acme_created = Organization.objects.get_or_create(
+            slug="acme",
+            defaults={"nombre": "Acme Ltd", "codigo_prefix": "ACM"},
+        )
+        self.stdout.write(f"  {'Created' if acme_created else 'Exists '} {acme.nombre}")
+
+        acme_admin, created = User.objects.get_or_create(
+            email="admin@acme.com",
+            defaults={"nombre": "Admin Acme", "rol": "admin", "organization": acme},
+        )
+        if created:
+            acme_admin.set_password("demo1234")
+            acme_admin.is_staff = True
+            acme_admin.is_superuser = True
+            acme_admin.save()
+            self.stdout.write("  Created admin@acme.com (superuser)")
+
+        # slug, nombre, categoria, color, orden, is_initial, mostrar_en_kanban
+        ACME_STATES = [
+            ("pendiente", "Pendiente", "todo", "#7C8A93", 0, True, True),
+            ("en-curso", "En curso", "active", "#29AFF5", 1, False, True),
+            ("hecho", "Hecho", "done", "#22B573", 2, False, True),
+            ("descartado", "Descartado", "cancelled", "#E5484D", 3, False, False),
+        ]
+        for slug, nombre, categoria, color, orden, is_initial, mostrar in ACME_STATES:
+            WorkflowState.objects.get_or_create(
+                organization=acme,
+                slug=slug,
+                defaults={
+                    "nombre": nombre,
+                    "categoria": categoria,
+                    "color": color,
+                    "orden": orden,
+                    "is_initial": is_initial,
+                    "mostrar_en_kanban": mostrar,
+                },
+            )
+        ACME_PRIORITIES = [
+            ("baja", "Baja", "#7C8A93", 0, False),
+            ("normal", "Normal", "#29AFF5", 1, True),
+            ("alta", "Alta", "#E5484D", 2, False),
+        ]
+        for slug, nombre, color, orden, is_default in ACME_PRIORITIES:
+            Priority.objects.get_or_create(
+                organization=acme,
+                slug=slug,
+                defaults={"nombre": nombre, "color": color, "orden": orden, "is_default": is_default},
+            )
+
+        acme_states = {s.slug: s for s in WorkflowState.objects.for_org(acme)}
+        acme_priorities = {p.slug: p for p in Priority.objects.for_org(acme)}
+        acme_cliente = Cliente.objects.get_or_create(organization=acme, nombre="Acme Corp")[0]
+        acme_proceso = Proceso.objects.get_or_create(organization=acme, nombre="Operaciones")[0]
+        acme_app = Aplicacion.objects.get_or_create(organization=acme, nombre="Sistema Interno")[0]
+
+        ACME_ACTIVITIES = [
+            ("Configurar VPN para equipo remoto", "pendiente"),
+            ("Renovar certificado SSL", "en-curso"),
+            ("Migrar correo a Google Workspace", "hecho"),
+            ("Documentar proceso de onboarding", "pendiente"),
+            ("Revisar accesos de exempleados", "descartado"),
+        ]
+        created_count = 0
+        for i, (nombre, estado_slug) in enumerate(ACME_ACTIVITIES, start=1):
+            pk = 9000 + i
+            inicio = today - timedelta(days=i * 3)
+            defaults = {
+                "organization": acme,
+                "cliente": acme_cliente,
+                "proceso": acme_proceso,
+                "aplicacion": acme_app,
+                "nombre": nombre,
+                "descripcion": "",
+                "responsable": acme_admin,
+                "mes_planeacion": inicio.strftime("%Y-%m"),
+                "semana_planeacion": 1,
+                "prioridad": acme_priorities["normal"],
+                "estado": acme_states[estado_slug],
+                "fecha_inicio": inicio,
+                "fecha_limite": inicio + timedelta(days=14),
+            }
+            activity, created = Activity.objects.get_or_create(pk=pk, defaults=defaults)
+            if created:
+                created_count += 1
+        return created_count

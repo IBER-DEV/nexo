@@ -45,12 +45,18 @@ python manage.py migrate && python manage.py seed_data && python manage.py runse
 # Backend — Docker (Postgres real, hot-reload)
 docker compose up --build           # localhost:8000
 
-# Tests backend (36 tests: auth, CRUD, visibilidad, tenancy, codigo, catalogos)
+# Tests backend (67 tests: auth, CRUD, visibilidad, tenancy, maestros, sync, organización)
 docker compose exec -T backend python manage.py test
+
+# Sync AppSheet (Google Sheets) — requiere GOOGLE_SHEETS_CREDENTIALS_JSON configurado
+docker compose exec -T backend python manage.py sync_appsheet --org demo --dry-run
 ```
 
-Credenciales de prueba tras `seed_data`: `admin@empresa.com` / `demo1234` (admin),
-`ana.garcia@empresa.com` / `demo1234` (coordinador).
+`seed_data` crea **dos organizaciones** para poder probar aislamiento multi-tenant a mano:
+- `demo` (prefijo `ACT`, flujo de 6 estados "TI clásico"): `admin@empresa.com` / `demo1234`
+  (admin), `ana.garcia@empresa.com` / `demo1234` (coordinador).
+- `acme` (prefijo `ACM`, flujo propio de 4 estados — para ver que el Kanban y los selects
+  son realmente dinámicos): `admin@acme.com` / `demo1234` (admin).
 
 ## Settings de Django — tres perfiles, no dos
 
@@ -82,6 +88,25 @@ Credenciales de prueba tras `seed_data`: `admin@empresa.com` / `demo1234` (admin
   tokens ya están pensados para funcionar en claro y oscuro.
 - **`eslint.config.js`** tiene `ignores` explícitos (`.venv`, `.agents`, `backend`, etc.) — sin
   eso, lint tarda minutos recorriendo directorios que no son del frontend.
+- **Ningún queryset de un modelo org-scoped se usa sin pasar por la organización.** Siempre
+  `Model.objects.for_org(org)` (manager en `apps/organizations/scoping.py`) o el mixin
+  `OrganizationScopedViewSetMixin` en un ViewSet — nunca `Model.objects.all()` ni
+  `.filter(...)` a secas en views/serializers. `apps/activities/tests/test_scoping_guard.py`
+  falla si un ViewSet nuevo maneja un modelo con FK `organization` y no hereda el mixin; no
+  lo excluyas del test, corrige el ViewSet.
+- **`WorkflowState.categoria`** (todo/active/done/cancelled) es la única fuente de verdad
+  para métricas y para el fallback del sync — nunca compares `estado.slug` contra strings
+  tipo `"backlog"`/`"done"` en código nuevo (esos slugs son solo el seed de la org `demo`,
+  no existen garantizados en otras organizaciones). Usa los helpers `isDone`/`isCancelled`/
+  `isOpen` de `useWorkspace()` en el frontend, o `estado.categoria` en el backend.
+- **Mapeo a Google Sheets es `WorkflowState.external_mappings` (JSON)**, no un dict fijo —
+  `sheets_client.resolve_state_from_sheet()` ya conserva el estado actual si comparte fase
+  con otro más genérico (evita que un pull degrade `en pruebas` a `en progreso`). No
+  reintroducir un mapeo hardcodeado de 4 fases.
+- **Código de actividad (`ACT-0001`) es por organización**, no una secuencia global —
+  `Activity.numero` + `Organization.codigo_prefix`, asignado vía
+  `apps/organizations/sequences.py::SequenceService` (no calcules `numero` a mano en
+  ningún sitio nuevo).
 
 ## CI (`.github/workflows/ci.yml`)
 
@@ -102,22 +127,26 @@ exige estos checks en verde antes de mergear (ruleset configurado en GitHub).
   `cuelume`) — solo en momentos que lo ameritan (éxito/error de acciones), nunca en hover o
   en algo que se repita muchas veces por sesión.
 
-## Fase 1 — Bloque 1: Multi-tenancy + Maestros (EN PROGRESO — 2026-07-16)
+## Fase 1 — Bloque 1: Multi-tenancy + Maestros configurables (COMPLETADO — 2026-07-17)
 
-**Estado:** E0, E1, E2 completadas (36 tests OK). E3a-E5 pendientes.
-
-- **E0:** Tests refactorizados en paquete con factories ✅
-- **E1:** App organizations, User/Activity org-scoped, scoping multi-tenant ✅
-- **E2:** Empresa→Cliente, catálogos con org, numero/codigo por org, CRUD ✅
-- **E3a:** WorkflowState/Priority/ActivityType, /workspace/, sync external_mappings (TODO)
-- **E3b:** Frontend dinámico useWorkspace, badges, Kanban (TODO)
-- **E4:** Admin UI maestros, tabs settings (TODO)
-- **E5:** Sync multi-org, segunda org en seed, docs (TODO)
-
-Ver plan detallado en `~/.claude/plans/vamos-a-empezar-la-imperative-pixel.md`.
+Nexo dejó de asumir una sola empresa con un flujo fijo. `Organization` es el tenant;
+`WorkflowState`/`Priority`/`ActivityType` reemplazan los enums fijos que antes vivían en
+`Activity.Status`/`Activity.Priority` y en `src/lib/types.ts` — cada organización define su
+propio flujo (nombre, color, orden, categoría, estado inicial) y el frontend lo consume
+dinámicamente vía `useWorkspace()` (`GET /workspace/`, bootstrap en una sola llamada).
+Catálogos (Cliente/Proceso/Aplicación/Stakeholder) tienen dueño; el código de actividad es
+por organización (`{prefijo}-0001`). Admin de todo esto en Configuración → Maestros/
+Organización. Detalle de decisiones y las 7 etapas (E0-E5) en
+`~/.claude/plans/vamos-a-empezar-la-imperative-pixel.md`; contexto de negocio y
+diferenciadores detectados en el camino, en `docs/ROADMAP.md`.
 
 ## Deuda conocida / pendiente
 
 - Sin tests de frontend (solo backend tiene suite).
+- Catálogos (Cliente/Proceso/Aplicación/Stakeholder) son tablas tipadas fijas — un catálogo
+  nuevo (Proveedor, Sucursal...) requiere migración. Un modelo genérico tipo EAV lo evitaría;
+  decisión consciente de no hacerlo sin un caso de cliente real (ver ROADMAP, Fase 1 punto 3).
+- Sin plantillas de flujo al crear una organización (siempre parte de cero en maestros) —
+  ver ROADMAP, Fase 1 punto 2.
 - `.agents/skills/` en el repo es una librería de referencia para asistentes de IA, no
   código del proyecto — está en `.gitignore` a propósito.

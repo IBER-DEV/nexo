@@ -85,9 +85,12 @@ def _client() -> gspread.Client:
     return gspread.authorize(creds)
 
 
-def get_worksheet() -> gspread.Worksheet:
-    spreadsheet_id = settings.APPSHEET_SPREADSHEET_ID
-    worksheet_name = settings.APPSHEET_WORKSHEET_NAME
+def get_worksheet(organization=None) -> gspread.Worksheet:
+    """Resuelve el spreadsheet/worksheet de `organization` si los tiene
+    configurados; si no, cae a los settings globales (la org 'default' que
+    ya usaba Nexo antes de ser multi-tenant)."""
+    spreadsheet_id = (getattr(organization, "appsheet_spreadsheet_id", "") or settings.APPSHEET_SPREADSHEET_ID)
+    worksheet_name = (getattr(organization, "appsheet_worksheet_name", "") or settings.APPSHEET_WORKSHEET_NAME)
     if not spreadsheet_id or not worksheet_name:
         raise RuntimeError("APPSHEET_SPREADSHEET_ID / APPSHEET_WORKSHEET_NAME no configurados")
     sh = _client().open_by_key(spreadsheet_id)
