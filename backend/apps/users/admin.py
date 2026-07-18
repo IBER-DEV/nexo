@@ -5,18 +5,18 @@ from .models import User
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = ["email", "nombre", "rol", "coordinador", "is_staff", "is_active"]
-    list_filter = ["rol", "coordinador", "is_staff", "is_active"]
+    list_display = ["email", "nombre", "organization", "rol", "coordinador", "is_staff", "is_active"]
+    list_filter = ["organization", "rol", "coordinador", "is_staff", "is_active"]
     search_fields = ["email", "nombre"]
     ordering = ["nombre"]
     fieldsets = (
         (None, {"fields": ("email", "password")}),
-        ("Datos personales", {"fields": ("nombre", "rol", "coordinador")}),
+        ("Datos personales", {"fields": ("nombre", "organization", "rol", "coordinador")}),
         ("Permisos", {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
     )
     add_fieldsets = (
         (None, {
             "classes": ("wide",),
-            "fields": ("email", "nombre", "rol", "coordinador", "password1", "password2"),
+            "fields": ("email", "nombre", "organization", "rol", "coordinador", "password1", "password2"),
         }),
     )
