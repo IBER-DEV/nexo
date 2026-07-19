@@ -9,6 +9,6 @@ openpyxl==3.1.5
 django-jazzmin==3.0.4
 gspread==6.1.4
 google-auth==2.35.0
-gunicorn==23.0.0
+gunicorn==26.0.0
 whitenoise==6.8.2
 django-anymail[postmark]==11.1
