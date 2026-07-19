@@ -3,7 +3,7 @@ E3a del bloque multi-tenancy: WorkflowState y Priority reemplazan los enums
 fijos Activity.Status / Activity.Priority; nace ActivityType (opcional).
 
 La migración duplica inline la tabla de estados/prioridades por defecto (no
-importa apps.activities.master_defaults) porque una migración histórica debe
+importa apps.activities.org_templates) porque una migración histórica debe
 seguir funcionando exactamente igual aunque ese módulo cambie después.
 """
 import django.db.models.deletion

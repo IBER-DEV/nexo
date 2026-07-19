@@ -26,9 +26,9 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useWorkspace } from "@/providers/WorkspaceProvider";
 
 const schema = z.object({
-  empresa: z.string().min(1, "Requerido"),
-  proceso: z.string().min(1, "Requerido"),
-  aplicacion: z.string().min(1, "Requerido"),
+  empresa: z.string(),
+  proceso: z.string(),
+  aplicacion: z.string(),
   nombre: z.string().min(3, "Mínimo 3 caracteres").max(120),
   descripcion: z.string().max(500),
   responsable_id: z.number({ error: "Requerido" }).int().positive("Requerido"),
@@ -65,7 +65,9 @@ export function ActivityForm({
     enabled: canPickUsers,
   });
 
-  const users = canPickUsers ? fetchedUsers : user ? [user] : [];
+  // El backend ahora incluye desactivados en la lista de admin (para poder
+  // reactivarlos en Usuarios) — acá solo se asignan actividades a activos.
+  const users = canPickUsers ? fetchedUsers.filter((u) => u.is_active) : user ? [user] : [];
 
   const { data: meta } = useQuery({
     queryKey: ["activities-meta"],
@@ -132,7 +134,7 @@ export function ActivityForm({
   return (
     <form onSubmit={submit} className="space-y-4">
       <div className="grid sm:grid-cols-2 gap-4">
-        <Field label="Empresa" error={form.formState.errors.empresa?.message}>
+        <Field label="Empresa (opcional)" error={form.formState.errors.empresa?.message}>
           <SelectControlled
             value={form.watch("empresa")}
             onChange={(v) => form.setValue("empresa", v)}
@@ -140,7 +142,7 @@ export function ActivityForm({
             placeholder="Seleccionar empresa"
           />
         </Field>
-        <Field label="Proceso" error={form.formState.errors.proceso?.message}>
+        <Field label="Proceso (opcional)" error={form.formState.errors.proceso?.message}>
           <SelectControlled
             value={form.watch("proceso")}
             onChange={(v) => form.setValue("proceso", v)}
@@ -148,7 +150,7 @@ export function ActivityForm({
             placeholder="Seleccionar proceso"
           />
         </Field>
-        <Field label="Aplicación" error={form.formState.errors.aplicacion?.message}>
+        <Field label="Aplicación (opcional)" error={form.formState.errors.aplicacion?.message}>
           <SelectControlled
             value={form.watch("aplicacion")}
             onChange={(v) => form.setValue("aplicacion", v)}
@@ -344,6 +346,8 @@ function Field({
   );
 }
 
+const EMPTY_OPTION = "__ninguna__";
+
 function SelectControlled({
   value,
   onChange,
@@ -356,11 +360,17 @@ function SelectControlled({
   placeholder: string;
 }) {
   return (
-    <Select value={value || undefined} onValueChange={onChange}>
+    <Select
+      value={value || EMPTY_OPTION}
+      onValueChange={(v) => onChange(v === EMPTY_OPTION ? "" : v)}
+    >
       <SelectTrigger>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
+        <SelectItem value={EMPTY_OPTION} className="text-muted-foreground italic">
+          Sin especificar
+        </SelectItem>
         {options.map((o) => (
           <SelectItem key={o} value={o}>
             {o}

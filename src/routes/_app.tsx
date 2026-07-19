@@ -3,6 +3,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { NexoLoader } from "@/components/brand/NexoLoader";
+import { EmailVerificationBanner } from "@/components/layout/EmailVerificationBanner";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import { WorkspaceProvider, useWorkspace } from "@/providers/WorkspaceProvider";
@@ -68,9 +69,24 @@ function WorkspaceGate({ pathname }: { pathname: string }) {
       <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
         <SidebarInset className="flex flex-col min-w-0 flex-1">
+          <EmailVerificationBanner />
           <Topbar />
-          <main className="flex-1 p-4 md:p-6 lg:p-8">
-            <div key={pathname} className="animate-fade-in">
+          <main className="relative flex-1 p-4 md:p-6 lg:p-8">
+            {/* Glow ambiental — la misma firma visual del pulso del dashboard,
+                presente en cada página como constante de marca. */}
+            <div
+              className="pointer-events-none absolute inset-x-0 top-0 h-72 overflow-hidden"
+              aria-hidden="true"
+            >
+              <div
+                className="ambient-glow absolute -top-24 -right-20 h-80 w-80 rounded-full blur-2xl"
+                style={{
+                  background:
+                    "radial-gradient(circle, color-mix(in oklab, var(--primary) 18%, transparent), transparent 70%)",
+                }}
+              />
+            </div>
+            <div key={pathname} className="relative z-10 animate-fade-in">
               <Outlet />
             </div>
           </main>

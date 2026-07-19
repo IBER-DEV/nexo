@@ -1,7 +1,9 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { setTokens, clearTokens, getAccessToken } from "@/lib/api";
 import type { User } from "@/lib/types";
 import { usersService } from "@/services/usersService";
+import { authService, type SignupInput } from "@/services/authService";
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -10,6 +12,7 @@ interface AuthState {
   canAccessPlanning: boolean;
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
+  signup: (input: SignupInput) => Promise<void>;
   logout: () => void;
 }
 
@@ -20,6 +23,7 @@ const AuthCtx = createContext<AuthState>({
   canAccessPlanning: false,
   user: null,
   login: async () => {},
+  signup: async () => {},
   logout: () => {},
 });
 
@@ -38,8 +42,9 @@ function loadStoredUser(): User | null {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(() => loadStoredUser());
+  const qc = useQueryClient();
   const isAuthenticated = !!user && !!getAccessToken();
-  const isAdmin = user?.rol === "admin";
+  const isAdmin = user?.rol === "admin" || user?.rol === "owner";
   const isCoordinator = user?.rol === "coordinator";
   const canAccessPlanning = isAdmin || isCoordinator;
 
@@ -47,10 +52,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const handler = () => {
       localStorage.removeItem(USER_KEY);
       setUser(null);
+      // Sin esto, React Query sigue sirviendo (workspace, actividades,
+      // usuarios...) del usuario/organización anterior hasta que cada query
+      // refetchee por su cuenta — con staleTime: Infinity en workspace,
+      // eso podía no pasar nunca sin un refresh manual.
+      qc.clear();
     };
     window.addEventListener("auth:logout", handler);
     return () => window.removeEventListener("auth:logout", handler);
-  }, []);
+  }, [qc]);
 
   useEffect(() => {
     if (!getAccessToken()) return;
@@ -88,6 +98,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       );
     }
     const data = (await res.json()) as { access: string; refresh: string; user: User };
+    qc.clear(); // descarta cualquier caché de una sesión/organización anterior
+    setTokens(data.access, data.refresh);
+    localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+    setUser(data.user);
+  };
+
+  const signup = async (input: SignupInput) => {
+    const data = await authService.signup(input);
+    qc.clear(); // descarta cualquier caché de una sesión/organización anterior
     setTokens(data.access, data.refresh);
     localStorage.setItem(USER_KEY, JSON.stringify(data.user));
     setUser(data.user);
@@ -97,11 +116,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearTokens();
     localStorage.removeItem(USER_KEY);
     setUser(null);
+    qc.clear();
   };
 
   return (
     <AuthCtx.Provider
-      value={{ isAuthenticated, isAdmin, isCoordinator, canAccessPlanning, user, login, logout }}
+      value={{
+        isAuthenticated,
+        isAdmin,
+        isCoordinator,
+        canAccessPlanning,
+        user,
+        login,
+        signup,
+        logout,
+      }}
     >
       {children}
     </AuthCtx.Provider>

@@ -27,6 +27,7 @@ LOCAL_APPS = [
     "apps.organizations",
     "apps.users",
     "apps.activities",
+    "apps.notifications",
 ]
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
@@ -132,5 +133,24 @@ CORS_ALLOW_CREDENTIALS = True
 GOOGLE_SHEETS_CREDENTIALS_JSON = config("GOOGLE_SHEETS_CREDENTIALS_JSON", default="")
 APPSHEET_SPREADSHEET_ID = config("APPSHEET_SPREADSHEET_ID", default="")
 APPSHEET_WORKSHEET_NAME = config("APPSHEET_WORKSHEET_NAME", default="")
+
+# ─── Email transaccional (Fase 1, punto 4: verificación, reset de contraseña) ─
+# Default = consola: cero fricción para desarrollar/probar el flujo completo
+# sin credenciales. prod.py cambia esto al backend de Anymail/Postmark.
+EMAIL_BACKEND = config(
+    "EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend"
+)
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="Nexo <no-reply@nexoengine.tech>")
+# URL pública del frontend — para construir los links de los correos
+# (verificación, reset de contraseña). No confundir con VITE_API_URL (esa la
+# lee el navegador; esta la usa el backend para *escribir* URLs en un email).
+FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:8080")
+# Proveedor actual: Postmark (dominio nexoengine.tech). Se dejó Resend
+# configurable por si se vuelve — cambiar de proveedor es solo EMAIL_BACKEND
+# + la key, el dominio nunca importa nada de esto (ver apps/notifications).
+ANYMAIL = {
+    "POSTMARK_SERVER_TOKEN": config("POSTMARK_SERVER_TOKEN", default=""),
+    "RESEND_API_KEY": config("RESEND_API_KEY", default=""),
+}
 
 from config.jazzmin_settings import JAZZMIN_SETTINGS, JAZZMIN_UI_TWEAKS  # noqa: E402

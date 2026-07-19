@@ -1,0 +1,56 @@
+{
+  "slug": "kanban_simple",
+  "version": 1,
+  "display_name": "Kanban simple",
+  "description": "Cuatro columnas — pendiente, en curso, hecho, descartado — para equipos que no necesitan las fases intermedias del flujo TI clásico.",
+  "recommended_for": ["Equipos pequeños", "Agile puro", "Producto"],
+  "is_system": true,
+  "states": [
+    {
+      "slug": "pendiente",
+      "nombre": "Pendiente",
+      "categoria": "todo",
+      "color": "#7C8A93",
+      "orden": 0,
+      "is_initial": true,
+      "mostrar_en_kanban": true,
+      "sheet_phase": ""
+    },
+    {
+      "slug": "en-curso",
+      "nombre": "En curso",
+      "categoria": "active",
+      "color": "#29AFF5",
+      "orden": 1,
+      "is_initial": false,
+      "mostrar_en_kanban": true,
+      "sheet_phase": ""
+    },
+    {
+      "slug": "hecho",
+      "nombre": "Hecho",
+      "categoria": "done",
+      "color": "#22B573",
+      "orden": 2,
+      "is_initial": false,
+      "mostrar_en_kanban": true,
+      "sheet_phase": ""
+    },
+    {
+      "slug": "descartado",
+      "nombre": "Descartado",
+      "categoria": "cancelled",
+      "color": "#E5484D",
+      "orden": 3,
+      "is_initial": false,
+      "mostrar_en_kanban": false,
+      "sheet_phase": ""
+    }
+  ],
+  "priorities": [
+    { "slug": "baja", "nombre": "Baja", "color": "#7C8A93", "orden": 0, "is_default": false },
+    { "slug": "normal", "nombre": "Normal", "color": "#29AFF5", "orden": 1, "is_default": true },
+    { "slug": "alta", "nombre": "Alta", "color": "#E5484D", "orden": 2, "is_default": false }
+  ],
+  "types": []
+}

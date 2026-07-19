@@ -28,6 +28,12 @@ services:
       - ./backend:/app
     ports:
       - "8000:8000"
+    # Overrides opcionales (ej. RESEND_API_KEY/EMAIL_BACKEND para probar envío
+    # real de correo) — backend/.env está gitignored, así que un valor real
+    # nunca se commitea. Lo que ya está fijo en `environment:` abajo siempre
+    # gana si hay conflicto de nombre, así que esto es puramente aditivo.
+    env_file:
+      - ./backend/.env
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.docker
       DB_HOST: db

@@ -1,0 +1,82 @@
+{
+  "slug": "ti_clasico",
+  "version": 1,
+  "display_name": "TI clásico",
+  "description": "El flujo original de Nexo: backlog, en progreso, en pruebas, pendiente cliente, finalizado, cancelado.",
+  "recommended_for": ["Equipos de TI", "Infraestructura", "Sistemas"],
+  "is_system": true,
+  "states": [
+    {
+      "slug": "backlog",
+      "nombre": "Backlog",
+      "categoria": "todo",
+      "color": "#7C8A93",
+      "orden": 0,
+      "is_initial": true,
+      "mostrar_en_kanban": true,
+      "sheet_phase": "No iniciada"
+    },
+    {
+      "slug": "in_progress",
+      "nombre": "En progreso",
+      "categoria": "active",
+      "color": "#29AFF5",
+      "orden": 1,
+      "is_initial": false,
+      "mostrar_en_kanban": true,
+      "sheet_phase": "En Proceso"
+    },
+    {
+      "slug": "testing",
+      "nombre": "En pruebas",
+      "categoria": "active",
+      "color": "#F0A93B",
+      "orden": 2,
+      "is_initial": false,
+      "mostrar_en_kanban": true,
+      "sheet_phase": "En Proceso"
+    },
+    {
+      "slug": "pending_client",
+      "nombre": "Pendiente cliente",
+      "categoria": "active",
+      "color": "#5B6EF5",
+      "orden": 3,
+      "is_initial": false,
+      "mostrar_en_kanban": false,
+      "sheet_phase": "En Proceso"
+    },
+    {
+      "slug": "done",
+      "nombre": "Finalizado",
+      "categoria": "done",
+      "color": "#22B573",
+      "orden": 4,
+      "is_initial": false,
+      "mostrar_en_kanban": true,
+      "sheet_phase": "Finalizada"
+    },
+    {
+      "slug": "cancelled",
+      "nombre": "Cancelado",
+      "categoria": "cancelled",
+      "color": "#7C8A93",
+      "orden": 5,
+      "is_initial": false,
+      "mostrar_en_kanban": false,
+      "sheet_phase": "Cancelado"
+    }
+  ],
+  "priorities": [
+    { "slug": "low", "nombre": "Baja", "color": "#7C8A93", "orden": 0, "is_default": false },
+    { "slug": "medium", "nombre": "Media", "color": "#29AFF5", "orden": 1, "is_default": true },
+    { "slug": "high", "nombre": "Alta", "color": "#F0A93B", "orden": 2, "is_default": false },
+    { "slug": "critical", "nombre": "Crítica", "color": "#E5484D", "orden": 3, "is_default": false }
+  ],
+  "types": [
+    { "slug": "desarrollo", "nombre": "Desarrollo", "color": "#29AFF5", "orden": 0 },
+    { "slug": "soporte", "nombre": "Soporte", "color": "#F0A93B", "orden": 1 },
+    { "slug": "mejora", "nombre": "Mejora", "color": "#22B573", "orden": 2 },
+    { "slug": "incidente", "nombre": "Incidente", "color": "#E5484D", "orden": 3 }
+  ]
+}

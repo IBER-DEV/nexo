@@ -3,11 +3,21 @@ import logging
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
+from apps.organizations.funnel import track
+
 from .models import Activity
 from .sheets_client import delete_row, get_worksheet, upsert_row
 from .sync_context import is_pulling
 
 logger = logging.getLogger(__name__)
+
+
+@receiver(post_save, sender=Activity)
+def track_first_activity_created(sender, instance, created, **kwargs):
+    # numero=1 es la primera actividad de la organización (ver SequenceService)
+    # — cierra el embudo del signup: "Nexo va a servirle a este usuario".
+    if created and instance.numero == 1:
+        track("first_activity_created", organization=instance.organization)
 
 
 @receiver(post_save, sender=Activity)

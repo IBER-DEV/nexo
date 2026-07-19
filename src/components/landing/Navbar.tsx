@@ -7,6 +7,7 @@ import { NEXO_REPO_URL, NexoBrandMark } from "./NexoBrandMark";
 const LINKS = [
   { label: "Funciones", href: "#features" },
   { label: "Demo interactiva", href: "#demo" },
+  { label: "Motor", href: "#engine" },
   { label: "Roadmap", href: "#roadmap" },
   { label: "Precios", href: "#pricing" },
 ];
@@ -56,10 +57,16 @@ export default function Navbar() {
           </a>
           <Link
             to="/login"
+            className="hidden rounded-full px-3.5 py-1.5 text-sm text-gray-300 transition-colors duration-300 hover:text-white sm:block"
+          >
+            Iniciar sesión
+          </Link>
+          <Link
+            to="/signup"
             className="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-gray-950 transition-all duration-300 hover:bg-emerald-400 hover:shadow-[0_0_28px_-4px_rgba(52,211,153,0.7)]"
           >
             <Rocket className="h-4 w-4" />
-            Iniciar sesión
+            Crear cuenta
           </Link>
         </div>
       </nav>

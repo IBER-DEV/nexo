@@ -1,0 +1,7 @@
+{% autoescape off %}Hola {{ nombre }},
+
+Confirma tu correo para terminar de asegurar tu cuenta de Nexo:
+{{ link }}
+
+Si no creaste esta cuenta, ignora este mensaje.
+{% endautoescape %}

@@ -2,6 +2,8 @@ import re
 
 from django.db import models
 
+from .scoping import OrgManager
+
 # Feature flags que cada plan trae activados por defecto. Un flag presente en
 # Organization.feature_flags siempre gana sobre estos defaults — así soporte
 # puede activar/desactivar features puntuales sin cambiar el plan.
@@ -57,3 +59,49 @@ class Organization(models.Model):
         if name in self.feature_flags:
             return bool(self.feature_flags[name])
         return bool(PLAN_DEFAULT_FLAGS.get(self.plan, {}).get(name, False))
+
+    @property
+    def owner(self):
+        """El usuario con rol=owner de esta organización (o None). Derivado,
+        no un FK propio: evita el bootstrap circular de una Organization que
+        necesitaría existir antes que el User que apunta a ella."""
+        return self.users.filter(rol="owner", is_active=True).first()
+
+
+class OrganizationAccessCode(models.Model):
+    """Mecanismo de incorporación de miembros: el Owner/Admin genera un
+    código y lo comparte por el canal que quiera — sin depender de la
+    entrega de un correo. Un código con max_usos=1 y expiración corta ES una
+    invitación individual. El canje pasa siempre por
+    membership.redeem_access_code (ver ADR 0002); nadie escribe
+    user.organization directamente."""
+
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="access_codes"
+    )
+    codigo = models.CharField(max_length=20, unique=True)
+    # Choices de User.Role — el servicio rechaza "owner" (fundar una org es
+    # otro caso de dominio; solo el signup crea Owners).
+    rol = models.CharField(max_length=20)
+    created_by = models.ForeignKey(
+        "users.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="access_codes_created",
+    )
+    expires_at = models.DateTimeField(null=True, blank=True)  # None = no expira
+    max_usos = models.PositiveIntegerField(null=True, blank=True)  # None = ilimitado
+    usos = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = OrgManager()
+
+    class Meta:
+        verbose_name = "código de acceso"
+        verbose_name_plural = "códigos de acceso"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.codigo} → {self.organization.slug} ({self.rol})"

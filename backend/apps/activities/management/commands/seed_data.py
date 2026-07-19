@@ -6,9 +6,10 @@ Safe to run multiple times (idempotent).
 """
 from datetime import date, timedelta
 from django.core.management.base import BaseCommand
+from django.db import connection
 from apps.organizations.models import Organization
 from apps.users.models import User
-from apps.activities.master_defaults import create_default_masters
+from apps.activities.org_templates import apply_template
 from apps.activities.models import (
     Activity,
     ActivityType,
@@ -152,7 +153,7 @@ class Command(BaseCommand):
             ]).update(coordinador=carlos, rol="member")
 
         self.stdout.write("Seeding workflow masters...")
-        create_default_masters(org, WorkflowState, Priority, ActivityType)
+        apply_template(org, "ti_clasico", WorkflowState, Priority, ActivityType)
         states = {s.slug: s for s in WorkflowState.objects.for_org(org)}
         priorities = {p.slug: p for p in Priority.objects.for_org(org)}
 
@@ -235,9 +236,28 @@ class Command(BaseCommand):
         self.stdout.write("  admin@acme.com / demo1234  (superuser, org 'acme' — flujo propio)")
         self.stdout.write("  (all team users use password: demo1234)")
 
+        self._fix_activity_id_sequence()
+
+    def _fix_activity_id_sequence(self) -> None:
+        """Los `pk=i` explícitos de arriba (y los `pk=9000+i` de Acme) dejan
+        la secuencia de Postgres del id de Activity atrasada — el próximo
+        INSERT sin pk explícito (cualquier actividad creada normalmente
+        desde la API) intentaría reusar un id ya ocupado y volaría con
+        IntegrityError. SQLite no tiene este problema (calcula MAX(rowid)+1
+        en cada insert), así que esto solo aplica a Postgres."""
+        if connection.vendor != "postgresql":
+            return
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT setval(pg_get_serial_sequence('activities_activity', 'id'), "
+                "COALESCE((SELECT MAX(id) FROM activities_activity), 1), "
+                "(SELECT MAX(id) FROM activities_activity) IS NOT NULL)"
+            )
+
     def _seed_acme(self, today: date) -> int:
-        """Segunda organización de demo: prefijo y flujo de estados propios
-        (4, no 6) para probar aislamiento y Kanban dinámico a mano."""
+        """Segunda organización de demo: plantilla "kanban_simple" (4
+        estados, no 6) para probar aislamiento, Kanban dinámico y las
+        plantillas de flujo a mano."""
         self.stdout.write("\nSeeding second organization (Acme Ltd)...")
         acme, acme_created = Organization.objects.get_or_create(
             slug="acme",
@@ -256,37 +276,7 @@ class Command(BaseCommand):
             acme_admin.save()
             self.stdout.write("  Created admin@acme.com (superuser)")
 
-        # slug, nombre, categoria, color, orden, is_initial, mostrar_en_kanban
-        ACME_STATES = [
-            ("pendiente", "Pendiente", "todo", "#7C8A93", 0, True, True),
-            ("en-curso", "En curso", "active", "#29AFF5", 1, False, True),
-            ("hecho", "Hecho", "done", "#22B573", 2, False, True),
-            ("descartado", "Descartado", "cancelled", "#E5484D", 3, False, False),
-        ]
-        for slug, nombre, categoria, color, orden, is_initial, mostrar in ACME_STATES:
-            WorkflowState.objects.get_or_create(
-                organization=acme,
-                slug=slug,
-                defaults={
-                    "nombre": nombre,
-                    "categoria": categoria,
-                    "color": color,
-                    "orden": orden,
-                    "is_initial": is_initial,
-                    "mostrar_en_kanban": mostrar,
-                },
-            )
-        ACME_PRIORITIES = [
-            ("baja", "Baja", "#7C8A93", 0, False),
-            ("normal", "Normal", "#29AFF5", 1, True),
-            ("alta", "Alta", "#E5484D", 2, False),
-        ]
-        for slug, nombre, color, orden, is_default in ACME_PRIORITIES:
-            Priority.objects.get_or_create(
-                organization=acme,
-                slug=slug,
-                defaults={"nombre": nombre, "color": color, "orden": orden, "is_default": is_default},
-            )
+        apply_template(acme, "kanban_simple", WorkflowState, Priority, ActivityType)
 
         acme_states = {s.slug: s for s in WorkflowState.objects.for_org(acme)}
         acme_priorities = {p.slug: p for p in Priority.objects.for_org(acme)}

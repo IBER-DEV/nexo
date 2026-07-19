@@ -1,8 +1,9 @@
 # CLAUDE.md
 
 Contexto de proyecto para Claude Code. Léelo al empezar cualquier sesión nueva — evita
-re-descubrir decisiones ya tomadas. El roadmap de negocio (fases, monetización) vive en
-[docs/ROADMAP.md](docs/ROADMAP.md); este archivo es sobre el código.
+re-descubrir decisiones ya tomadas. El roadmap (producto, arquitectura, monetización, plan de
+entrega) vive en [docs/ROADMAP.md](docs/ROADMAP.md) — es un índice a `docs/roadmap/*.md` y
+`docs/adr/`; este archivo es sobre el código en su estado actual.
 
 ## Qué es Nexo
 
@@ -45,7 +46,7 @@ python manage.py migrate && python manage.py seed_data && python manage.py runse
 # Backend — Docker (Postgres real, hot-reload)
 docker compose up --build           # localhost:8000
 
-# Tests backend (67 tests: auth, CRUD, visibilidad, tenancy, maestros, sync, organización)
+# Tests backend (83 tests: auth, CRUD, visibilidad, tenancy, maestros, sync, organización, plantillas)
 docker compose exec -T backend python manage.py test
 
 # Sync AppSheet (Google Sheets) — requiere GOOGLE_SHEETS_CREDENTIALS_JSON configurado
@@ -137,8 +138,72 @@ dinámicamente vía `useWorkspace()` (`GET /workspace/`, bootstrap en una sola l
 Catálogos (Cliente/Proceso/Aplicación/Stakeholder) tienen dueño; el código de actividad es
 por organización (`{prefijo}-0001`). Admin de todo esto en Configuración → Maestros/
 Organización. Detalle de decisiones y las 7 etapas (E0-E5) en
-`~/.claude/plans/vamos-a-empezar-la-imperative-pixel.md`; contexto de negocio y
-diferenciadores detectados en el camino, en `docs/ROADMAP.md`.
+`~/.claude/plans/vamos-a-empezar-la-imperative-pixel.md`; diferenciadores de producto
+detectados en el camino, en `docs/roadmap/product.md`.
+
+**Plantillas de flujo** (`backend/apps/activities/workflow_templates/*.json`, cargadas por
+`org_templates.py`): al crear una `Organization` (desde el admin de Django o desde el signup
+self-service), un campo/paso "Plantilla de flujo" aplica un preset
+(`ti_clasico`/`kanban_simple`/`mesa_ayuda`) vía `apply_template()` — la misma función que usa
+`seed_data`. Las plantillas son datos (JSON versionado en git con metadata
+`version`/`display_name`/`recommended_for`), no tuplas en Python — agregar una nueva es
+agregar un archivo, el loader la descubre por `glob` y valida sus invariantes al arrancar (ver
+`workflow_templates/README.md`). `apply_template` **copia** las filas a la org (nunca una
+referencia compartida) y solo se llama al crear; editar una org existente no reaplica nada.
+
+## Fase 1 — Punto 4: Signup self-service (COMPLETADO — 2026-07-18)
+
+Registro público sin intervención humana: `POST /api/v1/auth/signup/` (email, password, tu
+nombre, nombre de organización, plantilla) crea `Organization` + aplica la plantilla + crea el
+primer `User` como `rol=owner`, todo en una transacción (`apps/organizations/signup.py`), y
+responde con tokens JWT para auto-login inmediato. Alcance: Identidad completa
+(signup/login/logout/forgot/reset) + Organización (nombre→slug→plantilla) + auto-login directo
+al dashboard. **Invitaciones a un segundo usuario quedan fuera**, para cuando haya un caso real.
+
+- **Rol `owner`**: nuevo valor en `User.Role`, con `UniqueConstraint` (máximo un owner activo
+  por org). `Organization.owner` es una propiedad derivada (busca al `User` con ese rol), no
+  un FK — RBAC completo (Owner/Admin/Manager/Member/Viewer) sigue siendo Fase 2.
+- **Idempotencia**: el ancla es el email (`unique=True`), no el nombre de la organización —
+  nombres duplicados se resuelven con sufijo de slug (`acme`, `acme-2`); un doble-submit con el
+  mismo email nunca duplica una organización.
+- **Verificación de email no bloqueante**: banner persistente tras el login, nunca gatea el
+  flujo. Token stateless (`django.core.signing.TimestampSigner`); reset de contraseña reutiliza
+  `default_token_generator` de Django en vez de un segundo esquema de firma.
+- **Email transaccional** (primera integración del proyecto): Resend vía `django-anymail`,
+  `EMAIL_BACKEND` de consola por defecto en dev/tests, Resend solo en `prod.py` — ver variables
+  nuevas en `backend/.env.example`.
+- **Dominio separado del proveedor**: `SignupService.register()` nunca importa nada de correo;
+  al confirmar la transacción emite un signal Django (`user_registered`,
+  `apps/organizations/signals.py`) que la app nueva `apps/notifications/` escucha para enviar
+  el correo real — mismo patrón que `apps/activities/signals.py` usa para el push a Sheets.
+- **Funnel de producto** (`apps/organizations/funnel.py`): `logger.info` estructurado, no un
+  modelo en DB — eventos `signup_started`/`signup_completed`/`email_sent`/`email_confirmed`/
+  `first_activity_created`.
+
+Detalle completo y decisiones confirmadas con el usuario en
+`~/.claude/plans/vamos-a-empezar-la-imperative-pixel.md`; estado del punto en
+`docs/roadmap/release-plan.md`.
+
+## Fase 1 — Punto 4, Bloque C: Gestión de miembros y acceso (COMPLETADO — 2026-07-18)
+
+Incorporar miembros NO usa invitaciones por correo (diseño descartado antes de construirse —
+ver ADR 0002): el Owner/Admin genera **códigos de acceso** (`OrganizationAccessCode`: rol,
+expiración opcional, máx. usos, contador, activo) en Usuarios y equipos, y quien se registra
+elige "Tengo un código" en `/signup` (el mismo `POST /auth/signup/` con dos modos excluyentes:
+`nombre_org`+`template` XOR `access_code`).
+
+- **Regla dura nueva**: unirse a una organización existente pasa SIEMPRE por
+  `apps/organizations/membership.py::add_member()` — ningún mecanismo escribe
+  `user.organization`/`user.rol` directo. `add_member` rechaza `rol=owner` (fundar es otro
+  caso: solo `signup.register()` crea Owners). El canje (`redeem_access_code`) usa
+  `select_for_update` para que `max_usos` no se supere en carrera.
+- Gestión de equipo vía `PATCH /api/v1/users/{pk}/` (extendido): `rol` e `is_active` además de
+  `coordinador_id`. El Owner es intocable desde ahí y nadie se edita a sí mismo; degradar a un
+  coordinador limpia el `coordinador` de su equipo. La lista de usuarios del admin ahora
+  **incluye desactivados** (para reactivarlos) — consumidores tipo selector de responsable
+  deben filtrar `is_active` (ya hecho en `ActivityForm`).
+- `GET /auth/access-codes/resolve/?codigo=` es público (preview "Te unirás a X como Y") — la
+  entropía del código (~59 bits, alfabeto sin caracteres ambiguos) hace inviable enumerar.
 
 ## Deuda conocida / pendiente
 
@@ -146,7 +211,5 @@ diferenciadores detectados en el camino, en `docs/ROADMAP.md`.
 - Catálogos (Cliente/Proceso/Aplicación/Stakeholder) son tablas tipadas fijas — un catálogo
   nuevo (Proveedor, Sucursal...) requiere migración. Un modelo genérico tipo EAV lo evitaría;
   decisión consciente de no hacerlo sin un caso de cliente real (ver ROADMAP, Fase 1 punto 3).
-- Sin plantillas de flujo al crear una organización (siempre parte de cero en maestros) —
-  ver ROADMAP, Fase 1 punto 2.
 - `.agents/skills/` en el repo es una librería de referencia para asistentes de IA, no
   código del proyecto — está en `.gitignore` a propósito.

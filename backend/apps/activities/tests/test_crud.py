@@ -47,3 +47,17 @@ class ActivityCrudTests(APITestCase):
         activity = make_activity(self.admin)
         prefix = self.admin.organization.codigo_prefix
         self.assertEqual(activity.codigo, f"{prefix}-{activity.numero:04d}")
+
+    def test_empresa_proceso_aplicacion_are_optional(self):
+        """No toda organización trabaja con el concepto de empresa-cliente
+        o separa por proceso/aplicación — deben poder quedar vacíos."""
+        payload = self.payload(empresa="", proceso="", aplicacion="")
+        res = self.client.post("/api/v1/activities/", payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED, res.data)
+        activity = Activity.objects.get(pk=res.data["pk"])
+        self.assertIsNone(activity.cliente_id)
+        self.assertIsNone(activity.proceso_id)
+        self.assertIsNone(activity.aplicacion_id)
+        self.assertEqual(res.data["empresa"], "")
+        self.assertEqual(res.data["proceso"], "")
+        self.assertEqual(res.data["aplicacion"], "")

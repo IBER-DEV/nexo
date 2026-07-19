@@ -3,7 +3,7 @@ from datetime import date, timedelta
 
 from django.contrib.auth import get_user_model
 
-from apps.activities.master_defaults import create_default_masters
+from apps.activities.org_templates import apply_template
 from apps.activities.models import (
     Activity,
     ActivityType,
@@ -43,7 +43,7 @@ def make_user(email, nombre, rol="member", password="x", organization=None, **ex
 def ensure_masters(org):
     """Crea (si faltan) los estados/prioridades/tipos por defecto de la org
     y devuelve los diccionarios slug -> instancia."""
-    create_default_masters(org, WorkflowState, Priority, ActivityType)
+    apply_template(org, "ti_clasico", WorkflowState, Priority, ActivityType)
     return {
         "states": {s.slug: s for s in WorkflowState.objects.for_org(org)},
         "priorities": {p.slug: p for p in Priority.objects.for_org(org)},
@@ -88,6 +88,19 @@ def activity_payload(responsable, **overrides):
         "estado_id": masters["states"]["backlog"].pk,
         "fechaInicio": "2026-07-01",
         "fechaLimite": "2026-07-15",
+    }
+    data.update(overrides)
+    return data
+
+
+def signup_payload(**overrides):
+    """Valid POST body for /api/v1/auth/signup/."""
+    data = {
+        "email": "nuevo@acme.com",
+        "password": "contrasena-larga-123",
+        "nombre": "Nueva Owner",
+        "nombre_org": "Acme",
+        "template": "ti_clasico",
     }
     data.update(overrides)
     return data
