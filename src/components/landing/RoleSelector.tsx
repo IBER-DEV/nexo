@@ -6,6 +6,7 @@ import {
   CheckSquare,
   Crown,
   GitBranch,
+  KeyRound,
   ListChecks,
   Shield,
   ShieldCheck,
@@ -14,7 +15,7 @@ import {
 } from "lucide-react";
 import { EASE, fadeUp } from "./anim";
 
-type RoleId = "admin" | "coordinator" | "member";
+type RoleId = "owner" | "admin" | "coordinator" | "member";
 
 const ROLES: {
   id: RoleId;
@@ -26,10 +27,19 @@ const ROLES: {
   accentBg: string;
 }[] = [
   {
+    id: "owner",
+    name: "OWNER",
+    icon: Crown,
+    blurb: "Fundó la organización. Todo lo del admin, más los códigos de acceso del equipo.",
+    accent: "text-amber-400",
+    accentBorder: "border-amber-500/50",
+    accentBg: "bg-amber-500/10",
+  },
+  {
     id: "admin",
     name: "ADMIN",
-    icon: Crown,
-    blurb: "Gestión de usuarios, roles y catálogos (empresas, procesos, aplicaciones).",
+    icon: Shield,
+    blurb: "Gestión de usuarios, flujos de trabajo y catálogos (clientes, procesos, aplicaciones).",
     accent: "text-indigo-400",
     accentBorder: "border-indigo-500/50",
     accentBg: "bg-indigo-500/10",
@@ -56,6 +66,88 @@ const ROLES: {
 
 /* ---------- Role preview panes — reflejan features reales del producto ---------- */
 
+function OwnerPreview() {
+  const codes = [
+    { codigo: "NEX4-7K2M-9QRT", rol: "Miembro", usos: "2 / 5", estado: "Vigente", vigente: true },
+    {
+      codigo: "WM8H-P3XA-K2VD",
+      rol: "Coordinador",
+      usos: "1 / 1",
+      estado: "Agotado",
+      vigente: false,
+    },
+  ];
+  const team = [
+    { name: "Ana García", role: "Coordinador", initials: "AG" },
+    { name: "Carlos Pérez", role: "Miembro", initials: "CP" },
+  ];
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center gap-2 text-amber-400">
+        <KeyRound className="h-4 w-4" />
+        <span className="font-mono text-xs uppercase tracking-widest">códigos de acceso</span>
+      </div>
+      <div className="rounded-lg border border-hairline bg-ink/70 p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <span className="font-mono text-[10px] uppercase tracking-widest text-gray-500">
+            comparte un código — tu equipo entra solo
+          </span>
+          <span className="rounded-full bg-amber-500/10 px-2.5 py-0.5 font-mono text-[10px] text-amber-400">
+            + generar
+          </span>
+        </div>
+        <div className="space-y-2">
+          {codes.map((c, i) => (
+            <motion.div
+              key={c.codigo}
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, ease: EASE, delay: 0.1 * i }}
+              className={`flex items-center justify-between rounded-md border px-3.5 py-2.5 ${
+                c.vigente
+                  ? "border-hairline/60 bg-surface/60"
+                  : "border-hairline/40 bg-surface/30 opacity-60"
+              }`}
+            >
+              <span className="font-mono text-xs tracking-wider text-gray-200">{c.codigo}</span>
+              <div className="flex items-center gap-2 font-mono text-[10px]">
+                <span className="rounded-full border border-hairline bg-ink px-2 py-0.5 uppercase tracking-widest text-gray-400">
+                  {c.rol}
+                </span>
+                <span className="text-gray-500">{c.usos}</span>
+                <span className={c.vigente ? "text-emerald-400" : "text-gray-600"}>{c.estado}</span>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+      <div className="rounded-lg border border-hairline bg-ink/70 p-4">
+        <div className="mb-3 font-mono text-[10px] uppercase tracking-widest text-gray-500">
+          acceso del equipo — cambia roles, desactiva sin perder historial
+        </div>
+        <div className="space-y-2">
+          {team.map((u) => (
+            <div
+              key={u.name}
+              className="flex items-center justify-between rounded-md border border-hairline/60 bg-surface/60 px-3.5 py-2.5"
+            >
+              <div className="flex items-center gap-3">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full border border-hairline bg-ink font-mono text-[10px] text-gray-300">
+                  {u.initials}
+                </span>
+                <span className="text-sm text-gray-200">{u.name}</span>
+              </div>
+              <span className="rounded-full border border-hairline bg-ink px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-widest text-gray-400">
+                {u.role} ▾
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AdminPreview() {
   const users = [
     { name: "Ana García", role: "Coordinador", initials: "AG" },
@@ -63,7 +155,7 @@ function AdminPreview() {
     { name: "María López", role: "Miembro", initials: "ML" },
   ];
   const catalogs = [
-    { name: "Empresas", count: 3 },
+    { name: "Clientes", count: 3 },
     { name: "Procesos", count: 6 },
     { name: "Aplicaciones", count: 9 },
   ];
@@ -240,13 +332,14 @@ function MemberPreview() {
 }
 
 const PREVIEWS: Record<RoleId, { title: string; el: ComponentType }> = {
+  owner: { title: "owner · códigos de acceso y equipo", el: OwnerPreview },
   admin: { title: "admin · usuarios y catálogos", el: AdminPreview },
   coordinator: { title: "coordinador · planeación y reportes", el: CoordinatorPreview },
   member: { title: "miembro · mis actividades", el: MemberPreview },
 };
 
 export default function RoleSelector() {
-  const [role, setRole] = useState<RoleId>("coordinator");
+  const [role, setRole] = useState<RoleId>("owner");
   const active = ROLES.find((r) => r.id === role)!;
   const Preview = PREVIEWS[role].el;
 
@@ -269,11 +362,12 @@ export default function RoleSelector() {
               <h2 className="mt-4 font-display text-4xl font-bold tracking-tight text-white md:text-6xl">
                 Un solo motor.
                 <br />
-                Tres <span className="text-gradient-flow">roles reales</span>.
+                Cuatro <span className="text-gradient-flow">roles reales</span>.
               </h2>
               <p className="mt-5 max-w-md text-sm leading-relaxed text-gray-400 md:text-lg">
                 El sistema de roles de Nexo determina qué ve y qué puede hacer cada persona —
-                permisos reales de la API, no solo maquillaje visual.
+                permisos reales de la API, no solo maquillaje visual. El equipo entra con un código
+                de acceso: sin invitaciones por correo que se pierden en spam.
               </p>
             </motion.div>
 
@@ -375,11 +469,13 @@ export default function RoleSelector() {
             {/* under-glow keyed to role */}
             <div
               className={`pointer-events-none absolute -bottom-10 left-1/2 h-24 w-3/4 -translate-x-1/2 rounded-full blur-[70px] transition-colors duration-700 ${
-                role === "admin"
-                  ? "bg-indigo-500/20"
-                  : role === "coordinator"
-                    ? "bg-emerald-500/20"
-                    : "bg-gray-500/15"
+                role === "owner"
+                  ? "bg-amber-500/20"
+                  : role === "admin"
+                    ? "bg-indigo-500/20"
+                    : role === "coordinator"
+                      ? "bg-emerald-500/20"
+                      : "bg-gray-500/15"
               }`}
             />
           </motion.div>

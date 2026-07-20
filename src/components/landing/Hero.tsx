@@ -1,5 +1,6 @@
+import { Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { ArrowRight, Github, MousePointerClick, Terminal } from "lucide-react";
+import { Github, MousePointerClick, Rocket, Terminal } from "lucide-react";
 import FlowNetwork from "./FlowNetwork";
 import { EASE } from "./anim";
 import { NEXO_REPO_URL, NexoBrandMark } from "./NexoBrandMark";
@@ -79,9 +80,9 @@ export default function Hero() {
           transition={{ duration: 1, ease: EASE, delay: 0.52 }}
           className="mx-auto mt-7 max-w-2xl text-sm leading-relaxed text-gray-400 md:text-lg"
         >
-          Backlog, planeación semanal y mensual, tablero Kanban y reportes ejecutivos, con roles de
-          admin, coordinador y miembro. Nació como herramienta interna —{" "}
-          <span className="font-mono text-gray-300">FlowDesk</span> — hoy es open source.
+          Backlog, planeación, Kanban y reportes — con el flujo de <em>tu</em> equipo, no el
+          nuestro: elige una plantilla al crear tu espacio, ajusta estados y prioridades sin tocar
+          código, e invita con un código de acceso. Open source bajo AGPL-3.0.
         </motion.p>
 
         <motion.div
@@ -91,19 +92,19 @@ export default function Hero() {
           className="pointer-events-auto mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row"
         >
           <a
-            href="#roadmap"
+            href="#pricing"
             className="group order-2 flex items-center gap-2 rounded-full border border-hairline bg-surface/60 px-6 py-3 text-sm font-medium text-gray-300 backdrop-blur transition-all duration-300 hover:border-gray-500 hover:text-white sm:order-1"
           >
-            Ver roadmap de transición
-            <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1.5 group-hover:scale-110" />
+            <Terminal className="h-4 w-4 transition-transform duration-300 group-hover:-rotate-6" />
+            Autoalojar con Docker
           </a>
-          <a
-            href="#pricing"
+          <Link
+            to="/signup"
             className="group order-1 flex items-center gap-2.5 rounded-full bg-emerald-500 px-7 py-3 text-sm font-semibold text-gray-950 transition-all duration-300 hover:bg-emerald-400 glow-emerald sm:order-2"
           >
-            <Terminal className="h-4 w-4 transition-transform duration-300 group-hover:-rotate-6" />
-            Autoalojar ahora
-          </a>
+            <Rocket className="h-4 w-4 transition-transform duration-300 group-hover:-rotate-6" />
+            Crea tu espacio gratis
+          </Link>
         </motion.div>
 
         <motion.div

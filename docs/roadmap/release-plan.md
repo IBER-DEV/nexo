@@ -25,6 +25,7 @@ Dependabot, repo renombrado y protegido. Detalle: `git show af3d650 --stat`.
 | 4c | Gestión de miembros y acceso a organizaciones | ✅ Completado (2026-07-18) |
 | 5 | Billing (Stripe) | ⏸️ Sin diseñar |
 | 6 | Hosting del backend | ⏸️ Sin diseñar |
+| 7 | Landing, README y primer minuto (pre-lanzamiento) | 🚧 En progreso (2026-07-20), parte diferida al punto 6 |
 
 Detalle técnico de cada punto completado → [architecture.md](architecture.md). Detalle de
 producto/diferenciadores → [product.md](product.md). Planes de implementación caso por caso en
@@ -57,6 +58,15 @@ producto/diferenciadores → [product.md](product.md). Planes de implementación
    organización según estado de pago.
 6. **Hosting del backend** — backend dockerizado a Railway/Render/Fly.io. Falta: monitoreo
    (Sentry), backups automáticos de Postgres. (Email transaccional ya resuelto en el punto 4.)
+7. **Landing, README y primer minuto** — auditoría completa en
+   [landing-audit.md](landing-audit.md). La landing (`src/components/landing/`) no se publica
+   hasta que el punto 6 esté resuelto: hoy no hay worker de Cloudflare para el frontend ni
+   backend en producción, solo hosting comprado en Hostinger para `nexoengine.tech`. Por eso
+   la auditoría separa lo que **no depende de producción** (honestidad de contenido —
+   footer con formulario fake, quickstart incompleto, README desactualizado, anclas de
+   navegación, agrupación de features — implementado ya) de lo que **sí depende del punto 6**
+   (CTA primario, CTA contextual post-demo, capturas/demo pública, empty state de activación
+   post-signup) y queda diferido explícitamente en el documento, no perdido.
 
 La base de Fase 0 (imagen Docker, `gunicorn`, `whitenoise`, settings por entorno) es
 exactamente el punto de partida de este hosting.
@@ -86,3 +96,9 @@ adelantado. Lista de features → [product.md](product.md).
   Membership con `add_member()` como seam único (ADR 0002 — tabla física `Membership`
   diferida hasta multi-org Enterprise). Incluye cambio de rol y desactivación/reactivación de
   miembros desde la UI.
+- **2026-07-20** — Auditoría de landing/README/primer minuto en panel con roles
+  ([landing-audit.md](landing-audit.md)). Confirmó que la landing nueva (sin commitear al
+  momento de la auditoría) está lista en contenido, pero identificó una paradoja de CTA: el
+  botón primario lleva a `/signup`, que no puede completarse porque el punto 6 (hosting) no
+  existe aún. Decisión: implementar ya todo lo que no depende de producción (contenido,
+  quickstart, README, navegación) y diferir explícitamente lo que sí depende del punto 6.

@@ -36,11 +36,11 @@ const PHASES: Phase[] = [
   {
     id: "fase-1",
     title: "Fundaciones SaaS",
-    era: "Siguiente",
-    body: "Multi-tenancy, registro self-service y facturación para habilitar el plan Cloud — el ~60% del esfuerzo de toda la estrategia.",
-    badge: "en diseño",
+    era: "En progreso",
+    body: "Multi-tenancy ✓, plantillas de flujo ✓, registro self-service y códigos de acceso ✓ — construido y probado. Faltan facturación y hosting para habilitar el plan Cloud.",
+    badge: "construida en público",
     icon: Rocket,
-    style: "neutral",
+    style: "emerald",
   },
   {
     id: "fase-2",

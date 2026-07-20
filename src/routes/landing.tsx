@@ -10,6 +10,7 @@ import RoleSelector from "@/components/landing/RoleSelector";
 import NexoEngine from "@/components/landing/NexoEngine";
 import Roadmap from "@/components/landing/Roadmap";
 import Pricing from "@/components/landing/Pricing";
+import Faq from "@/components/landing/Faq";
 import Footer from "@/components/landing/Footer";
 import { NexoGradientDefs } from "@/components/landing/NexoBrandMark";
 
@@ -20,7 +21,7 @@ export const Route = createFileRoute("/landing")({
       {
         name: "description",
         content:
-          "Backlog, planeación semanal y mensual, tablero Kanban y reportes con roles de admin, coordinador y miembro. Open source bajo AGPL-3.0, autoalojable con Docker.",
+          "Backlog, planeación, Kanban y reportes con flujos configurables por organización: elige una plantilla, ajusta estados y prioridades, e invita a tu equipo con un código de acceso. Crea tu espacio en minutos. Open source bajo AGPL-3.0, autoalojable con Docker.",
       },
     ],
     links: [
@@ -77,6 +78,7 @@ function LandingPage() {
         <NexoEngine />
         <Roadmap />
         <Pricing />
+        <Faq />
       </main>
       <Footer />
     </div>
