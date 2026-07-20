@@ -59,15 +59,16 @@ producto/diferenciadores → [product.md](product.md). Planes de implementación
 6. **Hosting del backend** — 🚧 backend desplegado en Railway (proyecto `nexo-backend`):
    servicio `backend` (build por `backend/Dockerfile`) + Postgres administrado, wireado por
    variables de referencia (`${{Postgres.PGHOST}}` etc., no una `DATABASE_URL` — `prod.py` usa
-   `DB_NAME`/`DB_USER`/... por separado). Dominio generado por Railway
-   (`backend-production-c5b3.up.railway.app`); dominio propio (`api.nexoengine.tech`) pendiente
-   de apuntar el DNS en Hostinger. Bug encontrado y corregido en el primer deploy: `prod.py`
+   `DB_NAME`/`DB_USER`/... por separado). Dominio propio `api.nexoengine.tech` conectado (CNAME
+   + TXT de verificación creados vía la API de Hostinger, certificado válido); el dominio
+   generado por Railway (`backend-production-c5b3.up.railway.app`) queda como fallback — ambos
+   viven en `ALLOWED_HOSTS`. Bug encontrado y corregido en el primer deploy: `prod.py`
    necesitaba `SECURE_PROXY_SSL_HEADER` — Railway termina TLS en su borde y reenvía HTTP plano
    al contenedor, así que `SECURE_SSL_REDIRECT` sin ese header nunca ve la request como https y
-   redirige en loop. Falta: dominio propio, monitoreo (Sentry), backups automáticos de Postgres,
-   y decidir si el Worker de Cloudflare del frontend se conecta a este backend antes de publicar
-   la landing (ver [landing-audit.md](landing-audit.md)). (Email transaccional ya resuelto en
-   el punto 4 — Postmark ya está configurado en las variables del servicio.)
+   redirige en loop. Falta: monitoreo (Sentry), backups automáticos de Postgres, y decidir si
+   el Worker de Cloudflare del frontend se conecta a este backend antes de publicar la landing
+   (ver [landing-audit.md](landing-audit.md)). (Email transaccional ya resuelto en el punto 4 —
+   Postmark ya está configurado en las variables del servicio.)
 7. **Landing, README y primer minuto** — auditoría completa en
    [landing-audit.md](landing-audit.md). La landing (`src/components/landing/`) no se publica
    hasta que el punto 6 esté resuelto: hoy no hay worker de Cloudflare para el frontend ni
