@@ -3,8 +3,19 @@
 [![CI](https://github.com/IBER-DEV/nexo/actions/workflows/ci.yml/badge.svg)](https://github.com/IBER-DEV/nexo/actions/workflows/ci.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
 
-Plataforma open source de gestión de actividades y proyectos para equipos de TI: backlog,
-planeación semanal/mensual, tablero Kanban, reportes ejecutivos y administración de usuarios.
+> Nexo is an open-source activity management platform for IT teams — backlog, weekly/monthly
+> planning, Kanban, and per-organization configurable workflows. Docs and UI are in Spanish;
+> that's a product decision (Spanish-first), not an accident.
+
+> **Pendiente:** falta un GIF del Kanban real aquí arriba (arrastrar una tarjeta, en loop) —
+> se agrega en cuanto haya una grabación contra el producto corriendo, no un mock.
+
+Plataforma open source de gestión de actividades para equipos de TI: backlog, planeación
+semanal/mensual, tablero Kanban y reportes. Cada organización define su propio flujo (estados,
+prioridades, tipos) desde una plantilla al registrarse — `ti_clasico`, `kanban_simple` o
+`mesa_ayuda` — y lo ajusta sin tocar código. El registro es self-service; para sumar gente a una
+organización existente, quien la administra genera **códigos de acceso** (sin invitaciones por
+correo).
 
 ## Stack
 
@@ -62,12 +73,20 @@ archivos `.py`. Ver `docker-compose.yml` y `backend/Dockerfile`.
 
 ### Credenciales de prueba
 
-Tras correr `seed_data`:
+`seed_data` crea **dos organizaciones** para poder probar aislamiento multi-tenant a mano —
+cada una con su propio flujo, prefijo de actividad y usuarios:
 
 ```
+# org "demo" (prefijo ACT, flujo "TI clásico" de 6 estados)
 admin@empresa.com / demo1234        (administrador)
 ana.garcia@empresa.com / demo1234   (coordinador)
+
+# org "acme" (prefijo ACM, flujo propio de 4 estados)
+admin@acme.com / demo1234           (administrador)
 ```
+
+Entra con ambas para ver que el Kanban, los selects de estado/prioridad y la numeración de
+actividades son realmente dinámicos por organización, no un flujo fijo con etiquetas distintas.
 
 ## Scripts
 
@@ -89,10 +108,26 @@ ana.garcia@empresa.com / demo1234   (coordinador)
 
 ```
 src/                  Frontend (rutas, componentes, providers, servicios)
-backend/apps/         Apps Django (activities, users)
+backend/apps/         Apps Django (organizations, activities, users, notifications)
 backend/config/       Settings (dev / docker / prod), URLs
 docker-compose.yml    Backend + Postgres para desarrollo local
 ```
+
+## Estado del proyecto
+
+Fase 1 (fundaciones SaaS) en progreso — construida en público, ~60% del esfuerzo total de la
+estrategia:
+
+- [x] Multi-tenancy + maestros configurables por organización
+- [x] Plantillas de flujo al crear una organización (`ti_clasico` / `kanban_simple` /
+      `mesa_ayuda`)
+- [x] Registro self-service (organización + primer usuario, auto-login)
+- [x] Códigos de acceso para incorporar miembros a una organización existente
+- [ ] Catálogos genéricos / campos personalizados (deuda consciente, sin caso de cliente real)
+- [ ] Billing (Stripe)
+- [ ] Hosting del backend en producción
+
+Detalle completo en [docs/roadmap/release-plan.md](docs/roadmap/release-plan.md).
 
 ## Documentación
 

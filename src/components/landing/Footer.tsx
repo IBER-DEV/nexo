@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
-import { ArrowUpRight, Github, MessagesSquare, Send } from "lucide-react";
+import { ArrowUpRight, Eye, Github, MessagesSquare } from "lucide-react";
 import { EASE } from "./anim";
 import { NEXO_DISCUSSIONS_URL, NEXO_REPO_URL, NexoBrandMark } from "./NexoBrandMark";
 
@@ -12,7 +12,11 @@ const CTA = "¿Listo para ordenar el trabajo de tu equipo de TI?";
 const BOOT_LINES = [
   { text: "▸ clonando github.com/IBER-DEV/nexo … ok", color: "text-gray-500" },
   { text: "▸ montando módulos: kanban, backlog, planeación … ok", color: "text-gray-500" },
-  { text: "▸ guardas de rol [admin · coordinador · miembro] … ok", color: "text-gray-500" },
+  {
+    text: "▸ plantillas de flujo: ti_clasico · kanban_simple · mesa_ayuda … ok",
+    color: "text-gray-500",
+  },
+  { text: "▸ guardas de rol [owner · admin · coordinador · miembro] … ok", color: "text-gray-500" },
   { text: "✓ listo para autoalojar", color: "text-emerald-400" },
 ];
 
@@ -39,8 +43,6 @@ export default function Footer() {
   const [bootStep, setBootStep] = useState(0);
   const [ctaLen, setCtaLen] = useState(0);
   const [showPortal, setShowPortal] = useState(false);
-  const [email, setEmail] = useState("");
-  const [subscribed, setSubscribed] = useState(false);
 
   // Sequential typing: command -> boot lines -> big CTA -> portal
   useEffect(() => {
@@ -72,11 +74,6 @@ export default function Footer() {
     }, 55);
     return () => clearInterval(typeCmd);
   }, [inView]);
-
-  const subscribe = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) setSubscribed(true);
-  };
 
   const socials = [
     { icon: Github, label: "GitHub", href: NEXO_REPO_URL },
@@ -151,31 +148,18 @@ export default function Footer() {
               transition={{ duration: 0.8, ease: EASE }}
               className={showPortal ? "pointer-events-auto" : "pointer-events-none"}
             >
-              {subscribed ? (
-                <p className="mt-8 text-sm text-emerald-400">
-                  ✓ listo — te avisaremos a <span className="text-gray-300">{email}</span> cuando
-                  haya novedades
-                </p>
-              ) : (
-                <form onSubmit={subscribe} className="mt-8 flex max-w-lg items-center gap-2">
-                  <span className="hidden shrink-0 text-sm text-emerald-400 sm:block">❯</span>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="tu correo para novedades del proyecto"
-                    className="w-full rounded-lg border border-hairline bg-surface/80 px-4 py-3 font-mono text-sm text-gray-200 outline-none transition-colors placeholder:text-gray-600 focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/20"
-                  />
-                  <button
-                    type="submit"
-                    className="flex shrink-0 items-center gap-2 rounded-lg bg-emerald-500 px-5 py-3 text-sm font-semibold text-gray-950 transition-all duration-300 hover:bg-emerald-400 hover:shadow-[0_0_24px_-4px_rgba(52,211,153,0.8)]"
-                  >
-                    <Send className="h-4 w-4" />
-                    <span className="hidden sm:inline">Suscribirme</span>
-                  </button>
-                </form>
-              )}
+              <a
+                href={`${NEXO_REPO_URL}/subscription`}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-8 flex max-w-lg items-center gap-3 rounded-lg border border-hairline bg-surface/80 px-5 py-3.5 font-mono text-sm text-gray-200 transition-all duration-300 hover:border-emerald-500/60 hover:text-white hover:shadow-[0_0_24px_-4px_rgba(52,211,153,0.5)]"
+              >
+                <Eye className="h-4 w-4 shrink-0 text-emerald-400" />
+                <span>Watch releases en GitHub — así te enteras cuando haya novedades</span>
+              </a>
+              <p className="mt-3 max-w-lg font-mono text-[11px] text-gray-600">
+                sin newsletter falsa: la actividad del repo es la única fuente de novedades hoy
+              </p>
 
               <div className="mt-8 flex items-center gap-3">
                 {socials.map((s) => (

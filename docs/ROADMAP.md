@@ -13,5 +13,8 @@ responda tu pregunta:
   billing.
 - **[roadmap/release-plan.md](roadmap/release-plan.md)** — estado actual: qué fase/punto está
   completado, en progreso o pendiente, y en qué orden.
+- **[roadmap/landing-audit.md](roadmap/landing-audit.md)** — auditoría de landing, README y
+  primer minuto: qué se implementó ya y qué queda diferido hasta que el hosting (Fase 1, punto
+  6) esté resuelto.
 
 El contexto técnico general del código (no del roadmap) vive en [CLAUDE.md](../CLAUDE.md).

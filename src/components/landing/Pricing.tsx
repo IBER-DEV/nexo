@@ -1,15 +1,21 @@
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { Check, CheckCircle2, Cloud, Container, Copy, Mail } from "lucide-react";
+import { Check, CheckCircle2, Cloud, Container, Copy, Mail, Rocket } from "lucide-react";
 import { fadeUp } from "./anim";
-import { NEXO_DISCUSSIONS_URL } from "./NexoBrandMark";
+import { NEXO_DISCUSSIONS_URL, NEXO_REPO_URL } from "./NexoBrandMark";
 
-const DOCKER_CMD = "docker compose up --build";
+// El comando debe ser autosuficiente: "docker compose up --build" solo, sin el
+// clone previo, no hace nada — es el bug de comprensión #1 del quickstart.
+const DOCKER_CMD = `git clone ${NEXO_REPO_URL}.git && cd nexo && docker compose up --build`;
+const DOCKER_CMD_LABEL = "git clone && docker compose up --build";
 
 const COMMUNITY_FEATURES = [
   "100% open source (AGPL-3.0)",
   "Kanban, backlog y planeación semanal/mensual",
-  "Reportes y roles admin/coordinador/miembro",
+  "Flujos configurables: estados, prioridades y tipos por organización",
+  "Plantillas de inicio: TI clásico · Kanban simple · Mesa de ayuda",
+  "Registro self-service y códigos de acceso para tu equipo",
   "Sync opcional con Google Sheets/AppSheet",
 ];
 
@@ -101,26 +107,35 @@ export default function Pricing() {
                 </li>
               ))}
             </ul>
-            <button
-              onClick={copyCmd}
-              className={`group mt-9 flex w-full items-center justify-center gap-2.5 rounded-full border px-6 py-3 font-mono text-sm transition-all duration-300 ${
-                copied
-                  ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-300"
-                  : "border-hairline bg-surface text-gray-300 hover:border-gray-500 hover:text-white"
-              }`}
-            >
-              {copied ? (
-                <>
-                  <CheckCircle2 className="h-4 w-4" />
-                  copiado al portapapeles
-                </>
-              ) : (
-                <>
-                  <Copy className="h-4 w-4 transition-transform group-hover:scale-110" />
-                  {DOCKER_CMD}
-                </>
-              )}
-            </button>
+            <div className="mt-9 space-y-3">
+              <Link
+                to="/signup"
+                className="flex w-full items-center justify-center gap-2.5 rounded-full bg-emerald-500 px-6 py-3 text-sm font-semibold text-gray-950 transition-all duration-300 hover:bg-emerald-400 hover:shadow-[0_0_24px_-6px_rgba(52,211,153,0.8)]"
+              >
+                <Rocket className="h-4 w-4" />
+                Probar sin instalar
+              </Link>
+              <button
+                onClick={copyCmd}
+                className={`group flex w-full items-center justify-center gap-2.5 rounded-full border px-6 py-3 font-mono text-sm transition-all duration-300 ${
+                  copied
+                    ? "border-emerald-500/60 bg-emerald-500/10 text-emerald-300"
+                    : "border-hairline bg-surface text-gray-300 hover:border-gray-500 hover:text-white"
+                }`}
+              >
+                {copied ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4" />
+                    copiado al portapapeles
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4 transition-transform group-hover:scale-110" />
+                    {DOCKER_CMD_LABEL}
+                  </>
+                )}
+              </button>
+            </div>
           </motion.div>
 
           {/* Cloud / Enterprise — en el roadmap, no disponible aún */}
@@ -185,6 +200,16 @@ export default function Pricing() {
           className="mt-10 text-center font-mono text-xs text-gray-600"
         >
           núcleo bajo AGPL-3.0 · sin feature flags en self-hosted · exporta tus datos cuando quieras
+        </motion.p>
+        <motion.p
+          variants={fadeUp}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true }}
+          custom={4}
+          className="mt-2 text-center font-mono text-xs text-gray-600"
+        >
+          150+ tests corriendo en CI · imagen Docker publicada en GHCR en cada release
         </motion.p>
       </div>
     </section>

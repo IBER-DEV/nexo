@@ -94,6 +94,9 @@ const CAPABILITIES: Capability[] = [
   },
 ];
 
+const AVAILABLE = CAPABILITIES.filter((c) => c.status === "disponible");
+const ROADMAP = CAPABILITIES.filter((c) => c.status === "roadmap");
+
 export default function NexoEngine() {
   return (
     <section id="engine" className="relative overflow-hidden bg-ink py-28 md:py-36">
@@ -120,50 +123,60 @@ export default function NexoEngine() {
           </p>
         </motion.div>
 
-        <div className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {CAPABILITIES.map((cap, i) => {
-            const available = cap.status === "disponible";
-            return (
+        {/* Disponible hoy — tarjetas grandes, la que gana peso visual */}
+        <div className="mt-16 grid gap-5 sm:grid-cols-3">
+          {AVAILABLE.map((cap, i) => (
+            <motion.div
+              key={cap.id}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{ duration: 0.7, ease: EASE, delay: i * 0.06 }}
+              className="relative rounded-2xl border border-emerald-500/40 bg-emerald-500/[0.05] p-6 backdrop-blur transition-transform duration-500 hover:-translate-y-1 shadow-[0_0_50px_-24px_rgba(16,185,129,0.5)]"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-emerald-500/50 text-emerald-400">
+                  <cap.icon className="h-[18px] w-[18px]" />
+                </span>
+                <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/50 bg-emerald-500/15 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-widest text-emerald-300">
+                  <Check className="h-3 w-3" />
+                  Disponible
+                </span>
+              </div>
+              <h3 className="mt-4 font-display text-xl font-bold tracking-tight text-white">
+                {cap.label}
+              </h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-gray-400">{cap.description}</p>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Roadmap — fila secundaria, más compacta a propósito: no es la mayoría del mensaje */}
+        <div className="mt-10">
+          <span className="font-mono text-[11px] uppercase tracking-widest text-gray-600">
+            en el roadmap — todavía no son un producto activo
+          </span>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {ROADMAP.map((cap, i) => (
               <motion.div
                 key={cap.id}
-                initial={{ opacity: 0, y: 24 }}
+                initial={{ opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.4 }}
-                transition={{ duration: 0.7, ease: EASE, delay: i * 0.05 }}
-                className={`relative rounded-2xl border p-5 backdrop-blur transition-transform duration-500 hover:-translate-y-1 ${
-                  available
-                    ? "border-emerald-500/40 bg-emerald-500/[0.05] shadow-[0_0_50px_-24px_rgba(16,185,129,0.5)]"
-                    : "border-dashed border-hairline bg-surface/40"
-                }`}
+                transition={{ duration: 0.6, ease: EASE, delay: i * 0.04 }}
+                className="flex items-center gap-3 rounded-xl border border-dashed border-hairline bg-surface/40 px-4 py-3"
               >
-                <div className="flex items-center justify-between gap-3">
-                  <span
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${
-                      available
-                        ? "border-emerald-500/50 text-emerald-400"
-                        : "border-hairline text-gray-500"
-                    }`}
-                  >
-                    <cap.icon className="h-4 w-4" />
-                  </span>
-                  <span
-                    className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-widest ${
-                      available
-                        ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-300"
-                        : "border-dashed border-gray-600/50 bg-transparent text-gray-500"
-                    }`}
-                  >
-                    {available ? <Check className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-                    {available ? "Disponible" : "Roadmap"}
-                  </span>
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-hairline text-gray-500">
+                  <cap.icon className="h-3.5 w-3.5" />
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-gray-300">{cap.label}</p>
+                  <p className="truncate text-xs text-gray-500">{cap.description}</p>
                 </div>
-                <h3 className="mt-4 font-display text-lg font-bold tracking-tight text-white">
-                  {cap.label}
-                </h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-gray-400">{cap.description}</p>
+                <Clock className="ml-auto h-3.5 w-3.5 shrink-0 text-gray-600" />
               </motion.div>
-            );
-          })}
+            ))}
+          </div>
         </div>
       </div>
     </section>
