@@ -24,7 +24,7 @@ Dependabot, repo renombrado y protegido. Detalle: `git show af3d650 --stat`.
 | 4 | Signup self-service + onboarding | ✅ Completado (2026-07-18), alcance Bloque A+B+D |
 | 4c | Gestión de miembros y acceso a organizaciones | ✅ Completado (2026-07-18) |
 | 5 | Billing (Stripe) | ⏸️ Sin diseñar |
-| 6 | Hosting del backend | ⏸️ Sin diseñar |
+| 6 | Hosting del backend | 🚧 En progreso (2026-07-20) — backend en Railway |
 | 7 | Landing, README y primer minuto (pre-lanzamiento) | 🚧 En progreso (2026-07-20), parte diferida al punto 6 |
 
 Detalle técnico de cada punto completado → [architecture.md](architecture.md). Detalle de
@@ -56,8 +56,18 @@ producto/diferenciadores → [product.md](product.md). Planes de implementación
      de reapertura). Incluye además cambio de rol y desactivación de miembros desde la UI.
 5. **Billing** — Stripe (Checkout + Customer Portal), webhook que activa/suspende la
    organización según estado de pago.
-6. **Hosting del backend** — backend dockerizado a Railway/Render/Fly.io. Falta: monitoreo
-   (Sentry), backups automáticos de Postgres. (Email transaccional ya resuelto en el punto 4.)
+6. **Hosting del backend** — 🚧 backend desplegado en Railway (proyecto `nexo-backend`):
+   servicio `backend` (build por `backend/Dockerfile`) + Postgres administrado, wireado por
+   variables de referencia (`${{Postgres.PGHOST}}` etc., no una `DATABASE_URL` — `prod.py` usa
+   `DB_NAME`/`DB_USER`/... por separado). Dominio generado por Railway
+   (`backend-production-c5b3.up.railway.app`); dominio propio (`api.nexoengine.tech`) pendiente
+   de apuntar el DNS en Hostinger. Bug encontrado y corregido en el primer deploy: `prod.py`
+   necesitaba `SECURE_PROXY_SSL_HEADER` — Railway termina TLS en su borde y reenvía HTTP plano
+   al contenedor, así que `SECURE_SSL_REDIRECT` sin ese header nunca ve la request como https y
+   redirige en loop. Falta: dominio propio, monitoreo (Sentry), backups automáticos de Postgres,
+   y decidir si el Worker de Cloudflare del frontend se conecta a este backend antes de publicar
+   la landing (ver [landing-audit.md](landing-audit.md)). (Email transaccional ya resuelto en
+   el punto 4 — Postmark ya está configurado en las variables del servicio.)
 7. **Landing, README y primer minuto** — auditoría completa en
    [landing-audit.md](landing-audit.md). La landing (`src/components/landing/`) no se publica
    hasta que el punto 6 esté resuelto: hoy no hay worker de Cloudflare para el frontend ni
