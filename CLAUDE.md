@@ -29,6 +29,15 @@ Cloudflare cableado (el comentario del propio archivo dice no tocarlo manualment
 Por esto Docker **solo cubre el backend** — dockerizar el frontend como servidor Node
 implicaría pelear contra este target y fue una decisión explícita, no un olvido.
 
+**Despliegue real (desde 2026-07-20):** `wrangler.jsonc` tiene `name: "nexo"` (Worker en
+`nexo.iber-mascodev.workers.dev`; dominio propio `nexoengine.tech` aún sin apuntar ahí).
+`VITE_API_URL` se hornea en build time (`import.meta.env`, no es una var de runtime del
+Worker) — cambiar la URL del backend exige `VITE_API_URL=... npm run build && npx wrangler
+deploy`, no alcanza con tocar una variable en el dashboard de Cloudflare. El backend vive en
+Railway (`api.nexoengine.tech`); su `CORS_ALLOWED_ORIGINS` debe incluir el dominio del Worker
+que le pega. Detalle completo del hosting en
+[docs/roadmap/release-plan.md](docs/roadmap/release-plan.md), punto 6.
+
 ## Comandos
 
 ```bash
