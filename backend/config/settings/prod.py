@@ -20,6 +20,10 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+# El proxy del hosting (Railway) termina TLS en su borde y reenvía HTTP plano
+# al contenedor — sin esto, SECURE_SSL_REDIRECT nunca ve la request como https
+# y redirige en loop a sí misma (301 infinito).
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Envío real de correo vía Postmark (dev/docker usan la consola por defecto).
 EMAIL_BACKEND = "anymail.backends.postmark.EmailBackend"
