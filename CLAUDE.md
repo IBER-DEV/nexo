@@ -29,14 +29,18 @@ Cloudflare cableado (el comentario del propio archivo dice no tocarlo manualment
 Por esto Docker **solo cubre el backend** — dockerizar el frontend como servidor Node
 implicaría pelear contra este target y fue una decisión explícita, no un olvido.
 
-**Despliegue real (desde 2026-07-20):** `wrangler.jsonc` tiene `name: "nexo"` (Worker en
-`nexo.iber-mascodev.workers.dev`; dominio propio `nexoengine.tech` aún sin apuntar ahí).
-`VITE_API_URL` se hornea en build time (`import.meta.env`, no es una var de runtime del
-Worker) — cambiar la URL del backend exige `VITE_API_URL=... npm run build && npx wrangler
-deploy`, no alcanza con tocar una variable en el dashboard de Cloudflare. El backend vive en
-Railway (`api.nexoengine.tech`); su `CORS_ALLOWED_ORIGINS` debe incluir el dominio del Worker
-que le pega. Detalle completo del hosting en
-[docs/roadmap/release-plan.md](docs/roadmap/release-plan.md), punto 6.
+**Despliegue real (desde 2026-07-20):** `wrangler.jsonc` tiene `name: "nexo"`, con rutas a
+`nexoengine.tech` y `www.nexoengine.tech` (zona migrada a Cloudflare) además del subdominio
+`nexo.iber-mascodev.workers.dev` como fallback. `VITE_API_URL` se hornea en build time
+(`import.meta.env`, no es una var de runtime del Worker) — **usar siempre `npm run deploy`**
+(= `npm run build:prod && wrangler deploy`, con `VITE_API_URL=https://api.nexoengine.tech/api/v1`
+vía `cross-env`), nunca `npm run build && npx wrangler deploy` a mano: un `npm run build` a
+secas hornea el default de `.env.example` (`localhost:8000`) y el sitio en producción se
+rompe en silencio (typecheck/build pasan igual — el error solo aparece en runtime, en la
+consola del navegador, como CORS bloqueando `localhost:8000` desde `https://nexoengine.tech`;
+ya pasó una vez). El backend vive en Railway (`api.nexoengine.tech`); su
+`CORS_ALLOWED_ORIGINS` debe incluir el dominio del Worker que le pega. Detalle completo del
+hosting en [docs/roadmap/release-plan.md](docs/roadmap/release-plan.md), punto 6.
 
 ## Comandos
 
