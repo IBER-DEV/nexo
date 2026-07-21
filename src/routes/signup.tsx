@@ -25,7 +25,12 @@ import { ROLE_LABEL } from "@/lib/types";
 import { ApiError } from "@/lib/api";
 import { toast } from "sonner";
 
+type SignupSearch = { template?: string };
+
 export const Route = createFileRoute("/signup")({
+  validateSearch: (search: Record<string, unknown>): SignupSearch => ({
+    template: typeof search.template === "string" ? search.template : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Crear cuenta · Nexo" },
@@ -80,6 +85,7 @@ function fieldErrorMessage(err: unknown): string {
 function SignupPage() {
   const { signup } = useAuth();
   const navigate = useNavigate();
+  const { template: templateFromUrl } = Route.useSearch();
   const [mode, setMode] = useState<SignupMode>("crear");
 
   const { data: templates, isLoading: loadingTemplates } = useQuery({
@@ -97,7 +103,7 @@ function SignupPage() {
       email: "",
       password: "",
       nombre_org: "",
-      template: "",
+      template: templateFromUrl ?? "",
       access_code: "",
     },
   });

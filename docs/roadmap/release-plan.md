@@ -25,7 +25,7 @@ Dependabot, repo renombrado y protegido. Detalle: `git show af3d650 --stat`.
 | 4c | Gestión de miembros y acceso a organizaciones | ✅ Completado (2026-07-18) |
 | 5 | Billing (Stripe) | ⏸️ Sin diseñar |
 | 6 | Hosting del backend | 🚧 En progreso (2026-07-20) — backend en Railway + frontend en Cloudflare Workers |
-| 7 | Landing, README y primer minuto (pre-lanzamiento) | 🚧 En progreso (2026-07-20) |
+| 7 | Landing, README y primer minuto (pre-lanzamiento) | ✅ Completado (2026-07-20), falta contenido real (capturas/GIF/demo pública) |
 
 Detalle técnico de cada punto completado → [architecture.md](architecture.md). Detalle de
 producto/diferenciadores → [product.md](product.md). Planes de implementación caso por caso en
@@ -93,16 +93,15 @@ producto/diferenciadores → [product.md](product.md). Planes de implementación
    funciona — retomar la paradoja del CTA documentada en [landing-audit.md](landing-audit.md)
    ahora que el punto 6
    dejó de ser el bloqueante.
-7. **Landing, README y primer minuto** — auditoría completa en
-   [landing-audit.md](landing-audit.md). Se separó lo que **no depende de producción**
-   (honestidad de contenido — footer con formulario fake, quickstart incompleto, README
-   desactualizado, anclas de navegación, agrupación de features — implementado el
-   2026-07-20) de lo que **sí dependía del punto 6** (CTA primario, CTA contextual post-demo,
-   capturas/demo pública, empty state de activación post-signup). Con el frontend ya en un
-   Worker de Cloudflare (`nexo.iber-mascodev.workers.dev`) y el backend respondiendo en
-   `api.nexoengine.tech`, ese bloqueante desapareció — falta decidir cuándo retomar esa
-   segunda tanda (sigue habiendo trabajo de contenido real: capturas del producto, GIF,
-   demo pública) antes de anunciar la landing como publicada.
+7. **Landing, README y primer minuto** — ✅ dos rondas completadas el 2026-07-20, detalle en
+   [landing-audit.md](landing-audit.md). Primera ronda: contenido no dependiente de producción
+   (footer con formulario fake, quickstart incompleto, README desactualizado, anclas de
+   navegación, agrupación de features). Segunda ronda, una vez resuelto el punto 6: CTA
+   contextual bajo la demo (`/signup?template=`), empty state de activación en el dashboard
+   vacío (`{PREFIJO}-0001` + botón directo a crear la primera actividad), nudge del Owner hacia
+   códigos de acceso, link real del README a la landing. **Sigue pendiente** — no es código,
+   es contenido real que hay que producir: capturas del producto, GIF del Kanban, video de
+   instalación, Open Graph image, y el diseño de una instancia demo pública de solo lectura.
 
 La base de Fase 0 (imagen Docker, `gunicorn`, `whitenoise`, settings por entorno) es
 exactamente el punto de partida de este hosting.
