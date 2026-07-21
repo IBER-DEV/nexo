@@ -72,11 +72,15 @@ inicial en inglés (GitHub es global; español-first es una decisión de product
 accidente — vale la pena decirlo explícitamente en vez de asumirlo), mención de la org `acme`
 del seed para ver multi-tenant en acción, sección "Estado del proyecto" con el checklist de
 Fase 1. Link "¿solo quieres verlo? → nexoengine.tech" agregado el 2026-07-20 una vez que el
-dominio quedó realmente sirviendo la app (antes habría sido un link muerto).
+dominio quedó realmente sirviendo la app (antes habría sido un link muerto). GIF real del
+Kanban (`public/kanban.gif`, arrastrando una actividad entre columnas) grabado por el usuario
+contra el producto corriendo y agregado al primer scroll del README — el intento inicial pesaba
+48 MB (22.7s sin recortar, casi no comprimía por la cantidad de movimiento en pantalla); la
+versión final recortada a ~7s / 84 frames / 720px quedó en 332 KB.
 
-**Sigue pendiente:** GIF en loop del Kanban real arrastrando una tarjeta — es el elemento de
-mayor retorno de todo el README (primer scroll, antes del `git clone`) pero requiere grabarlo
-contra el producto corriendo; se deja como pendiente explícito, no como placeholder falso.
+**Sigue pendiente:** capturas del dashboard/reportes/Configuración → Maestros, video de
+instalación, Open Graph image, demo pública — contenido real por producir, no código (guía de
+grabación entregada al usuario en el chat, no versionada como archivo).
 
 ## Signup y primer minuto — 8/10
 

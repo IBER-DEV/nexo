@@ -7,8 +7,7 @@
 > planning, Kanban, and per-organization configurable workflows. Docs and UI are in Spanish;
 > that's a product decision (Spanish-first), not an accident.
 
-> **Pendiente:** falta un GIF del Kanban real aquí arriba (arrastrar una tarjeta, en loop) —
-> se agrega en cuanto haya una grabación contra el producto corriendo, no un mock.
+![Kanban de Nexo — arrastrando una actividad entre columnas](public/kanban.gif)
 
 **¿Solo quieres verlo?** → [nexoengine.tech](https://nexoengine.tech) — landing con demo
 interactiva, sin instalar nada.
