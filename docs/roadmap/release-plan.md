@@ -74,13 +74,24 @@ producto/diferenciadores → [product.md](product.md). Planes de implementación
    genérica `tanstack-start-app` a `nexo`). Build con
    `VITE_API_URL=https://api.nexoengine.tech/api/v1` horneado en tiempo de build (Vite inlinea
    `import.meta.env.VITE_API_URL`, no es una var de runtime del Worker — cambiarla exige
-   rebuild + redeploy, no solo tocar una variable en el dashboard). `CORS_ALLOWED_ORIGINS` del
-   backend ya incluye este dominio, probado con un preflight `OPTIONS` real. Pendiente: apuntar
-   `nexoengine.tech` (dominio raíz, hoy con un A record de Hostinger) a este Worker en vez del
-   subdominio `*.workers.dev` — requiere decidir qué pasa con lo que hoy sirve la raíz del
-   dominio antes de tocar ese DNS, así que no se hizo solo. Con frontend y backend ya
-   conectados, el CTA primario de la landing (`/signup`) funciona de punta a punta — retomar la
-   paradoja del CTA documentada en [landing-audit.md](landing-audit.md) ahora que el punto 6
+   rebuild + redeploy, no solo tocar una variable en el dashboard).
+
+   **Dominio raíz migrado a Cloudflare** (2026-07-20): `nexoengine.tech` pasó de nameservers de
+   Hostinger (`dns-parking.com`) a Cloudflare (`giancarlo.ns.cloudflare.com` /
+   `journey.ns.cloudflare.com`) para poder servir el Worker en el dominio raíz — un Worker no
+   puede colgar de un CNAME externo apuntando a `*.workers.dev`, necesita ser dueño de la zona.
+   Todos los registros de correo (MX, DKIM×3, SPF, DMARC, autodiscover/autoconfig de Hostinger,
+   bounce de Postmark) y los de Railway (`api` + verificación) se recrearon 1:1 en la zona
+   nueva antes de tocar los nameservers — sin downtime de correo verificado post-migración.
+   Rutas del Worker: `nexoengine.tech/*` y `www.nexoengine.tech/*` (agregadas a mano desde el
+   dashboard de Cloudflare — el token de API usado para crear la zona/DNS no traía el permiso
+   `Zone → Workers Routes`, y el patrón `*.nexoengine.tech/*` que sugiere la UI por defecto solo
+   matchea subdominios, no el ápex; hay que usar `nexoengine.tech/*` sin el `*.` inicial).
+   `CORS_ALLOWED_ORIGINS` del backend incluye `nexoengine.tech`, `www.nexoengine.tech` y el
+   dominio de Workers — los tres probados con preflight `OPTIONS` real. Con frontend y backend
+   ya conectados de punta a punta en el dominio real, el CTA primario de la landing (`/signup`)
+   funciona — retomar la paradoja del CTA documentada en [landing-audit.md](landing-audit.md)
+   ahora que el punto 6
    dejó de ser el bloqueante.
 7. **Landing, README y primer minuto** — auditoría completa en
    [landing-audit.md](landing-audit.md). Se separó lo que **no depende de producción**
