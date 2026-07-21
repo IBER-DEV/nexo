@@ -10,6 +10,9 @@
 > **Pendiente:** falta un GIF del Kanban real aquí arriba (arrastrar una tarjeta, en loop) —
 > se agrega en cuanto haya una grabación contra el producto corriendo, no un mock.
 
+**¿Solo quieres verlo?** → [nexoengine.tech](https://nexoengine.tech) — landing con demo
+interactiva, sin instalar nada.
+
 Plataforma open source de gestión de actividades para equipos de TI: backlog, planeación
 semanal/mensual, tablero Kanban y reportes. Cada organización define su propio flujo (estados,
 prioridades, tipos) desde una plantilla al registrarse — `ti_clasico`, `kanban_simple` o

@@ -68,11 +68,13 @@ import { useSound } from "@/providers/SoundProvider";
 
 type ActivitiesSearch = {
   q: string;
+  new?: boolean;
 };
 
 export const Route = createFileRoute("/_app/activities")({
   validateSearch: (search: Record<string, unknown>): ActivitiesSearch => ({
     q: typeof search.q === "string" ? search.q : "",
+    new: search.new === true || search.new === "1" || search.new === "true",
   }),
   head: () => ({
     meta: [
@@ -93,7 +95,7 @@ function ActivitiesPage() {
   const navigate = useNavigate();
   const { play } = useSound();
   const { activeStates, activePriorities, stateById, priorityById, isOpen } = useWorkspace();
-  const { q: urlQ } = Route.useSearch();
+  const { q: urlQ, new: openNew } = Route.useSearch();
   const { data, isLoading } = useQuery({
     queryKey: ["activities"],
     queryFn: () => activitiesService.list(),
@@ -120,6 +122,13 @@ function ActivitiesPage() {
   const [openForm, setOpenForm] = useState(false);
   const [editing, setEditing] = useState<Activity | null>(null);
   const [deleting, setDeleting] = useState<Activity | null>(null);
+
+  // Deep-link desde el empty state del dashboard: /activities?new=1 abre el
+  // formulario de creación directo, sin que el usuario tenga que encontrar
+  // el botón "Nueva actividad".
+  useEffect(() => {
+    if (openNew) setOpenForm(true);
+  }, [openNew]);
 
   const responsables = useMemo(() => {
     if (!data) return [] as string[];

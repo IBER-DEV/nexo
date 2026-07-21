@@ -24,8 +24,8 @@ Dependabot, repo renombrado y protegido. Detalle: `git show af3d650 --stat`.
 | 4 | Signup self-service + onboarding | ✅ Completado (2026-07-18), alcance Bloque A+B+D |
 | 4c | Gestión de miembros y acceso a organizaciones | ✅ Completado (2026-07-18) |
 | 5 | Billing (Stripe) | ⏸️ Sin diseñar |
-| 6 | Hosting del backend | ⏸️ Sin diseñar |
-| 7 | Landing, README y primer minuto (pre-lanzamiento) | 🚧 En progreso (2026-07-20), parte diferida al punto 6 |
+| 6 | Hosting del backend | 🚧 En progreso (2026-07-20) — backend en Railway + frontend en Cloudflare Workers |
+| 7 | Landing, README y primer minuto (pre-lanzamiento) | ✅ Completado (2026-07-20), falta contenido real (capturas/GIF/demo pública) |
 
 Detalle técnico de cada punto completado → [architecture.md](architecture.md). Detalle de
 producto/diferenciadores → [product.md](product.md). Planes de implementación caso por caso en
@@ -56,17 +56,52 @@ producto/diferenciadores → [product.md](product.md). Planes de implementación
      de reapertura). Incluye además cambio de rol y desactivación de miembros desde la UI.
 5. **Billing** — Stripe (Checkout + Customer Portal), webhook que activa/suspende la
    organización según estado de pago.
-6. **Hosting del backend** — backend dockerizado a Railway/Render/Fly.io. Falta: monitoreo
-   (Sentry), backups automáticos de Postgres. (Email transaccional ya resuelto en el punto 4.)
-7. **Landing, README y primer minuto** — auditoría completa en
-   [landing-audit.md](landing-audit.md). La landing (`src/components/landing/`) no se publica
-   hasta que el punto 6 esté resuelto: hoy no hay worker de Cloudflare para el frontend ni
-   backend en producción, solo hosting comprado en Hostinger para `nexoengine.tech`. Por eso
-   la auditoría separa lo que **no depende de producción** (honestidad de contenido —
-   footer con formulario fake, quickstart incompleto, README desactualizado, anclas de
-   navegación, agrupación de features — implementado ya) de lo que **sí depende del punto 6**
-   (CTA primario, CTA contextual post-demo, capturas/demo pública, empty state de activación
-   post-signup) y queda diferido explícitamente en el documento, no perdido.
+6. **Hosting del backend** — 🚧 backend desplegado en Railway (proyecto `nexo-backend`):
+   servicio `backend` (build por `backend/Dockerfile`) + Postgres administrado, wireado por
+   variables de referencia (`${{Postgres.PGHOST}}` etc., no una `DATABASE_URL` — `prod.py` usa
+   `DB_NAME`/`DB_USER`/... por separado). Dominio propio `api.nexoengine.tech` conectado (CNAME
+   + TXT de verificación creados vía la API de Hostinger, certificado válido); el dominio
+   generado por Railway (`backend-production-c5b3.up.railway.app`) queda como fallback — ambos
+   viven en `ALLOWED_HOSTS`. Bug encontrado y corregido en el primer deploy: `prod.py`
+   necesitaba `SECURE_PROXY_SSL_HEADER` — Railway termina TLS en su borde y reenvía HTTP plano
+   al contenedor, así que `SECURE_SSL_REDIRECT` sin ese header nunca ve la request como https y
+   redirige en loop. Falta: monitoreo (Sentry), backups automáticos de Postgres. (Email
+   transaccional ya resuelto en el punto 4 — Postmark ya está configurado en las variables del
+   servicio.)
+
+   **Frontend desplegado** (2026-07-20): Worker de Cloudflare `nexo` en
+   `https://nexo.iber-mascodev.workers.dev` (`wrangler.jsonc` renombrado de la plantilla
+   genérica `tanstack-start-app` a `nexo`). Build con
+   `VITE_API_URL=https://api.nexoengine.tech/api/v1` horneado en tiempo de build (Vite inlinea
+   `import.meta.env.VITE_API_URL`, no es una var de runtime del Worker — cambiarla exige
+   rebuild + redeploy, no solo tocar una variable en el dashboard).
+
+   **Dominio raíz migrado a Cloudflare** (2026-07-20): `nexoengine.tech` pasó de nameservers de
+   Hostinger (`dns-parking.com`) a Cloudflare (`giancarlo.ns.cloudflare.com` /
+   `journey.ns.cloudflare.com`) para poder servir el Worker en el dominio raíz — un Worker no
+   puede colgar de un CNAME externo apuntando a `*.workers.dev`, necesita ser dueño de la zona.
+   Todos los registros de correo (MX, DKIM×3, SPF, DMARC, autodiscover/autoconfig de Hostinger,
+   bounce de Postmark) y los de Railway (`api` + verificación) se recrearon 1:1 en la zona
+   nueva antes de tocar los nameservers — sin downtime de correo verificado post-migración.
+   Rutas del Worker: `nexoengine.tech/*` y `www.nexoengine.tech/*` (agregadas a mano desde el
+   dashboard de Cloudflare — el token de API usado para crear la zona/DNS no traía el permiso
+   `Zone → Workers Routes`, y el patrón `*.nexoengine.tech/*` que sugiere la UI por defecto solo
+   matchea subdominios, no el ápex; hay que usar `nexoengine.tech/*` sin el `*.` inicial).
+   `CORS_ALLOWED_ORIGINS` del backend incluye `nexoengine.tech`, `www.nexoengine.tech` y el
+   dominio de Workers — los tres probados con preflight `OPTIONS` real. Con frontend y backend
+   ya conectados de punta a punta en el dominio real, el CTA primario de la landing (`/signup`)
+   funciona — retomar la paradoja del CTA documentada en [landing-audit.md](landing-audit.md)
+   ahora que el punto 6
+   dejó de ser el bloqueante.
+7. **Landing, README y primer minuto** — ✅ dos rondas completadas el 2026-07-20, detalle en
+   [landing-audit.md](landing-audit.md). Primera ronda: contenido no dependiente de producción
+   (footer con formulario fake, quickstart incompleto, README desactualizado, anclas de
+   navegación, agrupación de features). Segunda ronda, una vez resuelto el punto 6: CTA
+   contextual bajo la demo (`/signup?template=`), empty state de activación en el dashboard
+   vacío (`{PREFIJO}-0001` + botón directo a crear la primera actividad), nudge del Owner hacia
+   códigos de acceso, link real del README a la landing. **Sigue pendiente** — no es código,
+   es contenido real que hay que producir: capturas del producto, GIF del Kanban, video de
+   instalación, Open Graph image, y el diseño de una instancia demo pública de solo lectura.
 
 La base de Fase 0 (imagen Docker, `gunicorn`, `whitenoise`, settings por entorno) es
 exactamente el punto de partida de este hosting.
@@ -102,3 +137,9 @@ adelantado. Lista de features → [product.md](product.md).
   botón primario lleva a `/signup`, que no puede completarse porque el punto 6 (hosting) no
   existe aún. Decisión: implementar ya todo lo que no depende de producción (contenido,
   quickstart, README, navegación) y diferir explícitamente lo que sí depende del punto 6.
+- **2026-07-20** — Punto 6 arranca: backend desplegado en Railway (Postgres administrado,
+  dominio propio `api.nexoengine.tech`) y frontend en un Worker de Cloudflare
+  (`nexo.iber-mascodev.workers.dev`), CORS wireado entre ambos y probado con un preflight
+  real. La paradoja del CTA de la auditoría anterior deja de ser un bloqueante técnico —
+  queda pendiente el dominio raíz (`nexoengine.tech` → Worker) y la segunda tanda de
+  contenido real (capturas, GIF, demo pública) antes de anunciar la landing como publicada.

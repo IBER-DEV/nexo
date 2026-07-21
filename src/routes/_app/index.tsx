@@ -30,6 +30,7 @@ import { useWorkspace } from "@/providers/WorkspaceProvider";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
+import { Rocket } from "lucide-react";
 
 export const Route = createFileRoute("/_app/")({
   head: () => ({
@@ -51,6 +52,46 @@ const CHART_COLORS = [
   "var(--chart-4)",
   "var(--chart-5)",
 ];
+
+function EmptyDashboard() {
+  const { workspace } = useWorkspace();
+  const { user } = useAuth();
+  const prefix = workspace?.organization?.codigo_prefix || "ACT";
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Pulso del equipo" description="Resumen ejecutivo del equipo de sistemas" />
+      <Card className="flex flex-col items-center gap-4 p-12 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <Rocket className="h-6 w-6" />
+        </div>
+        <div className="space-y-1.5">
+          <h3 className="text-lg font-semibold">
+            Tu espacio está listo — falta la primera actividad
+          </h3>
+          <p className="max-w-md text-sm text-muted-foreground">
+            En cuanto la crees, obtendrá el código{" "}
+            <span className="font-mono font-medium text-foreground">{prefix}-0001</span> y este
+            dashboard empieza a mostrar métricas reales de tu equipo.
+          </p>
+        </div>
+        <Button asChild size="lg" className="gap-2">
+          <Link to="/activities" search={{ q: "", new: true }}>
+            Crear mi primera actividad
+          </Link>
+        </Button>
+        {user?.rol === "owner" && (
+          <p className="text-xs text-muted-foreground">
+            ¿Ya tienes equipo?{" "}
+            <Link to="/users" className="text-primary hover:underline">
+              Genera un código de acceso para invitarlos
+            </Link>
+          </p>
+        )}
+      </Card>
+    </div>
+  );
+}
 
 function DashboardPage() {
   const { isAdmin, isCoordinator } = useAuth();
@@ -81,6 +122,10 @@ function DashboardPage() {
         </div>
       </div>
     );
+  }
+
+  if (data.length === 0) {
+    return <EmptyDashboard />;
   }
 
   const now = Date.now();

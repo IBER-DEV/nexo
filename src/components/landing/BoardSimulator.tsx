@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { AnimatePresence, LayoutGroup, motion, useInView } from "framer-motion";
 import {
   Activity,
@@ -8,6 +9,7 @@ import {
   Loader2,
   Play,
   RotateCcw,
+  Rocket,
   Sheet,
   Timer,
 } from "lucide-react";
@@ -501,6 +503,23 @@ export default function BoardSimulator() {
               })}
             </motion.div>
           </LayoutGroup>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.6 }}
+          transition={{ duration: 0.6, ease: EASE }}
+          className="mt-8 flex justify-center"
+        >
+          <Link
+            to="/signup"
+            search={{ template: template.key }}
+            className="group flex items-center gap-2.5 rounded-full bg-emerald-500 px-7 py-3 text-sm font-semibold text-gray-950 transition-all duration-300 hover:bg-emerald-400 hover:shadow-[0_0_24px_-6px_rgba(52,211,153,0.8)]"
+          >
+            <Rocket className="h-4 w-4 transition-transform duration-300 group-hover:-rotate-6" />
+            Empieza con "{template.nombre}"
+          </Link>
         </motion.div>
 
         <motion.p
