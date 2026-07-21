@@ -36,3 +36,5 @@ dist-ssr
 
 # AI agent skill reference library (local tooling, not project source)
 .agents/
+.claude/
+skills-lock.json
