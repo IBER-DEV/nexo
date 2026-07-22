@@ -5,6 +5,7 @@ Creates 8 team users + 42 activities matching the frontend mock data.
 Safe to run multiple times (idempotent).
 """
 from datetime import date, timedelta
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import connection
 from apps.organizations.models import Organization
@@ -134,6 +135,23 @@ class Command(BaseCommand):
             if changed:
                 admin.save()
 
+        # Usuario compartido de la demo pública (/auth/demo-login/, sin
+        # password) — is_demo_readonly=True hace que DenyDemoWrites lo
+        # bloquee en toda la API sin importar el rol; member alcanza para
+        # ver todo lo que ve un usuario normal de la org.
+        demo_viewer, demo_created = User.objects.get_or_create(
+            email=settings.DEMO_USER_EMAIL,
+            defaults={"nombre": "Visitante demo", "rol": "member", "organization": org},
+        )
+        if demo_created:
+            demo_viewer.set_unusable_password()
+            demo_viewer.is_demo_readonly = True
+            demo_viewer.save()
+            self.stdout.write(f"  Created {demo_viewer.email} (demo pública, solo lectura)")
+        elif not demo_viewer.is_demo_readonly:
+            demo_viewer.is_demo_readonly = True
+            demo_viewer.save(update_fields=["is_demo_readonly"])
+
         # Assign members to coordinators (idempotent)
         # Ana coordina: María, Jorge, Lucía, Diego
         # Carlos coordina: Sofía, Pablo
@@ -235,6 +253,9 @@ class Command(BaseCommand):
         self.stdout.write("  ana.garcia@empresa.com / demo1234")
         self.stdout.write("  admin@acme.com / demo1234  (superuser, org 'acme' — flujo propio)")
         self.stdout.write("  (all team users use password: demo1234)")
+        self.stdout.write(
+            f"  {settings.DEMO_USER_EMAIL}  (demo pública, solo lectura — via POST /auth/demo-login/, sin password)"
+        )
 
         self._fix_activity_id_sequence()
 

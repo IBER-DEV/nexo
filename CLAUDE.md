@@ -72,6 +72,11 @@ docker compose exec -T backend python manage.py sync_appsheet --org demo --dry-r
 - `acme` (prefijo `ACM`, flujo propio de 4 estados — para ver que el Kanban y los selects
   son realmente dinámicos): `admin@acme.com` / `demo1234` (admin).
 
+También crea `settings.DEMO_USER_EMAIL` (`demo-viewer@nexoengine.tech` por defecto) en la org
+`demo`, con `is_demo_readonly=True` — sin password, se resuelve vía `POST /auth/demo-login/`
+(botón "explorar la app real" del `BoardSimulator` en la landing). Ver
+[docs/roadmap/landing-audit.md](docs/roadmap/landing-audit.md) para el diseño completo.
+
 ## Settings de Django — tres perfiles, no dos
 
 - `config.settings.dev` — SQLite fijo, ignora las variables `DB_*`. Uso nativo local.
@@ -121,6 +126,14 @@ docker compose exec -T backend python manage.py sync_appsheet --org demo --dry-r
   `Activity.numero` + `Organization.codigo_prefix`, asignado vía
   `apps/organizations/sequences.py::SequenceService` (no calcules `numero` a mano en
   ningún sitio nuevo).
+- **Un permiso "global" agregado a `REST_FRAMEWORK.DEFAULT_PERMISSION_CLASSES` no aplica en
+  toda la API si algún ViewSet declara su propio `permission_classes`** — en DRF eso
+  *reemplaza*, no combina, el default (varios ViewSets del proyecto ya lo hacen: `ActivityViewSet`
+  y otros). Para una regla que sí debe ser verdaderamente global (ej. `DemoAwareJWTAuthentication`,
+  que bloquea escrituras del usuario de la demo pública), engánchala en
+  `DEFAULT_AUTHENTICATION_CLASSES` en vez de `DEFAULT_PERMISSION_CLASSES` — ahí sí ningún
+  ViewSet sobreescribe nada. Verificalo con una petición real, no solo lectura del código: este
+  bug pasó desapercibido hasta un `curl` manual.
 
 ## CI (`.github/workflows/ci.yml`)
 

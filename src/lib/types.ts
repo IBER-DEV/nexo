@@ -121,6 +121,7 @@ export interface User {
   coordinador_nombre?: string | null;
   email_verified: boolean;
   is_active: boolean;
+  is_demo_readonly: boolean;
 }
 
 /** Código de acceso a la organización (Bloque C — ver ADR 0002). */
