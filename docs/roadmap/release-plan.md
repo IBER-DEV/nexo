@@ -105,8 +105,25 @@ producto/diferenciadores → [product.md](product.md). Planes de implementación
    lectura (`DemoAwareJWTAuthentication` bloquea cualquier escritura suya en toda la API desde
    la capa de autenticación, el único punto que ningún ViewSet sobreescribe); botón "explorar la
    app real" en el `BoardSimulator`, banner persistente en la app, toast automático en 403.
-   **Sigue pendiente** — no es código, es contenido real que hay que producir: capturas del
-   producto, video de instalación, Open Graph image.
+   Corregido en el camino: `demo-viewer` se creó con `rol=member`, que en `ActivityViewSet`
+   solo ve actividades propias (responsable/created_by) — veía el dashboard vacío pese a los 42
+   registros del seed. Pasó a `rol=admin` (ve todo el org); sigue sin poder escribir nada porque
+   `is_demo_readonly` no depende del rol.
+
+   **Passwords de `seed_data` rotados solo en la base de datos de Railway** (2026-07-21, no en
+   `seed_data.py` — el self-hosted local sigue con `demo1234` sin cambios): una vez que
+   `nexoengine.tech` apunta a una base compartida real, las credenciales `demo1234`
+   documentadas en el README/CLAUDE.md dejaron de ser inofensivas — cualquiera podía loguearse
+   por `/auth/token/` normal como `admin@empresa.com` y tener escritura completa sobre la
+   misma org `demo` que ve la demo pública de solo lectura, sin pasar por
+   `DemoAwareJWTAuthentication` (ese flag es por usuario, no por org). Se generaron passwords
+   aleatorios para los 10 usuarios con password real de las orgs `demo`/`acme` (nadie los
+   necesita: la demo pública ya no depende de loguearse con esas cuentas). Verificado con una
+   petición real: login viejo → 401, demo-login → sigue en 200.
+   **Idea evaluada, no implementada:** dejar elegir el rol en la demo pública (`demo-viewer-admin`
+   / `-coordinator` / `-member`, todos `is_demo_readonly=True`) para mostrar la interacción real
+   por rol en vez de las previews mockeadas del `RoleSelector` de la landing — encaja con lo que
+   esa sección ya promete, pero no se construyó todavía, solo quedó evaluada.
 
 La base de Fase 0 (imagen Docker, `gunicorn`, `whitenoise`, settings por entorno) es
 exactamente el punto de partida de este hosting.

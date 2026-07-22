@@ -99,6 +99,14 @@ También crea `settings.DEMO_USER_EMAIL` (`demo-viewer@nexoengine.tech` por defe
   la ejecuta el navegador del usuario, no otro contenedor.
 - **Columna `FlowDeskID`** en el sync de AppSheet/Google Sheets (`backend/apps/activities/sheets_client.py`):
   es un contrato externo ya comunicado — no renombrarla sin coordinarlo con la hoja real.
+- **Los passwords de `seed_data` (`demo1234`) NO son válidos en producción** — se rotaron a
+  mano en la base de datos de Railway (2026-07-21, no en `seed_data.py`) porque
+  `nexoengine.tech` apunta a una org `demo` compartida y real: esas credenciales, documentadas
+  en el README, daban escritura completa a cualquiera. `seed_data` sigue creando usuarios con
+  `demo1234` para self-hosted (`get_or_create` no resetea el password de un usuario ya
+  existente, así que re-correr el comando en Railway no deshace la rotación). Si necesitas
+  entrar como admin/coordinador a la org `demo` de producción, no existe una password
+  documentada — usa el admin de Django o genera una nueva a mano.
 - **Puerto de Postgres en compose**: deliberadamente sin publicar al host (`db` no tiene
   `ports:`). Esta máquina ya tenía cosas en 5432 y 5433; el backend igual lo alcanza por la red
   interna de Docker como `db:5432`.
