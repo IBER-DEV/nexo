@@ -4,7 +4,7 @@ from django.contrib import admin
 from apps.activities.models import ActivityType, Priority, WorkflowState
 from apps.activities.org_templates import DEFAULT_TEMPLATE, TEMPLATE_CHOICES, apply_template
 
-from .models import Organization
+from .models import Organization, WaitlistSignup
 
 
 class OrganizationAddForm(forms.ModelForm):
@@ -43,3 +43,10 @@ class OrganizationAdmin(admin.ModelAdmin):
         if not change:
             template_key = form.cleaned_data.get("template", DEFAULT_TEMPLATE)
             apply_template(obj, template_key, WorkflowState, Priority, ActivityType)
+
+
+@admin.register(WaitlistSignup)
+class WaitlistSignupAdmin(admin.ModelAdmin):
+    list_display = ["email", "source", "created_at"]
+    search_fields = ["email"]
+    list_filter = ["source"]

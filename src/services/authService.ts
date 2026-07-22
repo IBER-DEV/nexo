@@ -57,4 +57,9 @@ export const authService = {
       method: "POST",
       body: JSON.stringify(input),
     }),
+  joinWaitlist: (email: string, source = "pricing_cloud") =>
+    apiFetch<{ detail: string }>("/auth/waitlist/", {
+      method: "POST",
+      body: JSON.stringify({ email, source }),
+    }),
 };

@@ -20,7 +20,7 @@ from apps.organizations.membership import (
     register_with_code,
     resolve_access_code,
 )
-from apps.organizations.serializers import OrganizationSerializer
+from apps.organizations.serializers import OrganizationSerializer, WaitlistJoinSerializer
 from apps.organizations.signup import SignupError
 from apps.organizations.signup import register as signup_register
 
@@ -106,6 +106,21 @@ class SignupView(APIView):
             },
             status=status.HTTP_201_CREATED,
         )
+
+
+class WaitlistJoinView(APIView):
+    """Lead del plan Cloud/Enterprise (card de precios de la landing): sin
+    auth, sin organización todavía — solo guarda el email para avisar cuando
+    abra el acceso beta. Idempotente por email (ver WaitlistJoinSerializer)."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = WaitlistJoinSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        track("waitlist_joined", email=serializer.validated_data["email"])
+        return response.Response({"detail": "ok"}, status=status.HTTP_201_CREATED)
 
 
 class DemoLoginView(APIView):
