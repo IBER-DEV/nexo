@@ -10,6 +10,7 @@ from .views import (
     ResendVerificationView,
     SignupTemplatesView,
     SignupView,
+    WaitlistJoinView,
 )
 
 urlpatterns = [
@@ -18,6 +19,7 @@ urlpatterns = [
     path("signup/", SignupView.as_view(), name="signup"),
     path("signup/templates/", SignupTemplatesView.as_view(), name="signup_templates"),
     path("demo-login/", DemoLoginView.as_view(), name="demo_login"),
+    path("waitlist/", WaitlistJoinView.as_view(), name="waitlist_join"),
     path("access-codes/resolve/", AccessCodeResolveView.as_view(), name="access_code_resolve"),
     path("email/verify/", EmailVerifyView.as_view(), name="email_verify"),
     path("email/resend/", ResendVerificationView.as_view(), name="email_resend"),

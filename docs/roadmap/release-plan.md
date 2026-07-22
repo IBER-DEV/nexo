@@ -93,7 +93,7 @@ producto/diferenciadores → [product.md](product.md). Planes de implementación
    funciona — retomar la paradoja del CTA documentada en [landing-audit.md](landing-audit.md)
    ahora que el punto 6
    dejó de ser el bloqueante.
-7. **Landing, README y primer minuto** — ✅ tres rondas completadas (2026-07-20/21), detalle en
+7. **Landing, README y primer minuto** — ✅ cuatro rondas completadas (2026-07-20/21), detalle en
    [landing-audit.md](landing-audit.md). Primera ronda: contenido no dependiente de producción
    (footer con formulario fake, quickstart incompleto, README desactualizado, anclas de
    navegación, agrupación de features). Segunda ronda, una vez resuelto el punto 6: CTA
@@ -105,8 +105,34 @@ producto/diferenciadores → [product.md](product.md). Planes de implementación
    lectura (`DemoAwareJWTAuthentication` bloquea cualquier escritura suya en toda la API desde
    la capa de autenticación, el único punto que ningún ViewSet sobreescribe); botón "explorar la
    app real" en el `BoardSimulator`, banner persistente en la app, toast automático en 403.
-   **Sigue pendiente** — no es código, es contenido real que hay que producir: capturas del
-   producto, video de instalación, Open Graph image.
+   Corregido en el camino: `demo-viewer` se creó con `rol=member`, que en `ActivityViewSet`
+   solo ve actividades propias (responsable/created_by) — veía el dashboard vacío pese a los 42
+   registros del seed. Pasó a `rol=admin` (ve todo el org); sigue sin poder escribir nada porque
+   `is_demo_readonly` no depende del rol.
+
+   **Passwords de `seed_data` rotados solo en la base de datos de Railway** (2026-07-21, no en
+   `seed_data.py` — el self-hosted local sigue con `demo1234` sin cambios): una vez que
+   `nexoengine.tech` apunta a una base compartida real, las credenciales `demo1234`
+   documentadas en el README/CLAUDE.md dejaron de ser inofensivas — cualquiera podía loguearse
+   por `/auth/token/` normal como `admin@empresa.com` y tener escritura completa sobre la
+   misma org `demo` que ve la demo pública de solo lectura, sin pasar por
+   `DemoAwareJWTAuthentication` (ese flag es por usuario, no por org). Se generaron passwords
+   aleatorios para los 10 usuarios con password real de las orgs `demo`/`acme` (nadie los
+   necesita: la demo pública ya no depende de loguearse con esas cuentas). Verificado con una
+   petición real: login viejo → 401, demo-login → sigue en 200.
+   **Demo pública por rol** (2026-07-21, cuarta ronda): la idea evaluada arriba se construyó —
+   `demo-{role}@nexoengine.tech` (uno por rol, `settings.DEMO_EMAIL_TEMPLATE`/`DEMO_ROLES`),
+   `POST /auth/demo-login/` acepta `{"role": "..."}` (default `admin`), y el `RoleSelector` de
+   la landing tiene un botón "Probar como {rol} — app real, sin instalar" por cada preview
+   mockeada. El rol `member` necesitaba datos propios para no ver el dashboard vacío
+   (`ActivityViewSet` lo filtra a responsable/created_by) — se le asignaron 5 actividades del
+   seed. El rol `coordinator` necesitaba equipo propio para demostrar algo — Jorge y Diego
+   pasaron de coordinarlos Ana a coordinarlos el demo-coordinator (Ana se queda con María y
+   Lucía). Verificado con peticiones reales contra los 4 roles: owner/admin ven las 42
+   actividades del org, coordinator ve solo su equipo, member ve solo lo suyo — todos bloqueados
+   en escritura por igual. El hint "Demo · admin@empresa.com / demo1234" del login ya no se
+   muestra en producción (gateado por si `VITE_API_URL` apunta a `localhost`, ese hint solo
+   tiene sentido contra un backend propio).
 
 La base de Fase 0 (imagen Docker, `gunicorn`, `whitenoise`, settings por entorno) es
 exactamente el punto de partida de este hosting.

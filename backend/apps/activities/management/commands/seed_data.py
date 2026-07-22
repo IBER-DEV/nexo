@@ -135,35 +135,54 @@ class Command(BaseCommand):
             if changed:
                 admin.save()
 
-        # Usuario compartido de la demo pública (/auth/demo-login/, sin
-        # password) — is_demo_readonly=True hace que DenyDemoWrites lo
-        # bloquee en toda la API sin importar el rol; member alcanza para
-        # ver todo lo que ve un usuario normal de la org.
-        demo_viewer, demo_created = User.objects.get_or_create(
-            email=settings.DEMO_USER_EMAIL,
-            defaults={"nombre": "Visitante demo", "rol": "member", "organization": org},
-        )
-        if demo_created:
-            demo_viewer.set_unusable_password()
-            demo_viewer.is_demo_readonly = True
-            demo_viewer.save()
-            self.stdout.write(f"  Created {demo_viewer.email} (demo pública, solo lectura)")
-        elif not demo_viewer.is_demo_readonly:
-            demo_viewer.is_demo_readonly = True
-            demo_viewer.save(update_fields=["is_demo_readonly"])
+        # Un usuario demo compartido por rol (/auth/demo-login/, sin
+        # password) — deja ver la interacción *real* por rol (qué ve un
+        # coordinador vs. un member), no una preview mockeada. Owner/admin/
+        # coordinator no necesitan datos extra para ser útiles; member sí
+        # (ActivityViewSet lo filtra a solo lo suyo — se reasignan algunas
+        # actividades más abajo, después de sembrarlas). is_demo_readonly
+        # bloquea cualquier escritura suya en toda la API sin importar el
+        # rol, así que cada uno es seguro con el alcance real de su rol.
+        demo_users: dict[str, User] = {}
+        for role in settings.DEMO_ROLES:
+            email = settings.DEMO_EMAIL_TEMPLATE.format(role=role)
+            u, u_created = User.objects.get_or_create(
+                email=email,
+                defaults={"nombre": f"Demo {role}", "rol": role, "organization": org},
+            )
+            if u_created:
+                u.set_unusable_password()
+                u.is_demo_readonly = True
+                u.save()
+                self.stdout.write(f"  Created {u.email} (demo pública, {role})")
+            else:
+                changed = False
+                if u.rol != role:
+                    u.rol = role
+                    changed = True
+                if not u.is_demo_readonly:
+                    u.is_demo_readonly = True
+                    changed = True
+                if changed:
+                    u.save()
+            demo_users[role] = u
 
         # Assign members to coordinators (idempotent)
-        # Ana coordina: María, Jorge, Lucía, Diego
+        # Ana coordina: María, Lucía — Jorge y Diego pasan al demo-coordinator
+        # (necesita equipo propio para que el rol demuestre algo real).
         # Carlos coordina: Sofía, Pablo
         ana = coordinators_by_email.get("ana.garcia@empresa.com")
         carlos = coordinators_by_email.get("carlos.perez@empresa.com")
+        demo_coordinator = demo_users["coordinator"]
         if ana:
             User.objects.filter(email__in=[
                 "maria.lopez@empresa.com",
-                "jorge.ramirez@empresa.com",
                 "lucia.torres@empresa.com",
-                "diego.vargas@empresa.com",
             ]).update(coordinador=ana, rol="member")
+        User.objects.filter(email__in=[
+            "jorge.ramirez@empresa.com",
+            "diego.vargas@empresa.com",
+        ]).update(coordinador=demo_coordinator, rol="member")
         if carlos:
             User.objects.filter(email__in=[
                 "sofia.mendoza@empresa.com",
@@ -243,6 +262,14 @@ class Command(BaseCommand):
             f"\nDone. {created_count} activities created (existing ones untouched)."
         ))
 
+        # demo-member necesita ser responsable de algo — ActivityViewSet
+        # filtra a member a solo lo suyo (responsable/created_by). Sin esto
+        # vería el dashboard vacío, igual que pasaba con el demo-admin
+        # cuando todavía era un único usuario con rol=member.
+        Activity.objects.filter(organization=org, pk__in=[1, 2, 3, 4, 5]).update(
+            responsable=demo_users["member"]
+        )
+
         acme_created_count = self._seed_acme(today)
 
         self.stdout.write(self.style.SUCCESS(
@@ -253,9 +280,11 @@ class Command(BaseCommand):
         self.stdout.write("  ana.garcia@empresa.com / demo1234")
         self.stdout.write("  admin@acme.com / demo1234  (superuser, org 'acme' — flujo propio)")
         self.stdout.write("  (all team users use password: demo1234)")
-        self.stdout.write(
-            f"  {settings.DEMO_USER_EMAIL}  (demo pública, solo lectura — via POST /auth/demo-login/, sin password)"
-        )
+        for role in settings.DEMO_ROLES:
+            email = settings.DEMO_EMAIL_TEMPLATE.format(role=role)
+            self.stdout.write(
+                f"  {email}  (demo pública, {role} — via POST /auth/demo-login/ {{\"role\":\"{role}\"}}, sin password)"
+            )
 
         self._fix_activity_id_sequence()
 

@@ -1,10 +1,12 @@
 import { useState, type ComponentType } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   BarChart3,
   Building2,
   CheckSquare,
   Crown,
+  Eye,
   GitBranch,
   KeyRound,
   ListChecks,
@@ -13,6 +15,8 @@ import {
   Square,
   Users,
 } from "lucide-react";
+import { toast } from "sonner";
+import { useAuth } from "@/providers/AuthProvider";
 import { EASE, fadeUp } from "./anim";
 
 type RoleId = "owner" | "admin" | "coordinator" | "member";
@@ -340,8 +344,23 @@ const PREVIEWS: Record<RoleId, { title: string; el: ComponentType }> = {
 
 export default function RoleSelector() {
   const [role, setRole] = useState<RoleId>("owner");
+  const [enteringDemo, setEnteringDemo] = useState(false);
   const active = ROLES.find((r) => r.id === role)!;
   const Preview = PREVIEWS[role].el;
+  const { loginAsDemo } = useAuth();
+  const navigate = useNavigate();
+
+  const tryAsRole = async () => {
+    setEnteringDemo(true);
+    try {
+      await loginAsDemo(role);
+      navigate({ to: "/" });
+    } catch {
+      toast.error("La demo pública no está disponible ahora mismo.");
+    } finally {
+      setEnteringDemo(false);
+    }
+  };
 
   return (
     <section id="features" className="relative overflow-hidden bg-ink py-28 md:py-36">
@@ -464,6 +483,18 @@ export default function RoleSelector() {
                     <Preview />
                   </motion.div>
                 </AnimatePresence>
+              </div>
+              <div className="border-t border-hairline px-5 py-4 md:px-6">
+                <button
+                  onClick={tryAsRole}
+                  disabled={enteringDemo}
+                  className={`group flex w-full items-center justify-center gap-2 rounded-full border px-5 py-2.5 text-sm font-medium transition-all duration-300 disabled:opacity-60 ${active.accentBorder} ${active.accent} hover:brightness-125`}
+                >
+                  <Eye className="h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
+                  {enteringDemo
+                    ? "entrando…"
+                    : `Probar como ${active.name.toLowerCase()} — app real, sin instalar`}
+                </button>
               </div>
             </div>
             {/* under-glow keyed to role */}

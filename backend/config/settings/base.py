@@ -159,9 +159,13 @@ ANYMAIL = {
 }
 
 # ─── Demo pública (solo lectura) ───────────────────────────────────────────
-# Usuario compartido que /auth/demo-login/ resuelve — creado por seed_data
-# con is_demo_readonly=True. Vacío/inexistente = demo desactivada (404), el
+# Un usuario compartido por rol (owner/admin/coordinator/member) — deja ver
+# la interacción real por rol, no una preview mockeada — todos creados por
+# seed_data con is_demo_readonly=True. {role} se resuelve contra
+# DEMO_ROLES; vacío/inexistente = demo desactivada para ese rol (404), el
 # self-hosted no tiene por qué exponer esto.
-DEMO_USER_EMAIL = config("DEMO_USER_EMAIL", default="demo-viewer@nexoengine.tech")
+DEMO_EMAIL_TEMPLATE = config("DEMO_EMAIL_TEMPLATE", default="demo-{role}@nexoengine.tech")
+DEMO_ROLES = ["owner", "admin", "coordinator", "member"]
+DEMO_DEFAULT_ROLE = "admin"
 
 from config.jazzmin_settings import JAZZMIN_SETTINGS, JAZZMIN_UI_TWEAKS  # noqa: E402

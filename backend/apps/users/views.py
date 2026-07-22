@@ -20,7 +20,7 @@ from apps.organizations.membership import (
     register_with_code,
     resolve_access_code,
 )
-from apps.organizations.serializers import OrganizationSerializer
+from apps.organizations.serializers import OrganizationSerializer, WaitlistJoinSerializer
 from apps.organizations.signup import SignupError
 from apps.organizations.signup import register as signup_register
 
@@ -108,21 +108,46 @@ class SignupView(APIView):
         )
 
 
+class WaitlistJoinView(APIView):
+    """Lead del plan Cloud/Enterprise (card de precios de la landing): sin
+    auth, sin organización todavía — solo guarda el email para avisar cuando
+    abra el acceso beta. Idempotente por email (ver WaitlistJoinSerializer)."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = WaitlistJoinSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        track("waitlist_joined", email=serializer.validated_data["email"])
+        return response.Response({"detail": "ok"}, status=status.HTTP_201_CREATED)
+
+
 class DemoLoginView(APIView):
     """Demo pública de solo lectura: sin password, emite tokens para el
-    usuario compartido `settings.DEMO_USER_EMAIL` (creado por seed_data con
-    is_demo_readonly=True). DenyDemoWrites bloquea cualquier escritura suya
-    en toda la API — este endpoint solo resuelve *quién* es, no *qué puede
-    hacer*. 404 si la demo no está configurada (self-hosted no la expone por
-    defecto): más honesto que un 500 o un 401 engañoso."""
+    usuario compartido del rol pedido (`{"role": "coordinator"}`, default
+    `settings.DEMO_DEFAULT_ROLE`) — un usuario por rol, creado por seed_data
+    con is_demo_readonly=True, para mostrar la interacción *real* de cada
+    rol en vez de una preview mockeada. DemoAwareJWTAuthentication bloquea
+    cualquier escritura suya en toda la API — este endpoint solo resuelve
+    *quién* es, no *qué puede hacer*. 404 si ese rol no está configurado en
+    esta instancia (self-hosted no expone la demo por defecto): más
+    honesto que un 500 o un 401 engañoso."""
 
     permission_classes = [permissions.AllowAny]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "demo_login"
 
     def post(self, request):
+        role = request.data.get("role") or settings.DEMO_DEFAULT_ROLE
+        if role not in settings.DEMO_ROLES:
+            return response.Response(
+                {"detail": f"Rol de demo inválido. Usa uno de: {', '.join(settings.DEMO_ROLES)}."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        email = settings.DEMO_EMAIL_TEMPLATE.format(role=role)
         user = User.objects.filter(
-            email__iexact=settings.DEMO_USER_EMAIL, is_demo_readonly=True, is_active=True
+            email__iexact=email, is_demo_readonly=True, is_active=True
         ).first()
         if user is None:
             return response.Response(

@@ -68,6 +68,26 @@ class Organization(models.Model):
         return self.users.filter(rol="owner", is_active=True).first()
 
 
+class WaitlistSignup(models.Model):
+    """Lead del plan Cloud/Enterprise (landing → card de precios): captura el
+    email de quien quiere que le avisemos cuando abramos el acceso beta. No
+    hay Organization todavía — es anterior a cualquier signup. `email` es
+    unique y el alta es get_or_create (ver WaitlistJoinSerializer): reenviar
+    el mismo formulario dos veces no duplica el lead."""
+
+    email = models.EmailField(unique=True)
+    source = models.CharField(max_length=50, default="pricing_cloud")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "lead de waitlist"
+        verbose_name_plural = "leads de waitlist"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.email
+
+
 class OrganizationAccessCode(models.Model):
     """Mecanismo de incorporación de miembros: el Owner/Admin genera un
     código y lo comparte por el canal que quiera — sin depender de la

@@ -22,7 +22,10 @@ export interface SignupResult {
 }
 
 /** Demo pública de solo lectura: sin credenciales, un solo POST. 404 si la
- * instancia no la tiene configurada (self-hosted no la expone por defecto). */
+ * instancia no la tiene configurada (self-hosted no la expone por defecto).
+ * Un usuario por rol — deja ver la interacción real, no una preview. */
+export type DemoRole = "owner" | "admin" | "coordinator" | "member";
+
 export interface DemoLoginResult {
   access: string;
   refresh: string;
@@ -36,7 +39,11 @@ export const authService = {
       method: "POST",
       body: JSON.stringify(input),
     }),
-  demoLogin: () => apiFetch<DemoLoginResult>("/auth/demo-login/", { method: "POST" }),
+  demoLogin: (role?: DemoRole) =>
+    apiFetch<DemoLoginResult>("/auth/demo-login/", {
+      method: "POST",
+      body: JSON.stringify(role ? { role } : {}),
+    }),
   verifyEmail: (token: string) =>
     apiFetch<{ detail: string }>(`/auth/email/verify/?token=${encodeURIComponent(token)}`),
   resendVerification: () => apiFetch<{ detail: string }>("/auth/email/resend/", { method: "POST" }),
@@ -49,5 +56,10 @@ export const authService = {
     apiFetch<{ detail: string }>("/auth/password/reset/", {
       method: "POST",
       body: JSON.stringify(input),
+    }),
+  joinWaitlist: (email: string, source = "pricing_cloud") =>
+    apiFetch<{ detail: string }>("/auth/waitlist/", {
+      method: "POST",
+      body: JSON.stringify({ email, source }),
     }),
 };

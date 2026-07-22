@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { setTokens, clearTokens, getAccessToken } from "@/lib/api";
 import type { User } from "@/lib/types";
 import { usersService } from "@/services/usersService";
-import { authService, type SignupInput } from "@/services/authService";
+import { authService, type DemoRole, type SignupInput } from "@/services/authService";
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -13,7 +13,7 @@ interface AuthState {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
   signup: (input: SignupInput) => Promise<void>;
-  loginAsDemo: () => Promise<void>;
+  loginAsDemo: (role?: DemoRole) => Promise<void>;
   logout: () => void;
 }
 
@@ -114,8 +114,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(data.user);
   };
 
-  const loginAsDemo = async () => {
-    const data = await authService.demoLogin();
+  const loginAsDemo = async (role?: DemoRole) => {
+    const data = await authService.demoLogin(role);
     qc.clear();
     setTokens(data.access, data.refresh);
     localStorage.setItem(USER_KEY, JSON.stringify(data.user));

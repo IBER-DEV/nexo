@@ -1,66 +1,68 @@
 import { useRef } from "react";
 import { motion, useScroll, useSpring, useTransform } from "framer-motion";
-import { GitCommitHorizontal, Rocket, ShieldCheck, Sparkles } from "lucide-react";
+import { Check, CircleDashed, MoveRight, Sparkles } from "lucide-react";
 import { EASE, fadeUp } from "./anim";
 
 type Phase = {
   id: string;
   title: string;
   era: string;
-  body: string;
+  items: string[];
   badge: string;
-  icon: typeof GitCommitHorizontal;
-  style: "gray" | "neutral" | "emerald" | "dashed";
+  icon: typeof Sparkles;
+  style: "neutral" | "emerald" | "dashed";
 };
 
-// Fases reales de docs/ROADMAP.md — no inventar fechas ni features no planeadas ahí.
+// Roadmap orientado a valor para el usuario final — sin detalle técnico
+// interno (commits, arquitectura, tareas de README). No inventar features
+// que no estén en docs/ROADMAP.md, solo traducir el lenguaje.
 const PHASES: Phase[] = [
   {
-    id: "origen",
-    title: "El origen",
-    era: "Era FlowDesk",
-    body: "Nexo nació como FlowDesk: una herramienta interna para resolver los cuellos de botella del equipo de TI.",
-    badge: "herramienta interna",
-    icon: GitCommitHorizontal,
-    style: "gray",
-  },
-  {
-    id: "fase-0",
-    title: "Preparación open source",
-    era: "Completada",
-    body: "Licencia AGPL-3.0, CI en GitHub Actions, primera suite de tests del backend e imagen Docker publicada. El repositorio quedó listo como proyecto público (tag v0.1.0).",
-    badge: "open source",
-    icon: Sparkles,
+    id: "hoy",
+    title: "Disponible hoy",
+    era: "Listo para usar",
+    items: [
+      "Kanban, backlog y planeación semanal/mensual para todo tu equipo",
+      "Flujos de trabajo a tu medida: define tus propios estados, prioridades y tipos de actividad",
+      "Plantillas de inicio: TI clásico, Kanban simple o mesa de ayuda",
+      "Tu equipo entra solo con un código de acceso — sin invitaciones por correo que se pierden en spam",
+      "Reportes y métricas de avance por persona, equipo y periodo",
+      "Sincronización opcional con Google Sheets, si ya vives ahí",
+    ],
+    badge: "core del producto",
+    icon: Check,
     style: "emerald",
   },
   {
-    id: "fase-1",
-    title: "Fundaciones SaaS",
-    era: "En progreso",
-    body: "Multi-tenancy ✓, plantillas de flujo ✓, registro self-service y códigos de acceso ✓ — construido y probado. Faltan facturación y hosting para habilitar el plan Cloud.",
-    badge: "construida en público",
-    icon: Rocket,
-    style: "emerald",
+    id: "proximamente",
+    title: "En desarrollo",
+    era: "Próximamente",
+    items: [
+      "Plan Cloud: nosotros alojamos y actualizamos por ti, sin que toques un servidor",
+      "Facturación simple por número de usuarios activos",
+      "Respaldos automáticos administrados",
+    ],
+    badge: "en construcción",
+    icon: MoveRight,
+    style: "neutral",
   },
   {
-    id: "fase-2",
-    title: "Enterprise",
+    id: "futuro",
+    title: "Futuro",
     era: "Sin fecha",
-    body: "SSO/SAML, auditoría y RBAC avanzado para cuentas Enterprise. Se construye contra el primer contrato real, no antes.",
-    badge: "a demanda",
-    icon: ShieldCheck,
+    items: [
+      "Inicio de sesión único (SSO/SAML) para tu empresa",
+      "Auditoría de actividad para cumplimiento y seguridad",
+      "Permisos más finos por equipo o proyecto",
+      "Integraciones adicionales (Slack, Jira, calendario)",
+    ],
+    badge: "bajo evaluación",
+    icon: CircleDashed,
     style: "dashed",
   },
 ];
 
 const STYLE_MAP = {
-  gray: {
-    badge: "border-gray-600/50 bg-gray-500/10 text-gray-500",
-    dot: "border-gray-600 bg-ink text-gray-500",
-    card: "border-hairline bg-surface/70",
-    title: "text-gray-400",
-    glow: "",
-  },
   neutral: {
     badge: "border-indigo-500/30 bg-indigo-500/10 text-indigo-300",
     dot: "border-indigo-500/60 bg-ink text-indigo-400",
@@ -107,16 +109,14 @@ export default function Roadmap() {
           className="mx-auto max-w-2xl text-center"
         >
           <span className="font-mono text-xs uppercase tracking-widest text-emerald-400">
-            {"// roadmap de transición"}
+            {"// lo que viene"}
           </span>
           <h2 className="mt-4 font-display text-4xl font-bold tracking-tight text-white md:text-6xl">
-            De <span className="text-gray-500 line-through decoration-gray-600">FlowDesk</span> a{" "}
-            <span className="text-gradient-flow">NEXO</span>.
+            De backlog en hojas de cálculo a un motor que{" "}
+            <span className="text-gradient-flow">se adapta a tu equipo</span>.
           </h2>
           <p className="mt-5 text-sm leading-relaxed text-gray-400 md:text-lg">
-            El camino real de una herramienta interna a un motor open-core — el mismo que se
-            documenta en <span className="font-mono text-gray-300">docs/ROADMAP.md</span> del
-            repositorio.
+            Lo que ya puedes usar hoy, lo que estamos construyendo y hacia dónde va el producto.
           </p>
         </motion.div>
 
@@ -157,9 +157,6 @@ export default function Roadmap() {
                     className={`w-full rounded-2xl border p-6 backdrop-blur transition-transform duration-500 hover:-translate-y-1 md:p-7 ${s.card}`}
                   >
                     <div className="flex flex-wrap items-center gap-3">
-                      <span className="font-mono text-xs text-gray-600">
-                        {p.id === "origen" ? "ORIGEN" : p.id.toUpperCase().replace("-", " ")}
-                      </span>
                       <span
                         className={`rounded-full border px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-widest ${s.badge}`}
                       >
@@ -176,7 +173,19 @@ export default function Roadmap() {
                     >
                       {p.title}
                     </h3>
-                    <p className="mt-2.5 text-sm leading-relaxed text-gray-400">{p.body}</p>
+                    <ul className="mt-3.5 space-y-2">
+                      {p.items.map((item) => (
+                        <li
+                          key={item}
+                          className="flex items-start gap-2.5 text-sm leading-relaxed text-gray-400"
+                        >
+                          <p.icon
+                            className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${s.glow || "text-gray-500"}`}
+                          />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </motion.div>
               );

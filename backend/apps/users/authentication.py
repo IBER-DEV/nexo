@@ -13,13 +13,23 @@ class DemoAwareJWTAuthentication(JWTAuthentication):
     lo que en DRF *reemplaza* — no combina — `DEFAULT_PERMISSION_CLASSES`.
     Ningún ViewSet del proyecto sobreescribe `authentication_classes`, así
     que este es el único punto realmente global para bloquear escrituras sin
-    tocar cada vista una por una."""
+    tocar cada vista una por una.
+
+    `/auth/demo-login/` queda exento: es un POST, pero no escribe nada (solo
+    emite un token, sin tocar el usuario del token entrante) — sin esto, un
+    visitante con sesión demo activa (p. ej. "owner") no podía tocar
+    "Probar como coordinador" en el `RoleSelector`: su propio token viejo
+    disparaba el bloqueo contra el endpoint que intenta cambiar de rol."""
+
+    EXEMPT_PATH_SUFFIX = "/auth/demo-login/"
 
     def authenticate(self, request):
         result = super().authenticate(request)
         if result is None:
             return None
         user, token = result
+        if request.path.endswith(self.EXEMPT_PATH_SUFFIX):
+            return user, token
         if getattr(user, "is_demo_readonly", False) and request.method not in SAFE_METHODS:
             raise PermissionDenied("La demo pública es de solo lectura.")
         return user, token

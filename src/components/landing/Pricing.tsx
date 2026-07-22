@@ -1,9 +1,13 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { Check, CheckCircle2, Cloud, Container, Copy, Mail, Rocket } from "lucide-react";
+import { Check, CheckCircle2, Cloud, Container, Copy, Loader2, Mail, Rocket } from "lucide-react";
+import { toast } from "sonner";
+import { useAuth } from "@/providers/AuthProvider";
+import { ApiError } from "@/lib/api";
+import { authService } from "@/services/authService";
 import { fadeUp } from "./anim";
-import { NEXO_DISCUSSIONS_URL, NEXO_REPO_URL } from "./NexoBrandMark";
+import { NEXO_REPO_URL } from "./NexoBrandMark";
 
 // El comando debe ser autosuficiente: "docker compose up --build" solo, sin el
 // clone previo, no hace nada — es el bug de comprensión #1 del quickstart.
@@ -30,6 +34,41 @@ const CLOUD_FEATURES = [
 
 export default function Pricing() {
   const [copied, setCopied] = useState(false);
+  const [enteringDemo, setEnteringDemo] = useState(false);
+  const [email, setEmail] = useState("");
+  const [joiningWaitlist, setJoiningWaitlist] = useState(false);
+  const [joinedWaitlist, setJoinedWaitlist] = useState(false);
+  const { loginAsDemo } = useAuth();
+  const navigate = useNavigate();
+
+  const tryDemo = async () => {
+    setEnteringDemo(true);
+    try {
+      await loginAsDemo();
+      navigate({ to: "/" });
+    } catch {
+      toast.error("La demo pública no está disponible ahora mismo.");
+    } finally {
+      setEnteringDemo(false);
+    }
+  };
+
+  const joinWaitlist = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setJoiningWaitlist(true);
+    try {
+      await authService.joinWaitlist(email);
+      setJoinedWaitlist(true);
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? "Ese correo no se ve bien — revísalo e intenta de nuevo."
+          : "No pudimos guardar tu correo. Intenta de nuevo.";
+      toast.error(message);
+    } finally {
+      setJoiningWaitlist(false);
+    }
+  };
 
   const copyCmd = async () => {
     try {
@@ -108,13 +147,28 @@ export default function Pricing() {
               ))}
             </ul>
             <div className="mt-9 space-y-3">
-              <Link
-                to="/signup"
-                className="flex w-full items-center justify-center gap-2.5 rounded-full bg-emerald-500 px-6 py-3 text-sm font-semibold text-gray-950 transition-all duration-300 hover:bg-emerald-400 hover:shadow-[0_0_24px_-6px_rgba(52,211,153,0.8)]"
+              <button
+                onClick={tryDemo}
+                disabled={enteringDemo}
+                className="flex w-full items-center justify-center gap-2.5 rounded-full bg-emerald-500 px-6 py-3 text-sm font-semibold text-gray-950 transition-all duration-300 hover:bg-emerald-400 hover:shadow-[0_0_24px_-6px_rgba(52,211,153,0.8)] disabled:opacity-60"
               >
-                <Rocket className="h-4 w-4" />
-                Probar sin instalar
-              </Link>
+                {enteringDemo ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Rocket className="h-4 w-4" />
+                )}
+                {enteringDemo ? "entrando…" : "Probar sin instalar"}
+              </button>
+              <p className="text-center text-xs text-gray-500">
+                Entra directo a una demo con datos de muestra — sin registro.{" "}
+                <Link
+                  to="/signup"
+                  className="text-gray-300 underline underline-offset-2 hover:text-white"
+                >
+                  Crear cuenta
+                </Link>{" "}
+                aplica solo si vas a instalar Nexo en tu servidor o a usar Cloud.
+              </p>
               <button
                 onClick={copyCmd}
                 className={`group flex w-full items-center justify-center gap-2.5 rounded-full border px-6 py-3 font-mono text-sm transition-all duration-300 ${
@@ -167,9 +221,13 @@ export default function Pricing() {
                   $5–10
                 </span>
                 <span className="font-mono text-xs uppercase tracking-widest text-gray-400">
-                  / usuario / mes · meta de precio
+                  / usuario / mes
                 </span>
               </div>
+              <p className="mt-1.5 text-xs text-gray-500">
+                Estimado para el lanzamiento — el precio final se confirma antes de abrir el acceso
+                beta.
+              </p>
               <ul className="mt-7 flex-1 space-y-3.5">
                 {CLOUD_FEATURES.map((f) => (
                   <li key={f} className="flex items-center gap-3 text-sm text-gray-200">
@@ -178,15 +236,35 @@ export default function Pricing() {
                   </li>
                 ))}
               </ul>
-              <a
-                href={NEXO_DISCUSSIONS_URL}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-9 flex w-full items-center justify-center gap-2.5 rounded-full bg-gradient-to-r from-indigo-500 to-emerald-500 px-6 py-3 text-sm font-semibold text-white transition-all duration-300 animate-pulse-glow hover:brightness-110"
-              >
-                <Mail className="h-4 w-4" />
-                Súmate a la lista de espera
-              </a>
+              {joinedWaitlist ? (
+                <div className="mt-9 flex w-full items-center justify-center gap-2.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-6 py-3 text-sm font-medium text-emerald-300">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Listo. Te avisaremos por correo cuando abramos el acceso beta.
+                </div>
+              ) : (
+                <form onSubmit={joinWaitlist} className="mt-9 space-y-2.5">
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="tu@empresa.com"
+                    className="w-full rounded-full border border-hairline bg-surface px-5 py-3 text-sm text-white placeholder:text-gray-500 focus:border-emerald-500/60 focus:outline-none"
+                  />
+                  <button
+                    type="submit"
+                    disabled={joiningWaitlist}
+                    className="flex w-full items-center justify-center gap-2.5 rounded-full bg-gradient-to-r from-indigo-500 to-emerald-500 px-6 py-3 text-sm font-semibold text-white transition-all duration-300 animate-pulse-glow hover:brightness-110 disabled:opacity-60"
+                  >
+                    {joiningWaitlist ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Mail className="h-4 w-4" />
+                    )}
+                    Unirse a la lista de espera
+                  </button>
+                </form>
+              )}
             </div>
           </motion.div>
         </div>
