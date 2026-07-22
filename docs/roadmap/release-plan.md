@@ -25,7 +25,7 @@ Dependabot, repo renombrado y protegido. Detalle: `git show af3d650 --stat`.
 | 4c | Gestión de miembros y acceso a organizaciones | ✅ Completado (2026-07-18) |
 | 5 | Billing (Stripe) | ⏸️ Sin diseñar |
 | 6 | Hosting del backend | 🚧 En progreso (2026-07-20) — backend en Railway + frontend en Cloudflare Workers |
-| 7 | Landing, README y primer minuto (pre-lanzamiento) | ✅ Completado (2026-07-20), falta contenido real (capturas/GIF/demo pública) |
+| 7 | Landing, README y primer minuto (pre-lanzamiento) | ✅ Completado (2026-07-21), falta contenido real (capturas/video/OG image) |
 
 Detalle técnico de cada punto completado → [architecture.md](architecture.md). Detalle de
 producto/diferenciadores → [product.md](product.md). Planes de implementación caso por caso en
@@ -93,15 +93,20 @@ producto/diferenciadores → [product.md](product.md). Planes de implementación
    funciona — retomar la paradoja del CTA documentada en [landing-audit.md](landing-audit.md)
    ahora que el punto 6
    dejó de ser el bloqueante.
-7. **Landing, README y primer minuto** — ✅ dos rondas completadas el 2026-07-20, detalle en
+7. **Landing, README y primer minuto** — ✅ tres rondas completadas (2026-07-20/21), detalle en
    [landing-audit.md](landing-audit.md). Primera ronda: contenido no dependiente de producción
    (footer con formulario fake, quickstart incompleto, README desactualizado, anclas de
    navegación, agrupación de features). Segunda ronda, una vez resuelto el punto 6: CTA
    contextual bajo la demo (`/signup?template=`), empty state de activación en el dashboard
    vacío (`{PREFIJO}-0001` + botón directo a crear la primera actividad), nudge del Owner hacia
-   códigos de acceso, link real del README a la landing. **Sigue pendiente** — no es código,
-   es contenido real que hay que producir: capturas del producto, GIF del Kanban, video de
-   instalación, Open Graph image, y el diseño de una instancia demo pública de solo lectura.
+   códigos de acceso, GIF real del Kanban en el README (`public/kanban.gif`, recortado con
+   ffmpeg de 48MB/22.7s a 332KB/~7s). Tercera ronda (2026-07-21): **instancia demo pública** —
+   `POST /auth/demo-login/` emite tokens sin password para un usuario compartido de solo
+   lectura (`DemoAwareJWTAuthentication` bloquea cualquier escritura suya en toda la API desde
+   la capa de autenticación, el único punto que ningún ViewSet sobreescribe); botón "explorar la
+   app real" en el `BoardSimulator`, banner persistente en la app, toast automático en 403.
+   **Sigue pendiente** — no es código, es contenido real que hay que producir: capturas del
+   producto, video de instalación, Open Graph image.
 
 La base de Fase 0 (imagen Docker, `gunicorn`, `whitenoise`, settings por entorno) es
 exactamente el punto de partida de este hosting.

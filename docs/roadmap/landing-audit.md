@@ -53,12 +53,24 @@ honesto-provisional (a/b) que se había dejado como plan B.
   plantilla y ver el sprint correr. La ruta `/signup` acepta `?template=` y preselecciona el
   Select del formulario.
 
-**Sigue pendiente (necesita producto real corriendo/grabándose, no depende de hosting):**
+- Instancia demo pública (2026-07-21): botón "esto es una simulación — explorar la app real"
+  en el `BoardSimulator`, `POST /auth/demo-login/` (público, sin password) emite tokens para un
+  usuario compartido (`demo-viewer@nexoengine.tech`, creado por `seed_data` con
+  `is_demo_readonly=True`). Decisión: usuario compartido, no token de un solo uso — para una
+  demo de solo lectura la isolation entre visitantes no aporta nada (nadie puede escribir), así
+  que no había motivo para la complejidad de expirar/limpiar tokens efímeros. El bloqueo de
+  escritura vive en `DemoAwareJWTAuthentication` (`apps/users/authentication.py`) — **no** en un
+  `permission_class` (varios ViewSets ya declaran su propio `permission_classes`, lo que en DRF
+  *reemplaza* `DEFAULT_PERMISSION_CLASSES` en vez de combinarse; la capa de autenticación es el
+  único punto que ningún ViewSet sobreescribe). Banner persistente en la app
+  (`DemoModeBanner.tsx`) + toast automático en cualquier 403 (`src/lib/api.ts`) para que un
+  intento de escritura bloqueado no falle en silencio (el Kanban/`ActivityForm` no tenían manejo
+  de error propio). 7 tests nuevos en `apps/activities/tests/test_auth.py`.
+
+**Sigue pendiente (necesita producto real corriendo/grabándose):**
 - Carrusel/capturas del producto real (dashboard, Kanban, reportes, Configuración → Maestros)
-  — hoy la única demo es el mock del `BoardSimulator`.
-- Instancia demo pública (login de solo lectura sobre `seed_data`) — el mayor generador de
-  confianza para open source. Ya hay hosting para soportarla; falta diseñar el mecanismo de
-  login de solo lectura (usuario compartido vs. token de un solo uso) antes de exponerlo.
+  — hoy la única demo *visual* es el mock del `BoardSimulator`, aunque ahora hay una demo real
+  detrás de un clic.
 - Open Graph image para compartir en Slack/X/LinkedIn.
 
 ## README — 6/10

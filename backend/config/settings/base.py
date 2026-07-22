@@ -98,7 +98,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # ─── DRF ──────────────────────────────────────────────────────────────────────
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "apps.users.authentication.DemoAwareJWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
@@ -110,6 +110,11 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 200,
+    "DEFAULT_THROTTLE_RATES": {
+        # Solo /auth/demo-login/ usa este scope (ver DemoLoginView) — evita
+        # que alguien lo golpee en loop; no toca el resto de la API.
+        "demo_login": "20/hour",
+    },
 }
 
 # ─── JWT ──────────────────────────────────────────────────────────────────────
@@ -152,5 +157,11 @@ ANYMAIL = {
     "POSTMARK_SERVER_TOKEN": config("POSTMARK_SERVER_TOKEN", default=""),
     "RESEND_API_KEY": config("RESEND_API_KEY", default=""),
 }
+
+# ─── Demo pública (solo lectura) ───────────────────────────────────────────
+# Usuario compartido que /auth/demo-login/ resuelve — creado por seed_data
+# con is_demo_readonly=True. Vacío/inexistente = demo desactivada (404), el
+# self-hosted no tiene por qué exponer esto.
+DEMO_USER_EMAIL = config("DEMO_USER_EMAIL", default="demo-viewer@nexoengine.tech")
 
 from config.jazzmin_settings import JAZZMIN_SETTINGS, JAZZMIN_UI_TWEAKS  # noqa: E402

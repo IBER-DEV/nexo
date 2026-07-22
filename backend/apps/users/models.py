@@ -51,6 +51,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+    # Usuario compartido de la demo pública (login sin password vía
+    # /auth/demo-login/): DenyDemoWrites (apps/users/permissions.py) rechaza
+    # cualquier escritura suya en toda la API, sin importar el rol.
+    is_demo_readonly = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     # Verificación de email no bloqueante (Fase 1, punto 4): la presencia de
     # email_verified_at es la señal de "verificado" (evita bool+datetime

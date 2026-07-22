@@ -1,10 +1,12 @@
 import logging
 
+from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
 from django.utils import timezone
 from django.utils.encoding import DjangoUnicodeDecodeError, force_str
 from django.utils.http import urlsafe_base64_decode
 from rest_framework import generics, permissions, response, status
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
@@ -103,6 +105,37 @@ class SignupView(APIView):
                 "organization": OrganizationSerializer(org).data,
             },
             status=status.HTTP_201_CREATED,
+        )
+
+
+class DemoLoginView(APIView):
+    """Demo pública de solo lectura: sin password, emite tokens para el
+    usuario compartido `settings.DEMO_USER_EMAIL` (creado por seed_data con
+    is_demo_readonly=True). DenyDemoWrites bloquea cualquier escritura suya
+    en toda la API — este endpoint solo resuelve *quién* es, no *qué puede
+    hacer*. 404 si la demo no está configurada (self-hosted no la expone por
+    defecto): más honesto que un 500 o un 401 engañoso."""
+
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "demo_login"
+
+    def post(self, request):
+        user = User.objects.filter(
+            email__iexact=settings.DEMO_USER_EMAIL, is_demo_readonly=True, is_active=True
+        ).first()
+        if user is None:
+            return response.Response(
+                {"detail": "La demo pública no está disponible en esta instancia."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        refresh = RefreshToken.for_user(user)
+        return response.Response(
+            {
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+                "user": UserSerializer(user).data,
+            }
         )
 
 

@@ -13,6 +13,7 @@ interface AuthState {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
   signup: (input: SignupInput) => Promise<void>;
+  loginAsDemo: () => Promise<void>;
   logout: () => void;
 }
 
@@ -24,6 +25,7 @@ const AuthCtx = createContext<AuthState>({
   user: null,
   login: async () => {},
   signup: async () => {},
+  loginAsDemo: async () => {},
   logout: () => {},
 });
 
@@ -112,6 +114,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(data.user);
   };
 
+  const loginAsDemo = async () => {
+    const data = await authService.demoLogin();
+    qc.clear();
+    setTokens(data.access, data.refresh);
+    localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+    setUser(data.user);
+  };
+
   const logout = () => {
     clearTokens();
     localStorage.removeItem(USER_KEY);
@@ -129,6 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         login,
         signup,
+        loginAsDemo,
         logout,
       }}
     >

@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, LayoutGroup, motion, useInView } from "framer-motion";
 import {
   Activity,
   ArrowLeftRight,
   CheckCircle2,
   CircleDashed,
+  Eye,
   Loader2,
   Play,
   RotateCcw,
@@ -13,6 +14,8 @@ import {
   Sheet,
   Timer,
 } from "lucide-react";
+import { toast } from "sonner";
+import { useAuth } from "@/providers/AuthProvider";
 import { EASE, fadeUp } from "./anim";
 
 // ─── Plantillas reales del producto ──────────────────────────────────────────
@@ -218,9 +221,24 @@ export default function BoardSimulator() {
   const [templateKey, setTemplateKey] = useState(TEMPLATES[0].key);
   const [step, setStep] = useState(0);
   const [running, setRunning] = useState(false);
+  const [enteringDemo, setEnteringDemo] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const boardRef = useRef<HTMLDivElement>(null);
   const inView = useInView(boardRef, { amount: 0.2 });
+  const { loginAsDemo } = useAuth();
+  const navigate = useNavigate();
+
+  const exploreDemo = async () => {
+    setEnteringDemo(true);
+    try {
+      await loginAsDemo();
+      navigate({ to: "/" });
+    } catch {
+      toast.error("La demo pública no está disponible ahora mismo.");
+    } finally {
+      setEnteringDemo(false);
+    }
+  };
 
   const template = TEMPLATES.find((t) => t.key === templateKey) ?? TEMPLATES[0];
   const doneStateIds = new Set(
@@ -308,6 +326,16 @@ export default function BoardSimulator() {
             — estados, colores y prioridades exactos del producto. Después las ajustas a tu equipo
             sin tocar código: agrega estados, cambia colores, reordena.
           </p>
+          <button
+            onClick={exploreDemo}
+            disabled={enteringDemo}
+            className="group mt-4 inline-flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-gray-500 transition-colors hover:text-emerald-400 disabled:opacity-60"
+          >
+            <Eye className="h-3.5 w-3.5" />
+            {enteringDemo
+              ? "entrando…"
+              : "esto es una simulación — explorar la app real (sin instalar nada)"}
+          </button>
         </motion.div>
 
         {/* template picker */}

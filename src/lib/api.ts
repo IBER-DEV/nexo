@@ -1,3 +1,5 @@
+import { toast } from "sonner";
+
 const BASE_URL =
   (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:8000/api/v1";
 
@@ -83,6 +85,10 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     const data = await res.json().catch(() => ({}));
     const message =
       ((data as Record<string, unknown>)?.detail as string | undefined) ?? "Error en la petición";
+    // Ningún call-site de escritura (Kanban drag, ActivityForm, etc.) atrapa
+    // el ApiError con un toast propio — sin esto, un 403 de la demo pública
+    // falla en silencio y el usuario no entiende por qué "no pasó nada".
+    if (res.status === 403) toast.error(message);
     throw new ApiError(res.status, data, message);
   }
 

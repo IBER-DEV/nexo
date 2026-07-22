@@ -21,6 +21,14 @@ export interface SignupResult {
   organization: OrganizationDetail;
 }
 
+/** Demo pública de solo lectura: sin credenciales, un solo POST. 404 si la
+ * instancia no la tiene configurada (self-hosted no la expone por defecto). */
+export interface DemoLoginResult {
+  access: string;
+  refresh: string;
+  user: User;
+}
+
 export const authService = {
   templates: () => apiFetch<SignupTemplate[]>("/auth/signup/templates/"),
   signup: (input: SignupInput) =>
@@ -28,6 +36,7 @@ export const authService = {
       method: "POST",
       body: JSON.stringify(input),
     }),
+  demoLogin: () => apiFetch<DemoLoginResult>("/auth/demo-login/", { method: "POST" }),
   verifyEmail: (token: string) =>
     apiFetch<{ detail: string }>(`/auth/email/verify/?token=${encodeURIComponent(token)}`),
   resendVerification: () => apiFetch<{ detail: string }>("/auth/email/resend/", { method: "POST" }),

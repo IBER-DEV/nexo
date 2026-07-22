@@ -25,8 +25,9 @@ class UserSerializer(serializers.ModelSerializer):
             "coordinador_nombre",
             "email_verified",
             "is_active",
+            "is_demo_readonly",
         ]
-        read_only_fields = ["id", "iniciales", "is_active"]
+        read_only_fields = ["id", "iniciales", "is_active", "is_demo_readonly"]
 
     def get_coordinador_nombre(self, obj: User) -> str | None:
         if obj.coordinador_id:
