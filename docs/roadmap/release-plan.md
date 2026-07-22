@@ -134,6 +134,17 @@ producto/diferenciadores → [product.md](product.md). Planes de implementación
    muestra en producción (gateado por si `VITE_API_URL` apunta a `localhost`, ese hint solo
    tiene sentido contra un backend propio).
 
+   **Quinta ronda (2026-07-22) — preparar la landing para el punto 5 (billing):** el botón
+   "Probar sin instalar" de la card Community en Pricing todavía apuntaba a `/signup` pese a
+   que la demo real por rol ya existía (construida en la tercera/cuarta ronda) — se cambió para
+   invocar `loginAsDemo()` directo, el mismo mecanismo que ya usan `RoleSelector`/
+   `BoardSimulator`; "Crear cuenta" queda como nota secundaria explicando que aplica solo para
+   self-host o Cloud. La card Cloud/Enterprise reemplazó el link a GitHub Discussions por una
+   waitlist real: `WaitlistSignup` (`apps/organizations/models.py`, idempotente por email) +
+   `POST /api/v1/auth/waitlist/`, con el precio marcado explícitamente como estimado. Roadmap de
+   la landing reescrito de una línea de tiempo técnica (fases/commits) a 3 bloques de valor para
+   el usuario final (Disponible hoy / En desarrollo / Futuro) — sin nombrar fases internas.
+
 La base de Fase 0 (imagen Docker, `gunicorn`, `whitenoise`, settings por entorno) es
 exactamente el punto de partida de este hosting.
 
@@ -174,3 +185,9 @@ adelantado. Lista de features → [product.md](product.md).
   real. La paradoja del CTA de la auditoría anterior deja de ser un bloqueante técnico —
   queda pendiente el dominio raíz (`nexoengine.tech` → Worker) y la segunda tanda de
   contenido real (capturas, GIF, demo pública) antes de anunciar la landing como publicada.
+- **2026-07-22** — Landing preparada para el punto 5 (billing) antes de diseñarlo: CTA de
+  Community corregido para entrar a la demo real en vez de `/signup`, waitlist de email real
+  para Cloud/Enterprise (`WaitlistSignup` + `POST /auth/waitlist/`) reemplazando el link a
+  GitHub Discussions, y Roadmap de la landing reescrito a 3 bloques de valor para el usuario
+  final. Mergeado a `main` (PR #24) y desplegado a producción (Cloudflare Worker + redeploy de
+  Railway, migración `organizations.0004_waitlistsignup` aplicada).

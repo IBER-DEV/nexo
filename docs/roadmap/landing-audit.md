@@ -28,6 +28,14 @@ honestidad de Roadmap/Pricing ("en el roadmap — todavía no son un producto ac
 ("Crea tu espacio gratis" → `/signup`) ya funciona en producción; no hace falta el CTA
 honesto-provisional (a/b) que se había dejado como plan B.
 
+**§1b — CTA de Community mal dirigido (2026-07-22):** aun con `/signup` funcionando, la card
+Community de Pricing seguía mandando "Probar sin instalar" a `/signup` — pidiendo registro
+justo en el botón que promete lo contrario. Corregido para invocar la demo real por rol
+(`loginAsDemo()`, el mismo mecanismo del `RoleSelector`) sin pasar por signup; "Crear cuenta"
+quedó como nota secundaria aclarando que aplica solo para self-host o Cloud. De paso, la card
+Cloud/Enterprise dejó de linkear a GitHub Discussions y ahora captura el email a una waitlist
+real (`POST /auth/waitlist/`), con el precio marcado como estimado.
+
 **Implementado en esta ronda:**
 - Footer: formulario de suscripción fake (regex + "✓ te avisaremos" sin enviar nada) →
   reemplazado por enlace real a GitHub Watch/releases.
