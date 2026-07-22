@@ -40,7 +40,7 @@ class DemoLoginTests(APITestCase):
     def setUp(self):
         self.org = make_org(slug="demo-test")
         self.demo_user = make_user(
-            DEMO_EMAIL, "Visitante demo", rol="member", organization=self.org,
+            DEMO_EMAIL, "Visitante demo", rol="admin", organization=self.org,
             is_demo_readonly=True,
         )
         self.activity = make_activity(self.demo_user)
@@ -62,6 +62,21 @@ class DemoLoginTests(APITestCase):
         self.demo_user.save(update_fields=["is_active"])
         res = self.client.post("/api/v1/auth/demo-login/")
         self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_demo_user_sees_all_org_activities_not_just_own(self):
+        # rol=admin a propósito: ActivityViewSet filtra a member a solo sus
+        # propias actividades (responsable/created_by) -- el demo-viewer no
+        # es responsable de nada del seed real, así que con member vería el
+        # dashboard vacío. Regresión de un bug real encontrado en producción.
+        other_user = make_user("otro@test.com", "Otro", rol="member", organization=self.org)
+        make_activity(other_user, nombre="Actividad de otra persona")
+        token = self._demo_token()
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        res = self.client.get("/api/v1/activities/")
+        nombres = [a["nombre"] for a in res.data["results"]] if "results" in res.data else [
+            a["nombre"] for a in res.data
+        ]
+        self.assertIn("Actividad de otra persona", nombres)
 
     def test_demo_user_can_read(self):
         token = self._demo_token()

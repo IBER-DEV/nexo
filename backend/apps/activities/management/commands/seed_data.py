@@ -136,21 +136,32 @@ class Command(BaseCommand):
                 admin.save()
 
         # Usuario compartido de la demo pública (/auth/demo-login/, sin
-        # password) — is_demo_readonly=True hace que DenyDemoWrites lo
-        # bloquee en toda la API sin importar el rol; member alcanza para
-        # ver todo lo que ve un usuario normal de la org.
+        # password). rol=admin a propósito, no member: ActivityViewSet
+        # filtra a member a solo sus propias actividades (responsable o
+        # created_by), y el demo-viewer no es responsable de ninguna — con
+        # member vería el dashboard vacío. is_demo_readonly=True hace que
+        # DemoAwareJWTAuthentication bloquee cualquier escritura suya en
+        # toda la API sin importar el rol, así que "admin de solo lectura"
+        # es seguro: ve todo, no puede tocar nada.
         demo_viewer, demo_created = User.objects.get_or_create(
             email=settings.DEMO_USER_EMAIL,
-            defaults={"nombre": "Visitante demo", "rol": "member", "organization": org},
+            defaults={"nombre": "Visitante demo", "rol": "admin", "organization": org},
         )
         if demo_created:
             demo_viewer.set_unusable_password()
             demo_viewer.is_demo_readonly = True
             demo_viewer.save()
             self.stdout.write(f"  Created {demo_viewer.email} (demo pública, solo lectura)")
-        elif not demo_viewer.is_demo_readonly:
-            demo_viewer.is_demo_readonly = True
-            demo_viewer.save(update_fields=["is_demo_readonly"])
+        else:
+            changed = False
+            if demo_viewer.rol != "admin":
+                demo_viewer.rol = "admin"
+                changed = True
+            if not demo_viewer.is_demo_readonly:
+                demo_viewer.is_demo_readonly = True
+                changed = True
+            if changed:
+                demo_viewer.save()
 
         # Assign members to coordinators (idempotent)
         # Ana coordina: María, Jorge, Lucía, Diego
