@@ -19,11 +19,19 @@ export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
 
+// El hint "admin@empresa.com / demo1234" solo tiene sentido contra un
+// backend local (seed_data propio) — en producción esas credenciales ni
+// siquiera son válidas (ver CLAUDE.md, "Gotchas ya resueltos": se rotaron
+// en Railway porque estaban documentadas públicamente).
+const API_URL =
+  (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:8000/api/v1";
+const IS_LOCAL_BACKEND = API_URL.includes("localhost") || API_URL.includes("127.0.0.1");
+
 function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("admin@empresa.com");
-  const [password, setPassword] = useState("demo1234");
+  const [email, setEmail] = useState(IS_LOCAL_BACKEND ? "admin@empresa.com" : "");
+  const [password, setPassword] = useState(IS_LOCAL_BACKEND ? "demo1234" : "");
   const [loading, setLoading] = useState(false);
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -123,11 +131,15 @@ function LoginPage() {
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-xs text-muted-foreground">
-            Demo · <code className="font-mono">admin@empresa.com</code> /{" "}
-            <code className="font-mono">demo1234</code>
-          </p>
-          <p className="mt-2 text-center text-xs text-muted-foreground">
+          {IS_LOCAL_BACKEND && (
+            <p className="mt-6 text-center text-xs text-muted-foreground">
+              Demo · <code className="font-mono">admin@empresa.com</code> /{" "}
+              <code className="font-mono">demo1234</code>
+            </p>
+          )}
+          <p
+            className={`text-center text-xs text-muted-foreground ${IS_LOCAL_BACKEND ? "mt-2" : "mt-6"}`}
+          >
             ¿No tienes cuenta?{" "}
             <Link to="/signup" className="text-primary hover:underline">
               Crear una

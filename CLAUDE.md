@@ -72,10 +72,14 @@ docker compose exec -T backend python manage.py sync_appsheet --org demo --dry-r
 - `acme` (prefijo `ACM`, flujo propio de 4 estados — para ver que el Kanban y los selects
   son realmente dinámicos): `admin@acme.com` / `demo1234` (admin).
 
-También crea `settings.DEMO_USER_EMAIL` (`demo-viewer@nexoengine.tech` por defecto) en la org
-`demo`, con `is_demo_readonly=True` — sin password, se resuelve vía `POST /auth/demo-login/`
-(botón "explorar la app real" del `BoardSimulator` en la landing). Ver
-[docs/roadmap/landing-audit.md](docs/roadmap/landing-audit.md) para el diseño completo.
+También crea un usuario demo por rol en la org `demo` (`demo-{role}@nexoengine.tech` —
+`settings.DEMO_EMAIL_TEMPLATE`/`DEMO_ROLES`, owner/admin/coordinator/member), todos con
+`is_demo_readonly=True` — sin password, se resuelven vía `POST /auth/demo-login/
+{"role": "..."}` (botones "Probar como {rol}" del `RoleSelector` en la landing). `member` y
+`coordinator` necesitan datos propios para no ver todo vacío (`ActivityViewSet` los filtra a
+lo suyo/su equipo) — `seed_data` les asigna actividades/equipo a mano, no lo reasignes sin
+revisar por qué. Ver [docs/roadmap/landing-audit.md](docs/roadmap/landing-audit.md) para el
+diseño completo.
 
 ## Settings de Django — tres perfiles, no dos
 

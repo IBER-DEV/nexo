@@ -66,6 +66,17 @@ honesto-provisional (a/b) que se había dejado como plan B.
   (`DemoModeBanner.tsx`) + toast automático en cualquier 403 (`src/lib/api.ts`) para que un
   intento de escritura bloqueado no falle en silencio (el Kanban/`ActivityForm` no tenían manejo
   de error propio). 7 tests nuevos en `apps/activities/tests/test_auth.py`.
+- Demo pública **por rol** (2026-07-21): el usuario único pasó a ser uno por rol
+  (`demo-{role}@nexoengine.tech`, `owner`/`admin`/`coordinator`/`member`), todos
+  `is_demo_readonly=True`. `POST /auth/demo-login/` acepta `{"role": "..."}`. El `RoleSelector`
+  de la landing —que ya mostraba previews mockeadas por rol— ahora tiene un botón "Probar como
+  {rol}" que entra con datos y permisos reales, no una simulación de frontend. `member` y
+  `coordinator` necesitaban datos propios para no ver todo vacío — `seed_data` les asigna 5
+  actividades y 2 miembros de equipo respectivamente. Motivado por: (a) el usuario pidió la
+  feature explícitamente tras evaluarla, (b) al probar la demo real se encontró que las
+  credenciales `demo1234` documentadas en el README daban escritura completa sobre la misma org
+  compartida — se rotaron en producción (ver `release-plan.md`, punto 6) y el hint de esas
+  credenciales en `/login` se ocultó cuando `VITE_API_URL` no es `localhost`.
 
 **Sigue pendiente (necesita producto real corriendo/grabándose):**
 - Carrusel/capturas del producto real (dashboard, Kanban, reportes, Configuración → Maestros)

@@ -93,7 +93,7 @@ producto/diferenciadores → [product.md](product.md). Planes de implementación
    funciona — retomar la paradoja del CTA documentada en [landing-audit.md](landing-audit.md)
    ahora que el punto 6
    dejó de ser el bloqueante.
-7. **Landing, README y primer minuto** — ✅ tres rondas completadas (2026-07-20/21), detalle en
+7. **Landing, README y primer minuto** — ✅ cuatro rondas completadas (2026-07-20/21), detalle en
    [landing-audit.md](landing-audit.md). Primera ronda: contenido no dependiente de producción
    (footer con formulario fake, quickstart incompleto, README desactualizado, anclas de
    navegación, agrupación de features). Segunda ronda, una vez resuelto el punto 6: CTA
@@ -120,10 +120,19 @@ producto/diferenciadores → [product.md](product.md). Planes de implementación
    aleatorios para los 10 usuarios con password real de las orgs `demo`/`acme` (nadie los
    necesita: la demo pública ya no depende de loguearse con esas cuentas). Verificado con una
    petición real: login viejo → 401, demo-login → sigue en 200.
-   **Idea evaluada, no implementada:** dejar elegir el rol en la demo pública (`demo-viewer-admin`
-   / `-coordinator` / `-member`, todos `is_demo_readonly=True`) para mostrar la interacción real
-   por rol en vez de las previews mockeadas del `RoleSelector` de la landing — encaja con lo que
-   esa sección ya promete, pero no se construyó todavía, solo quedó evaluada.
+   **Demo pública por rol** (2026-07-21, cuarta ronda): la idea evaluada arriba se construyó —
+   `demo-{role}@nexoengine.tech` (uno por rol, `settings.DEMO_EMAIL_TEMPLATE`/`DEMO_ROLES`),
+   `POST /auth/demo-login/` acepta `{"role": "..."}` (default `admin`), y el `RoleSelector` de
+   la landing tiene un botón "Probar como {rol} — app real, sin instalar" por cada preview
+   mockeada. El rol `member` necesitaba datos propios para no ver el dashboard vacío
+   (`ActivityViewSet` lo filtra a responsable/created_by) — se le asignaron 5 actividades del
+   seed. El rol `coordinator` necesitaba equipo propio para demostrar algo — Jorge y Diego
+   pasaron de coordinarlos Ana a coordinarlos el demo-coordinator (Ana se queda con María y
+   Lucía). Verificado con peticiones reales contra los 4 roles: owner/admin ven las 42
+   actividades del org, coordinator ve solo su equipo, member ve solo lo suyo — todos bloqueados
+   en escritura por igual. El hint "Demo · admin@empresa.com / demo1234" del login ya no se
+   muestra en producción (gateado por si `VITE_API_URL` apunta a `localhost`, ese hint solo
+   tiene sentido contra un backend propio).
 
 La base de Fase 0 (imagen Docker, `gunicorn`, `whitenoise`, settings por entorno) es
 exactamente el punto de partida de este hosting.
