@@ -59,6 +59,20 @@ class DemoLoginTests(APITestCase):
         self.assertIn("access", res.data)
         self.assertTrue(res.data["user"]["is_demo_readonly"])
 
+    def test_demo_login_works_while_already_logged_in_as_demo(self):
+        # Regresion: un visitante con sesion demo activa (p. ej. "owner") no
+        # podia cambiar de rol -- su propio token viejo disparaba el bloqueo
+        # de DemoAwareJWTAuthentication contra demo-login/ mismo.
+        make_user(
+            DEMO_EMAIL_TEMPLATE.format(role="coordinator"), "Demo coordinator",
+            rol="coordinator", organization=self.org, is_demo_readonly=True,
+        )
+        first_token = self._demo_token("admin")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {first_token}")
+        res = self.client.post("/api/v1/auth/demo-login/", {"role": "coordinator"}, format="json")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data["user"]["rol"], "coordinator")
+
     def test_demo_login_404_when_role_not_configured(self):
         # No se puede borrar: tiene actividades con FK protegida. Basta con
         # que deje de matchear la búsqueda (email, is_demo_readonly, activo).
