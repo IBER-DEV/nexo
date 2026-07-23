@@ -47,6 +47,20 @@ Plane, OpenProject) resuelve estos puntos de la misma forma.
   integrar Jira/Azure DevOps ya está en el modelo de datos, no es una promesa de roadmap sin
   base.
 
+## ICP y qué no construir
+
+**Cliente objetivo:** equipo de TI de 5-50 personas en LATAM que hoy coordina trabajo en una
+hoja de cálculo, asigna por WhatsApp, reporta avances a mano y encuentra a Jira demasiado
+complejo. **No es el ICP inicial:** equipos de producto tipo Silicon Valley, empresas que piden
+SAML desde la demo, organizaciones con procurement pesado — una feature que solo ese segundo
+grupo pediría no es prioridad. Detalle de la tesis competitiva (por qué vertical y no horizontal
+contra Plane/Jira/Linear) en [launch-strategy.md](launch-strategy.md).
+
+Trampas de tiempo explícitas para los próximos 12 meses — no reabrir sin un caso de cliente
+real: SSO/SAML, LDAP, SCIM, marketplace de apps, wiki colaborativa completa, AI generativa
+compleja, motor de automatización estilo Zapier. Todas caben en la Fase 2 de abajo cuando (y si)
+hay un contrato real detrás.
+
 ## Fase 2 — Enterprise (features)
 
 **Estado: 💤 No empezar todavía.** Se construye contra el primer contrato real, no por

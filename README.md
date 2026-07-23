@@ -126,7 +126,7 @@ estrategia:
 - [x] Registro self-service (organización + primer usuario, auto-login)
 - [x] Códigos de acceso para incorporar miembros a una organización existente
 - [ ] Catálogos genéricos / campos personalizados (deuda consciente, sin caso de cliente real)
-- [ ] Billing (Stripe)
+- [ ] Billing (Lemon Squeezy)
 - [ ] Hosting del backend en producción
 
 Detalle completo en [docs/roadmap/release-plan.md](docs/roadmap/release-plan.md).

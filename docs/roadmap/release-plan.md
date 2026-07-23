@@ -23,7 +23,7 @@ Dependabot, repo renombrado y protegido. Detalle: `git show af3d650 --stat`.
 | 3 | Catálogos genéricos / campos personalizados | ⏸️ Pendiente, deuda consciente |
 | 4 | Signup self-service + onboarding | ✅ Completado (2026-07-18), alcance Bloque A+B+D |
 | 4c | Gestión de miembros y acceso a organizaciones | ✅ Completado (2026-07-18) |
-| 5 | Billing (Stripe) | ⏸️ Sin diseñar |
+| 5 | Billing (Lemon Squeezy) | 📋 Diseñado (2026-07-18), sin implementar |
 | 6 | Hosting del backend | 🚧 En progreso (2026-07-20) — backend en Railway + frontend en Cloudflare Workers |
 | 7 | Landing, README y primer minuto (pre-lanzamiento) | ✅ Completado (2026-07-21), falta contenido real (capturas/video/OG image) |
 
@@ -54,8 +54,14 @@ producto/diferenciadores → [product.md](product.md). Planes de implementación
      una tabla física `Membership` (ver ADR
      [0002](../adr/0002-membership-como-servicio-no-como-tabla.md) para el porqué y el punto
      de reapertura). Incluye además cambio de rol y desactivación de miembros desde la UI.
-5. **Billing** — Stripe (Checkout + Customer Portal), webhook que activa/suspende la
-   organización según estado de pago.
+5. **Billing** — 📋 diseñado 2026-07-18, sin implementar. Stripe descartado (no opera para
+   cuentas colombianas); proveedor elegido es **Lemon Squeezy** (Merchant of Record) por
+   velocidad de lanzamiento sobre margen — razonamiento completo en
+   [launch-strategy.md](launch-strategy.md), arquitectura de entidades/webhooks en
+   [monetization.md](monetization.md). Plan de sprints: (1) Checkout — SDK de Lemon Squeezy,
+   botón "Actualizar a Cloud", checkout hospedado; (2) Webhooks — endpoint firmado e
+   idempotente que actualiza `Organization.plan`; (3) Trial — 14 días sin tarjeta, conversión
+   desde la app; (4) Customer Portal — cambio de método de pago, cancelación, facturas.
 6. **Hosting del backend** — 🚧 backend desplegado en Railway (proyecto `nexo-backend`):
    servicio `backend` (build por `backend/Dockerfile`) + Postgres administrado, wireado por
    variables de referencia (`${{Postgres.PGHOST}}` etc., no una `DATABASE_URL` — `prod.py` usa
@@ -191,3 +197,7 @@ adelantado. Lista de features → [product.md](product.md).
   GitHub Discussions, y Roadmap de la landing reescrito a 3 bloques de valor para el usuario
   final. Mergeado a `main` (PR #24) y desplegado a producción (Cloudflare Worker + redeploy de
   Railway, migración `organizations.0004_waitlistsignup` aplicada).
+- **2026-07-18** — Estrategia de lanzamiento de Nexo Cloud y billing definida (documentada en
+  [launch-strategy.md](launch-strategy.md)): auditoría competitiva de Plane, tesis vertical, ICP
+  explícito, qué no construir en 12 meses, y billing con Lemon Squeezy en vez de Stripe (bloqueado
+  para cuentas colombianas). Punto 5 pasa de "sin diseñar" a "diseñado, sin implementar".

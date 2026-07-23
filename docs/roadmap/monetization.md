@@ -23,14 +23,29 @@ compitiendo contra nosotros. AGPL obliga a quien lo ofrezca como servicio a publ
 modificaciones — protege el negocio Cloud. Las features Enterprise, cuando existan, van en una
 carpeta `ee/` con licencia comercial propia (modelo GitLab), en el mismo repo.
 
-## Billing (Fase 1, punto 5 — sin diseñar todavía)
+## Billing (Fase 1, punto 5 — diseñado, sin implementar)
 
-Stripe (Checkout + Customer Portal ahorran la mayor parte del trabajo), webhook que
-activa/suspende la organización según estado de pago. `Organization.plan` y
-`Organization.feature_flags` ya existen desde el Bloque 1 de multi-tenancy — la lógica de
-límites por plan se diseña aquí, cuando llegue el turno (ver [release-plan.md](release-plan.md)).
+**Proveedor: Lemon Squeezy (Merchant of Record), no Stripe.** Stripe no opera nativamente para
+cuentas colombianas — queda descartado como solución inicial. Un Merchant of Record cobra
+globalmente en USD y maneja los impuestos internacionales por nosotros, a cambio de un fee más
+alto y de que la factura la emite una entidad extranjera (no DIAN). Pasarelas colombianas
+(Wompi, Mercado Pago, PayU) quedan como opción futura, solo cuando exista demanda real de
+factura DIAN de un cliente empresarial — hoy implicarían que Iber maneje DIAN/IVA/contabilidad
+directamente, tiempo operativo que no hay como founder solo. Razonamiento completo →
+[launch-strategy.md](launch-strategy.md).
+
+Entidades nuevas: `BillingCustomer`, `Subscription`, `CheckoutSession`, `WebhookEvent`. Webhooks
+mínimos: `subscription_created`/`subscription_updated`/`subscription_cancelled`/
+`payment_failed`, procesados de forma idempotente contra `WebhookEvent`. Acceso por estado:
+Trial/Active → completo, Past Due/Cancelled → solo lectura, Expired → bloqueado.
+`Organization.plan` y `Organization.feature_flags` ya existen desde el Bloque 1 de
+multi-tenancy — la lógica de límites por plan se termina de diseñar cuando llegue el turno (ver
+[release-plan.md](release-plan.md) para el plan de sprints).
 
 ## Bitácora
 
 - **2026-07-16** — Elegido AGPL-3.0 sobre MIT para proteger el plan Cloud de reventa por
   terceros.
+- **2026-07-18** — Billing diseñado: Lemon Squeezy sobre Stripe (bloqueado para Colombia) y
+  sobre pasarelas locales (velocidad de lanzamiento vs. carga operativa de DIAN/IVA). Detalle
+  completo en [launch-strategy.md](launch-strategy.md).
