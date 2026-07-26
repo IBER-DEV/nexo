@@ -3,6 +3,10 @@ import { toast } from "sonner";
 const BASE_URL =
   (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:8000/api/v1";
 
+/** URL pública del API. La necesita la pantalla de conexión de MCP, que le
+ *  arma al usuario la configuración de su cliente — no puede adivinarla. */
+export const API_BASE_URL = BASE_URL;
+
 const ACCESS_KEY = "flowdesk-access";
 const REFRESH_KEY = "flowdesk-refresh";
 

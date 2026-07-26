@@ -17,6 +17,7 @@ import { PrioritiesManager } from "@/components/settings/PrioritiesManager";
 import { OrganizationSettings } from "@/components/settings/OrganizationSettings";
 import { BillingSettings } from "@/components/settings/BillingSettings";
 import { AccessTokensSection } from "@/components/settings/AccessTokensSection";
+import { McpSection } from "@/components/settings/McpSection";
 import { useState } from "react";
 
 const TABS = ["cuenta", "maestros", "organizacion", "facturacion"] as const;
@@ -126,6 +127,7 @@ function SettingsPage() {
                 Cuenta y los ve cualquier rol, porque un token nunca puede
                 más que su dueño. */}
             <AccessTokensSection />
+            <McpSection />
           </TabsContent>
 
           {isAdmin && (

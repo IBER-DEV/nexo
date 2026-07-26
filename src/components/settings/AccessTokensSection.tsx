@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useSound } from "@/providers/SoundProvider";
+import { McpConnection } from "@/components/settings/McpConnection";
 import {
   TOKEN_SCOPE_LABEL,
   tokensService,
@@ -145,6 +146,14 @@ export function AccessTokensSection() {
                     {copiado ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                   </Button>
                 </div>
+
+                {/* Este es el único momento en que el token existe en
+                    claro, así que es el único en que se le puede entregar
+                    la configuración lista para pegar. Después ya no. */}
+                <div className="border-t border-border/60 pt-4">
+                  <McpConnection token={recienCreado} />
+                </div>
+
                 <Button onClick={cerrar} className="w-full">
                   Ya lo guardé
                 </Button>

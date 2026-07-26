@@ -20,4 +20,7 @@ responda tu pregunta:
   primer minuto: qué se implementó ya y qué queda diferido hasta que el hosting (Fase 1, punto
   6) esté resuelto.
 
+Para **operar** lo que ya está desplegado —entornos, tareas programadas, respaldos, limpieza de
+datos— el runbook es [operations.md](operations.md); no es roadmap, son cosas que se hacen.
+
 El contexto técnico general del código (no del roadmap) vive en [CLAUDE.md](../CLAUDE.md).

@@ -79,9 +79,13 @@ producto/diferenciadores → [product.md](product.md). Planes de implementación
    Tabla completa y los tres principios que la explican en
    [monetization.md](monetization.md).
 6. **Hosting del backend** — 🚧 backend desplegado en Railway (proyecto `nexo-backend`):
-   servicio `backend` (build por `backend/Dockerfile`) + Postgres administrado, wireado por
-   variables de referencia (`${{Postgres.PGHOST}}` etc., no una `DATABASE_URL` — `prod.py` usa
-   `DB_NAME`/`DB_USER`/... por separado). Dominio propio `api.nexoengine.tech` conectado (CNAME
+   servicio `backend` (build por `backend/Dockerfile`, con `Root Directory = backend` — ver
+   [operations.md](../operations.md), sin eso el build construye el frontend) + Postgres
+   administrado. **El procedimiento de despliegue y la operación de los entornos viven en
+   [operations.md](../operations.md)**, no acá. Las variables de base se cablean por referencia
+   (`${{Postgres.PGHOST}}` etc., no una `DATABASE_URL` — `prod.py` usa `DB_NAME`/`DB_USER`/...
+   por separado); estuvieron como valores literales hasta el 2026-07-26, lo que impedía duplicar
+   el entorno. Dominio propio `api.nexoengine.tech` conectado (CNAME
    + TXT de verificación creados vía la API de Hostinger, certificado válido); el dominio
    generado por Railway (`backend-production-c5b3.up.railway.app`) queda como fallback — ambos
    viven en `ALLOWED_HOSTS`. Bug encontrado y corregido en el primer deploy: `prod.py`
@@ -184,7 +188,7 @@ todos los planes**, con cuota por plan — su trabajo es atraer, no cobrar (ver
 | 1 | Tokens de larga vida (`PersonalAccessToken`) | ✅ Completado (2026-07-26) |
 | 2 | Servidor MCP (herramientas sobre el API existente) | ✅ Completado (2026-07-26) |
 | 3 | Cuota de MCP por plan | ✅ Completado (2026-07-26) |
-| 4 | UI de conexión + mensaje en la landing | 📋 Pendiente |
+| 4 | UI de conexión + mensaje en la landing | ✅ Completado (2026-07-26) |
 
 El paso 1 era el bloqueante real: el access token dura 8h y el refresh rota, así que ningún
 cliente MCP podía mantener sesión.
@@ -194,9 +198,15 @@ cliente MCP podía mantener sesión.
 decisiones —por qué sin el SDK, por qué sin streaming, y cómo se controlan los permisos cuando
 todo el tráfico es POST— en `CLAUDE.md`.
 
-**Lo que falta es lo que lo hace visible:** una pantalla que le entregue al usuario el bloque
-de configuración listo para pegar en su cliente, y decirlo en la landing. Hoy el diferenciador
-existe pero hay que armar la conexión a mano.
+La conexión se le entrega armada al usuario en Configuración → Cuenta (`McpConnection`), con el
+bloque para Claude Desktop y el comando para Claude Code. El bloque *con el token real* solo
+aparece en el diálogo de "token creado" —el único momento en que el valor existe en claro—; la
+tarjeta permanente muestra el mismo formato con un marcador. En la landing, MCP entró al bloque
+"Disponible hoy" del roadmap y a una pregunta del FAQ ("¿Cobran extra por las funciones de
+IA?"), que es donde se explica que no pagamos inferencia porque el usuario trae la suya.
+
+**Lo que queda es contenido, no código:** una guía paso a paso y una demo grabada del flujo
+"pídele a Claude que cargue tus actividades".
 
 ## Fase 2 — Enterprise
 
