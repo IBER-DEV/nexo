@@ -12,7 +12,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from apps.activities.tests.factories import make_user
 from apps.billing.models import CheckoutSession, Subscription
 from apps.billing.provider import ProviderError
-from apps.billing.tests.test_access import BILLING_ON, make_subscription
+from apps.billing.tests.test_access import BILLING_OFF, BILLING_ON, make_subscription
 
 
 class BillingStateTests(APITestCase):
@@ -21,6 +21,7 @@ class BillingStateTests(APITestCase):
         self.org = self.admin.organization
         self.client.force_authenticate(self.admin)
 
+    @override_settings(**BILLING_OFF)
     def test_instancia_sin_proveedor_reporta_billing_deshabilitado(self):
         res = self.client.get("/api/v1/billing/")
         self.assertEqual(res.status_code, status.HTTP_200_OK)
@@ -108,6 +109,7 @@ class CheckoutTests(APITestCase):
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
 
 
+@override_settings(**BILLING_OFF)
 class CheckoutSinProveedorTests(APITestCase):
     def test_self_hosted_responde_503_sin_reventar(self):
         admin = make_user("admin@test.com", "Admin", rol="admin")

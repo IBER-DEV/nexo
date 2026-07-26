@@ -142,11 +142,22 @@ diseño completo.
 - **Un permiso "global" agregado a `REST_FRAMEWORK.DEFAULT_PERMISSION_CLASSES` no aplica en
   toda la API si algún ViewSet declara su propio `permission_classes`** — en DRF eso
   *reemplaza*, no combina, el default (varios ViewSets del proyecto ya lo hacen: `ActivityViewSet`
-  y otros). Para una regla que sí debe ser verdaderamente global (ej. `DemoAwareJWTAuthentication`,
-  que bloquea escrituras del usuario de la demo pública), engánchala en
-  `DEFAULT_AUTHENTICATION_CLASSES` en vez de `DEFAULT_PERMISSION_CLASSES` — ahí sí ningún
-  ViewSet sobreescribe nada. Verificalo con una petición real, no solo lectura del código: este
-  bug pasó desapercibido hasta un `curl` manual.
+  y otros). Para una regla que sí debe ser verdaderamente global, va en
+  `apps/users/authentication.py::enforce_global_policy` — ahí sí ningún ViewSet sobreescribe
+  nada. Verificalo con una petición real, no solo lectura del código: este bug pasó
+  desapercibido hasta un `curl` manual.
+- **Toda regla global vive en `enforce_global_policy`, no en una clase de autenticación.** Hay
+  dos mecanismos (`NexoJWTAuthentication` para el navegador y
+  `PersonalAccessTokenAuthentication` para tokens de larga vida) y **ambos** la llaman. Antes el
+  enforcement estaba dentro de `authenticate()` y se encadenaba por herencia
+  (`BillingAwareJWTAuthentication` heredaba de `DemoAwareJWTAuthentication`, ambas ya
+  eliminadas); eso funcionaba con un solo mecanismo, pero el segundo habría entrado por otra
+  clase salteándose demo y facturación sin que nada avisara. Si agregas un tercero (OAuth), su
+  única obligación es llamar a esa función.
+- **Un test no debe depender de la *ausencia* de configuración.** Los cuatro tests del caso
+  self-hosted usan `@override_settings(**BILLING_OFF)` explícito: sin eso pasaban en CI (sin
+  credenciales) y empezaban a fallar en la máquina de quien ya conectó su tienda de Lemon
+  Squeezy — el peor modo de fallo posible. Ya pasó una vez.
 
 ## CI (`.github/workflows/ci.yml`)
 
@@ -257,12 +268,12 @@ cuentas colombianas — ver `docs/roadmap/launch-strategy.md`).
   `LEMONSQUEEZY_API_KEY`/`STORE_ID`/`VARIANT_ID_CLOUD` configuradas (el self-hosted AGPL), nada
   gatea nada y los endpoints de cobro responden 503. Pero `verify_signature` sin
   `WEBHOOK_SECRET` **rechaza** — un webhook no verificable puede cambiarle el plan a una org.
-- **El enforcement vive en `DEFAULT_AUTHENTICATION_CLASSES`, no en un permission class**
-  (`apps.billing.authentication.BillingAwareJWTAuthentication`, que hereda de
-  `DemoAwareJWTAuthentication` para encadenar ambas reglas en una sola clase). Es el mismo
-  gotcha ya documentado arriba: un ViewSet con `permission_classes` propio anula el default.
-  `/billing/` y `/auth/` quedan exentos — bloquear el endpoint por el que se paga a quien tiene
-  que pagar es un callejón sin salida que solo se sale por soporte manual.
+- **El enforcement vive en `enforce_global_policy`, no en un permission class**
+  (`apps.billing.access.enforce_billing_access`, llamada desde
+  `apps/users/authentication.py`). Es el mismo gotcha ya documentado arriba: un ViewSet con
+  `permission_classes` propio anula el default. `/billing/` y `/auth/` quedan exentos —
+  bloquear el endpoint por el que se paga a quien tiene que pagar es un callejón sin salida que
+  solo se sale por soporte manual.
 - **Idempotencia de webhooks por sha256 del cuerpo crudo**, no por un id del proveedor (Lemon
   Squeezy no garantiza uno). Por eso `WebhookView` lee `request.body` **antes** de tocar
   `request.data`: el parser de DRF consume el stream y la firma es sobre esos bytes exactos.
@@ -306,14 +317,38 @@ Tres principios, cada uno con su razón — no los relajes sin entenderla:
   del proveedor — nadie debería quedarse sin poder sumar a un compañero por un timeout. La red
   es `manage.py sync_seats` (idempotente, cron diario).
 
+## Tokens de acceso personal (COMPLETADO — 2026-07-26)
+
+Prerequisito de MCP, resuelto: `PersonalAccessToken` (`apps/users/models.py`) es una credencial
+de larga vida para clientes que no pueden mantener una sesión de navegador. Endpoints en
+`/api/v1/auth/tokens/`; UI en Configuración → Cuenta (`AccessTokensSection`).
+
+- **El token nunca se guarda en claro** — solo su sha256, y el valor real se muestra una única
+  vez al crearlo. Es **sha256 y no PBKDF2/bcrypt a propósito**: esos son lentos por diseño
+  porque protegen secretos de baja entropía elegidos por humanos; acá el secreto son 256 bits
+  aleatorios y el hash corre en *cada* petición del API, donde esa lentitud sería latencia pura.
+- **Un token nunca puede más que su dueño.** La autorización sigue saliendo del rol del `user`;
+  `scope` (`read`/`read_write`) solo acota *hacia abajo* — el caso de uso es darle a una IA
+  acceso de lectura al backlog sin que pueda modificarlo. Por eso cualquier rol puede emitir
+  tokens para sí mismo, no hace falta ser admin.
+- **Un token no puede gestionar tokens** (`/auth/tokens/` está bloqueado para ellos). Si
+  pudiera, uno de solo lectura emitiría uno de escritura y el `scope` no valdría nada.
+- **Desactivar a un usuario corta también sus tokens**, no solo su login.
+- `last_used_at` se escribe con throttle de 5 minutos y vía `.update()`: está en el camino
+  caliente de cada petición autenticada por token.
+- Revocar es `revoked_at`, no un DELETE: la fila queda como registro de que ese token existió.
+
 ## Deuda conocida / pendiente
 
 - Sin tests de frontend (solo backend tiene suite).
-- **MCP sin construir, y su prerequisito tampoco.** El diferenciador acordado ("conecta Nexo a
-  tu Claude y que él cargue las actividades") necesita primero **tokens de larga vida**: hoy el
-  access token dura 8h y el refresh rota, así que ningún cliente MCP puede mantener sesión. Un
-  `PersonalAccessToken` que herede el rol de su dueño es el paso 1. La cuota por plan del MCP
-  (gratis en todos, con tope distinto) es lo único que se cobrará de esa feature.
+- **MCP sin construir** (su prerequisito ya está: ver la sección de tokens abajo). Falta el
+  servidor en sí y la cuota por plan (gratis en todos, con tope distinto), que es lo único que
+  se cobrará de esa feature.
+- **El primer cobro sale siempre en 1 puesto.** `provider.create_checkout()` no manda cantidad
+  inicial y `sync_seats` solo corre cuando alguien entra o sale del equipo, así que una
+  organización de 8 personas que actualiza a Cloud paga 1 asiento hasta que muevan a alguien.
+  Se arregla llamando a `schedule_seat_sync` al aplicar la suscripción del webhook. **Arreglar
+  antes de cobrarle a alguien de verdad.**
 - **Wiki descartada por ahora** (sigue en la lista de "no construir en 12 meses" de
   `launch-strategy.md`). Que la IA escriba el contenido vía MCP no baja el costo de construirla:
   igual hacen falta modelo de documentos, editor, versionado, permisos y búsqueda. La versión

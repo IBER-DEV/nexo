@@ -13,7 +13,7 @@ from apps.activities.tests.factories import make_org, make_user
 from apps.billing import service
 from apps.billing.limits import PLAN_LIMITS, LimitExceeded, check_can_add_member, limits_for
 from apps.billing.models import Subscription
-from apps.billing.tests.test_access import BILLING_ON, make_subscription
+from apps.billing.tests.test_access import BILLING_OFF, BILLING_ON, make_subscription
 from apps.organizations.membership import MembershipError, add_member, generate_access_code
 from apps.users.models import User
 
@@ -25,6 +25,7 @@ def llenar_org(org, cuantos):
         make_user(f"relleno{i}@test.com", f"Relleno {i}", rol="member", organization=org)
 
 
+@override_settings(**BILLING_OFF)
 class SelfHostedTests(TestCase):
     """El principio que no se negocia: sin proveedor de pagos configurado
     —el caso del self-hosted AGPL— no hay techo de nada."""

@@ -99,10 +99,14 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # ─── DRF ──────────────────────────────────────────────────────────────────────
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        # Encadena demo de solo lectura + estado de suscripción; ambas son
-        # reglas globales y esta es la única capa que ningún ViewSet
-        # sobreescribe (ver apps/billing/authentication.py).
-        "apps.billing.authentication.BillingAwareJWTAuthentication",
+        # Dos mecanismos, una sola política: ambos llaman a
+        # `enforce_global_policy` (demo de solo lectura, alcance del token,
+        # estado de la suscripción). Esta es la única capa que ningún
+        # ViewSet sobreescribe — ver apps/users/authentication.py.
+        # El de tokens va primero porque descarta rápido lo que no lleva el
+        # prefijo `nxo_` y le deja el paso al JWT.
+        "apps.users.authentication.PersonalAccessTokenAuthentication",
+        "apps.users.authentication.NexoJWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",

@@ -170,6 +170,24 @@ producto/diferenciadores → [product.md](product.md). Planes de implementación
 La base de Fase 0 (imagen Docker, `gunicorn`, `whitenoise`, settings por entorno) es
 exactamente el punto de partida de este hosting.
 
+## Camino a MCP
+
+**Estado: 🚧 prerequisito resuelto, servidor sin construir.**
+
+El diferenciador acordado ("conecta Nexo a tu Claude y que él cargue tus actividades") no
+necesita que Nexo pague inferencia: el usuario trae su propia IA. Por eso MCP va **gratis en
+todos los planes**, con cuota por plan — su trabajo es atraer, no cobrar (ver
+[monetization.md](monetization.md)).
+
+| # | Paso | Estado |
+|---|---|---|
+| 1 | Tokens de larga vida (`PersonalAccessToken`) | ✅ Completado (2026-07-26) |
+| 2 | Servidor MCP (herramientas sobre el API existente) | 📋 Pendiente |
+| 3 | Cuota de MCP por plan | 📋 Pendiente |
+
+El paso 1 era el bloqueante real: el access token dura 8h y el refresh rota, así que ningún
+cliente MCP podía mantener sesión. Detalle de decisiones en `CLAUDE.md`.
+
 ## Fase 2 — Enterprise
 
 **Estado: 💤 No empezar todavía.** Se construye contra el primer contrato real, no por
@@ -213,6 +231,15 @@ adelantado. Lista de features → [product.md](product.md).
   GitHub Discussions, y Roadmap de la landing reescrito a 3 bloques de valor para el usuario
   final. Mergeado a `main` (PR #24) y desplegado a producción (Cloudflare Worker + redeploy de
   Railway, migración `organizations.0004_waitlistsignup` aplicada).
+- **2026-07-26** — Tokens de acceso personal (`PersonalAccessToken`), el prerequisito de MCP.
+  Al agregar un segundo mecanismo de autenticación quedó a la vista un problema de diseño en el
+  primero: el enforcement global (demo de solo lectura, estado de suscripción) vivía dentro de
+  `authenticate()` y se encadenaba por herencia, así que un mecanismo nuevo lo habría salteado
+  en silencio. Se extrajo a `enforce_global_policy`, que ambos llaman —y que cualquier tercero
+  tendrá que llamar—, y se eliminaron `DemoAwareJWTAuthentication` y
+  `BillingAwareJWTAuthentication`. En el camino se arreglaron cuatro tests que dependían de la
+  *ausencia* de credenciales de Lemon Squeezy: pasaban en CI y fallaban en una máquina con la
+  tienda ya conectada.
 - **2026-07-25** — Límites por plan definidos e implementados, cerrando el punto 5: 5 puestos en
   el tier gratuito de Cloud, sin techo en self-host ni en el plan de pago (que ahora sí
   sincroniza la cantidad facturada — antes, "puestos ilimitados" habría sido literal). Se decidió

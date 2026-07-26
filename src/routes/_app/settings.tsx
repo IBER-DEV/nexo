@@ -16,6 +16,7 @@ import { WorkflowStatesManager } from "@/components/settings/WorkflowStatesManag
 import { PrioritiesManager } from "@/components/settings/PrioritiesManager";
 import { OrganizationSettings } from "@/components/settings/OrganizationSettings";
 import { BillingSettings } from "@/components/settings/BillingSettings";
+import { AccessTokensSection } from "@/components/settings/AccessTokensSection";
 import { useState } from "react";
 
 const TABS = ["cuenta", "maestros", "organizacion", "facturacion"] as const;
@@ -120,6 +121,11 @@ function SettingsPage() {
                 />
               </div>
             </Card>
+
+            {/* Los tokens son personales, no de la organización: van en
+                Cuenta y los ve cualquier rol, porque un token nunca puede
+                más que su dueño. */}
+            <AccessTokensSection />
           </TabsContent>
 
           {isAdmin && (
