@@ -73,7 +73,9 @@ def _request(method: str, path: str, json: dict | None = None) -> dict:
     return res.json()
 
 
-def create_checkout(*, email: str, name: str, organization_id: int, redirect_url: str) -> dict:
+def create_checkout(
+    *, email: str, name: str, organization_id: int, redirect_url: str, quantity: int = 1
+) -> dict:
     """Crea un checkout hospedado y devuelve `{id, url}`.
 
     `custom.organization_id` es el hilo que ata el pago a la organización:
@@ -81,7 +83,17 @@ def create_checkout(*, email: str, name: str, organization_id: int, redirect_url
     esa suscripción, y es como `service.py` resuelve a quién pertenece un
     evento sin depender de que el email del pagador coincida con el del
     usuario que inició el checkout (a menudo no coincide: paga finanzas, usa
-    TI)."""
+    TI).
+
+    `quantity` son los puestos que ya ocupa la organización. Va acá y no
+    solo en el sync posterior porque el precio es por usuario: sin esto la
+    **primera** factura sale en 1 puesto aunque el equipo sea de ocho, y
+    ajustarlo después solo corrige de la segunda en adelante."""
+    # El guard va acá y no solo dentro de `_request`: armar el payload ya
+    # usa las settings (`int(VARIANT_ID_CLOUD)`), así que sin credenciales
+    # reventaría con un ValueError opaco antes de llegar a la petición.
+    if not is_configured():
+        raise BillingNotConfigured("Lemon Squeezy no está configurado en esta instancia.")
     payload = {
         "data": {
             "type": "checkouts",
@@ -92,6 +104,12 @@ def create_checkout(*, email: str, name: str, organization_id: int, redirect_url
                     # Lemon Squeezy exige strings en custom; un int vuelve
                     # como string igual, mejor mandarlo explícito.
                     "custom": {"organization_id": str(organization_id)},
+                    "variant_quantities": [
+                        {
+                            "variant_id": int(settings.LEMONSQUEEZY_VARIANT_ID_CLOUD),
+                            "quantity": quantity,
+                        }
+                    ],
                 },
                 "product_options": {"redirect_url": redirect_url},
             },

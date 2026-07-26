@@ -23,6 +23,18 @@ BILLING_ON = dict(
     LEMONSQUEEZY_WEBHOOK_SECRET="s3cr3t",
 )
 
+# Los tests del caso self-hosted tienen que declarar la ausencia de
+# credenciales, no dársela por sentada: en la máquina de alguien que ya
+# conectó su tienda de Lemon Squeezy, el .env real las trae y el test
+# empezaría a fallar solo ahí. "Pasa en CI, falla en tu máquina" es el peor
+# modo de fallo que puede tener una suite.
+BILLING_OFF = dict(
+    LEMONSQUEEZY_API_KEY="",
+    LEMONSQUEEZY_STORE_ID="",
+    LEMONSQUEEZY_VARIANT_ID_CLOUD="",
+    LEMONSQUEEZY_WEBHOOK_SECRET="",
+)
+
 
 def make_subscription(org, **overrides):
     defaults = {
@@ -101,6 +113,7 @@ class OrganizationLevelTests(TestCase):
         self.user = make_user("admin@test.com", "Admin", rol="admin")
         self.org = self.user.organization
 
+    @override_settings(**BILLING_OFF)
     def test_sin_proveedor_configurado_todo_es_completo(self):
         """El self-hosted AGPL no configura Lemon Squeezy: aunque quedara una
         fila de suscripción expirada, la facturación no gatea nada."""

@@ -13,7 +13,7 @@ from apps.activities.tests.factories import make_org, make_user
 from apps.billing import service
 from apps.billing.limits import PLAN_LIMITS, LimitExceeded, check_can_add_member, limits_for
 from apps.billing.models import Subscription
-from apps.billing.tests.test_access import BILLING_ON, make_subscription
+from apps.billing.tests.test_access import BILLING_OFF, BILLING_ON, make_subscription
 from apps.organizations.membership import MembershipError, add_member, generate_access_code
 from apps.users.models import User
 
@@ -25,6 +25,7 @@ def llenar_org(org, cuantos):
         make_user(f"relleno{i}@test.com", f"Relleno {i}", rol="member", organization=org)
 
 
+@override_settings(**BILLING_OFF)
 class SelfHostedTests(TestCase):
     """El principio que no se negocia: sin proveedor de pagos configurado
     —el caso del self-hosted AGPL— no hay techo de nada."""
@@ -191,6 +192,65 @@ class SeatSyncTests(TestCase):
         llenar_org(self.org, 6)
         call_command("sync_seats", "--dry-run")
         mock_update.assert_not_called()
+
+
+@override_settings(**BILLING_ON)
+class PrimerCobroTests(APITestCase):
+    """El precio es por usuario, así que la cantidad tiene que estar bien
+    desde la *primera* factura: ajustarla después solo corrige de la segunda
+    en adelante. Regresión de un hueco real."""
+
+    def setUp(self):
+        self.admin = make_user("admin@test.com", "Admin", rol="admin")
+        self.org = self.admin.organization
+        llenar_org(self.org, 7)  # + el admin = 8 puestos ocupados
+        self.client.force_authenticate(self.admin)
+
+    @patch("apps.billing.provider.create_checkout")
+    def test_el_checkout_arranca_con_los_puestos_reales(self, mock_create):
+        mock_create.return_value = {"id": "chk_1", "url": "https://acme.lemonsqueezy.com/buy/x"}
+        res = self.client.post("/api/v1/billing/checkout/")
+        self.assertEqual(res.status_code, status.HTTP_200_OK, res.data)
+        self.assertEqual(mock_create.call_args.kwargs["quantity"], 8)
+
+    @patch("apps.billing.provider.create_checkout")
+    def test_nunca_manda_cero_puestos(self, mock_create):
+        """Una organización sin usuarios activos no puede pedir un checkout
+        de 0 asientos: el proveedor lo rechazaría."""
+        mock_create.return_value = {"id": "chk_1", "url": "https://acme.lemonsqueezy.com/buy/x"}
+        type(self.admin).objects.filter(organization=self.org).update(is_active=False)
+        self.client.post("/api/v1/billing/checkout/")
+        self.assertEqual(mock_create.call_args.kwargs["quantity"], 1)
+
+    @patch("apps.billing.provider.update_quantity")
+    def test_el_webhook_corrige_la_cantidad_si_llego_mal(self, mock_update):
+        """Si el equipo cambió entre abrir el checkout y pagar, o el
+        proveedor ignoró la cantidad, el webhook lo repara."""
+        from apps.billing.service import apply_subscription
+
+        normalized = {
+            "provider_subscription_id": "9001",
+            "provider_customer_id": "5501",
+            "provider_item_id": "item-1",
+            "provider_status": "active",
+            "status": "active",
+            "variant_id": "777",
+            "quantity": 1,  # el proveedor reporta 1...
+            "trial_ends_at": None,
+            "renews_at": None,
+            "ends_at": None,
+            "customer_portal_url": "",
+            "update_payment_url": "",
+            "email": "pagador@test.com",
+        }
+        # captureOnCommitCallbacks: sync_seats va en transaction.on_commit,
+        # que en un TestCase no corre solo.
+        with self.captureOnCommitCallbacks(execute=True):
+            apply_subscription(self.org, normalized)
+
+        # ...pero la organización tiene 8 puestos ocupados.
+        mock_update.assert_called_once_with("item-1", 8)
+        self.assertEqual(Subscription.objects.get().quantity, 8)
 
 
 @override_settings(**BILLING_ON)

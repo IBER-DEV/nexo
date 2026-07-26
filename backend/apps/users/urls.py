@@ -1,5 +1,9 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
+from .views_tokens import (
+    PersonalAccessTokenListCreateView,
+    PersonalAccessTokenRevokeView,
+)
 from .views import (
     AccessCodeResolveView,
     CustomTokenObtainPairView,
@@ -25,4 +29,10 @@ urlpatterns = [
     path("email/resend/", ResendVerificationView.as_view(), name="email_resend"),
     path("password/forgot/", PasswordForgotView.as_view(), name="password_forgot"),
     path("password/reset/", PasswordResetConfirmView.as_view(), name="password_reset"),
+    path("tokens/", PersonalAccessTokenListCreateView.as_view(), name="access_tokens"),
+    path(
+        "tokens/<int:pk>/",
+        PersonalAccessTokenRevokeView.as_view(),
+        name="access_token_revoke",
+    ),
 ]

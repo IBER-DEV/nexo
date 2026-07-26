@@ -170,6 +170,34 @@ producto/diferenciadores → [product.md](product.md). Planes de implementación
 La base de Fase 0 (imagen Docker, `gunicorn`, `whitenoise`, settings por entorno) es
 exactamente el punto de partida de este hosting.
 
+## Camino a MCP
+
+**Estado: 🚧 prerequisito resuelto, servidor sin construir.**
+
+El diferenciador acordado ("conecta Nexo a tu Claude y que él cargue tus actividades") no
+necesita que Nexo pague inferencia: el usuario trae su propia IA. Por eso MCP va **gratis en
+todos los planes**, con cuota por plan — su trabajo es atraer, no cobrar (ver
+[monetization.md](monetization.md)).
+
+| # | Paso | Estado |
+|---|---|---|
+| 1 | Tokens de larga vida (`PersonalAccessToken`) | ✅ Completado (2026-07-26) |
+| 2 | Servidor MCP (herramientas sobre el API existente) | ✅ Completado (2026-07-26) |
+| 3 | Cuota de MCP por plan | ✅ Completado (2026-07-26) |
+| 4 | UI de conexión + mensaje en la landing | 📋 Pendiente |
+
+El paso 1 era el bloqueante real: el access token dura 8h y el refresh rota, así que ningún
+cliente MCP podía mantener sesión.
+
+`POST /api/v1/mcp/` habla JSON-RPC 2.0 y expone cinco herramientas (`obtener_workspace`,
+`listar_actividades`, `listar_usuarios`, `crear_actividad`, `actualizar_actividad`). Detalle de
+decisiones —por qué sin el SDK, por qué sin streaming, y cómo se controlan los permisos cuando
+todo el tráfico es POST— en `CLAUDE.md`.
+
+**Lo que falta es lo que lo hace visible:** una pantalla que le entregue al usuario el bloque
+de configuración listo para pegar en su cliente, y decirlo en la landing. Hoy el diferenciador
+existe pero hay que armar la conexión a mano.
+
 ## Fase 2 — Enterprise
 
 **Estado: 💤 No empezar todavía.** Se construye contra el primer contrato real, no por
@@ -213,6 +241,22 @@ adelantado. Lista de features → [product.md](product.md).
   GitHub Discussions, y Roadmap de la landing reescrito a 3 bloques de valor para el usuario
   final. Mergeado a `main` (PR #24) y desplegado a producción (Cloudflare Worker + redeploy de
   Railway, migración `organizations.0004_waitlistsignup` aplicada).
+- **2026-07-26** — Servidor MCP construido (`apps/mcp/`), con cuota por plan. Al implementarlo
+  apareció una consecuencia del diseño anterior: MCP habla JSON-RPC sobre POST, así que el verbo
+  HTTP —que era la señal para decidir "esto escribe"— deja de servir. La política se partió en
+  `assert_can_read`/`assert_can_write` método-agnósticas, con la versión HTTP construida encima
+  (no al revés) para que la regla no pueda divergir entre el API REST y MCP, y cada herramienta
+  declara si escribe. También se extrajo `activities/visibility.py` del `ActivityViewSet`: la
+  regla de quién ve qué actividades ahora tiene una sola implementación que consumen los dos.
+- **2026-07-26** — Tokens de acceso personal (`PersonalAccessToken`), el prerequisito de MCP.
+  Al agregar un segundo mecanismo de autenticación quedó a la vista un problema de diseño en el
+  primero: el enforcement global (demo de solo lectura, estado de suscripción) vivía dentro de
+  `authenticate()` y se encadenaba por herencia, así que un mecanismo nuevo lo habría salteado
+  en silencio. Se extrajo a `enforce_global_policy`, que ambos llaman —y que cualquier tercero
+  tendrá que llamar—, y se eliminaron `DemoAwareJWTAuthentication` y
+  `BillingAwareJWTAuthentication`. En el camino se arreglaron cuatro tests que dependían de la
+  *ausencia* de credenciales de Lemon Squeezy: pasaban en CI y fallaban en una máquina con la
+  tienda ya conectada.
 - **2026-07-25** — Límites por plan definidos e implementados, cerrando el punto 5: 5 puestos en
   el tier gratuito de Cloud, sin techo en self-host ni en el plan de pago (que ahora sí
   sincroniza la cantidad facturada — antes, "puestos ilimitados" habría sido literal). Se decidió

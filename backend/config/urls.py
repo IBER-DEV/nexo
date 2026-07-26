@@ -10,6 +10,7 @@ urlpatterns = [
         path("organization/", include("apps.organizations.urls")),
         path("access-codes/", include("apps.organizations.urls_access_codes")),
         path("billing/", include("apps.billing.urls")),
+        path("mcp/", include("apps.mcp.urls")),
         path("", include("apps.activities.urls_masters")),
     ])),
 ]

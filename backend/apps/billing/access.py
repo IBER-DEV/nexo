@@ -1,10 +1,28 @@
 """Resolución de "qué puede hacer esta organización" según su suscripción.
 
-Punto único de verdad: tanto el enforcement (`authentication.py`) como la
-UI (`GET /billing/subscription/`) preguntan acá, para que el banner que ve
-el usuario no pueda contradecir lo que el API le permite."""
+Punto único de verdad: tanto el enforcement
+(`apps.users.authentication.enforce_global_policy`) como la UI
+(`GET /billing/`) preguntan acá, para que el banner que ve el usuario no
+pueda contradecir lo que el API le permite."""
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import SAFE_METHODS
+
 from apps.billing.models import AccessLevel, Subscription
 from apps.billing.provider import is_configured
+
+READ_ONLY_MESSAGE = (
+    "Tu suscripción no está al día: la organización quedó en solo lectura. "
+    "Actualiza el método de pago en Configuración → Facturación para volver a escribir."
+)
+BLOCKED_MESSAGE = (
+    "La suscripción de tu organización expiró. Reactívala en "
+    "Configuración → Facturación para recuperar el acceso."
+)
+
+# Facturación e identidad quedan siempre accesibles: bloquear el endpoint
+# por el que se paga a quien tiene que pagar es un callejón sin salida del
+# que solo se sale por soporte manual.
+EXEMPT_PATH_FRAGMENTS = ("/billing/", "/auth/")
 
 
 def current_subscription(organization) -> Subscription | None:
@@ -33,3 +51,34 @@ def level_for_organization(organization) -> str:
     if sub is None:
         return AccessLevel.FULL
     return sub.access_level
+
+
+def assert_can_read(user) -> None:
+    """Método-agnóstica: sirve igual para un GET que para una llamada MCP."""
+    if level_for_organization(getattr(user, "organization", None)) == AccessLevel.BLOCKED:
+        raise PermissionDenied(BLOCKED_MESSAGE)
+
+
+def assert_can_write(user) -> None:
+    level = level_for_organization(getattr(user, "organization", None))
+    if level == AccessLevel.BLOCKED:
+        raise PermissionDenied(BLOCKED_MESSAGE)
+    if level == AccessLevel.READ_ONLY:
+        raise PermissionDenied(READ_ONLY_MESSAGE)
+
+
+def enforce_billing_access(request, user) -> None:
+    """Versión HTTP: traduce el verbo a lectura/escritura y delega en las
+    dos de arriba. Se construye sobre ellas y no al revés para que la regla
+    no pueda divergir entre el API REST y MCP —donde todo es POST y el
+    verbo no dice nada sobre si la operación escribe.
+
+    La llama `enforce_global_policy`, no un mecanismo de autenticación
+    concreto: así agregar uno nuevo (tokens de larga vida, mañana OAuth) no
+    la deja afuera por olvido."""
+    if any(fragment in request.path for fragment in EXEMPT_PATH_FRAGMENTS):
+        return
+    if request.method in SAFE_METHODS:
+        assert_can_read(user)
+    else:
+        assert_can_write(user)

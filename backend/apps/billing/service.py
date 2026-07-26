@@ -145,6 +145,8 @@ def start_trial(organization, user) -> Subscription:
 
 
 def start_checkout(organization, user) -> CheckoutSession:
+    from .limits import seats_in_use
+
     BillingCustomer.objects.get_or_create(
         organization=organization, defaults={"email": user.email}
     )
@@ -154,6 +156,9 @@ def start_checkout(organization, user) -> CheckoutSession:
         name=user.nombre,
         organization_id=organization.pk,
         redirect_url=redirect_url,
+        # Los puestos que la organización ya ocupa, para que la primera
+        # factura no salga en 1 asiento teniendo un equipo entero.
+        quantity=max(1, seats_in_use(organization)),
     )
     session = CheckoutSession.objects.create(
         organization=organization,
@@ -213,6 +218,11 @@ def apply_subscription(organization, normalized: dict) -> Subscription:
     ).update(status=CheckoutSession.Status.COMPLETED, completed_at=timezone.now())
 
     sync_organization_plan(sub)
+    # Red de seguridad sobre la cantidad inicial del checkout: si el equipo
+    # cambió entre "abrí el checkout" y "pagué", o si el proveedor ignoró la
+    # cantidad que mandamos, acá se corrige. No-op cuando ya coincide, así
+    # que no cuesta una llamada extra en el caso normal.
+    schedule_seat_sync(organization)
     track(
         "subscription_created" if created else "subscription_updated",
         organization=organization,

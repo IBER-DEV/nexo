@@ -11,6 +11,7 @@ from .serializers import ActivitySerializer
 from .filters import ActivityFilter
 from .models import Cliente, Proceso, Aplicacion, Stakeholder
 from .sync_utils import normalize_header, parse_date, parse_codigo, get_or_create_responsable
+from .visibility import RELATED, scope_to_user
 
 
 class ActivityViewSet(OrganizationScopedViewSetMixin, viewsets.ModelViewSet):
@@ -39,31 +40,12 @@ class ActivityViewSet(OrganizationScopedViewSetMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         # Primero el aislamiento por organización (mixin), después el scoping
-        # por rol dentro de la org.
-        base_qs = (
-            super()
-            .get_queryset()
-            .select_related(
-                "responsable",
-                "created_by",
-                "organization",
-                "cliente",
-                "proceso",
-                "aplicacion",
-                "stakeholder",
-                "estado",
-                "prioridad",
-                "tipo",
-            )
-            .order_by("-pk")
-        )
-        user = self.request.user
-        if getattr(user, "is_admin", False):
-            return base_qs
-        if getattr(user, "is_coordinator", False):
-            team_ids = user.team_user_ids() if hasattr(user, "team_user_ids") else [user.pk]
-            return base_qs.filter(Q(responsable_id__in=team_ids) | Q(created_by_id__in=team_ids)).distinct()
-        return base_qs.filter(Q(responsable=user) | Q(created_by=user)).distinct()
+        # por rol dentro de la org. Este último vive en activities/visibility.py
+        # porque el servidor MCP lo necesita igual: una regla de visibilidad
+        # con dos implementaciones es una fuga esperando a que alguien toque
+        # solo una.
+        base_qs = super().get_queryset().select_related(*RELATED).order_by("-pk")
+        return scope_to_user(base_qs, self.request.user)
 
     def perform_create(self, serializer):
         serializer.save(
