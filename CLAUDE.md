@@ -386,6 +386,20 @@ Cinco herramientas: `obtener_workspace`, `listar_actividades`, `listar_usuarios`
   sale de `API_BASE_URL` (`lib/api.ts`), no está hardcodeada — un self-hosted la necesita
   apuntando a su propio dominio.
 
+## Operación (entornos, crons, respaldos)
+
+Runbook completo en [docs/operations.md](docs/operations.md). Lo que hay que tener presente al
+tocar código:
+
+- **`backend/entrypoint.sh` corre `migrate --noinput` en cada arranque**, así que un push a
+  `main` aplica migraciones a producción sin intervención. Una migración destructiva se ensaya
+  en staging primero, no se descubre en producción.
+- **La org `demo` de producción NO es dato de prueba** — es la demo pública de la landing
+  (usuarios `demo-*` con `is_demo_readonly`, 42 actividades). Borrarla rompe los botones
+  "Probar como {rol}". La org `acme` sí es ruido: se limpia con
+  `manage.py purge_organization acme` (dry-run por defecto).
+- **Dos crons pendientes de programar**, ninguno bloqueante: `expire_trials` y `sync_seats`.
+
 ## Deuda conocida / pendiente
 
 - Sin tests de frontend (solo backend tiene suite).
