@@ -379,14 +379,20 @@ Cinco herramientas: `obtener_workspace`, `listar_actividades`, `listar_usuarios`
 - **Cuota por plan** en `apps/mcp/throttling.py`: gratis en todos los planes, con tope distinto
   (community 200/día, cloud 5000/día, enterprise sin tope). El self-hosted no se limita nunca —
   mismo gate `provider.is_configured()` que los puestos.
+- **La configuración de conexión se le entrega armada al usuario** (`McpConnection.tsx`, en
+  Configuración → Cuenta). El bloque con el token real solo puede aparecer en el diálogo de
+  "token creado", que es el único momento en que existe en claro; la tarjeta permanente
+  (`McpSection`) muestra el mismo bloque con un marcador para quien ya guardó el suyo. La URL
+  sale de `API_BASE_URL` (`lib/api.ts`), no está hardcodeada — un self-hosted la necesita
+  apuntando a su propio dominio.
 
 ## Deuda conocida / pendiente
 
 - Sin tests de frontend (solo backend tiene suite).
-- **MCP sin UI ni documentación de conexión.** El servidor funciona, pero un usuario todavía
-  tiene que armar a mano la configuración de su cliente (URL + token). Falta la pantalla que le
-  entregue el bloque de configuración listo para pegar, y decirlo en la landing — hoy el
-  diferenciador existe pero es invisible.
+- **MCP sin documentación larga ni video.** La UI ya entrega la configuración lista para pegar y
+  la landing lo menciona (Roadmap + FAQ), pero no hay una guía paso a paso ni una demo grabada
+  del flujo "pídele a Claude que cargue tus actividades" — que es justo lo que haría entender el
+  diferenciador de un vistazo.
 - **Wiki descartada por ahora** (sigue en la lista de "no construir en 12 meses" de
   `launch-strategy.md`). Que la IA escriba el contenido vía MCP no baja el costo de construirla:
   igual hacen falta modelo de documentos, editor, versionado, permisos y búsqueda. La versión

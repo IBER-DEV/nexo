@@ -28,6 +28,7 @@ const PHASES: Phase[] = [
       "Tu equipo entra solo con un código de acceso — sin invitaciones por correo que se pierden en spam",
       "Reportes y métricas de avance por persona, equipo y periodo",
       "Sincronización opcional con Google Sheets, si ya vives ahí",
+      "Conecta tu propio asistente de IA y pídele que cargue actividades o te resuma el backlog",
     ],
     badge: "core del producto",
     icon: Check,

@@ -16,6 +16,10 @@ const QUESTIONS = [
     q: "¿Qué pasa si dejan de mantenerlo?",
     a: "El código es tuyo. Es open source bajo AGPL-3.0: puedes seguir corriéndolo, forkearlo o contratar a quien quieras para mantenerlo — no dependes de que el proyecto original siga activo.",
   },
+  {
+    q: "¿Cobran extra por las funciones de IA?",
+    a: "No, y no vamos a hacerlo: Nexo no paga inferencia. Conectas tu propio asistente (Claude u otro cliente compatible con MCP) con un token que generas desde Configuración, y le pides que cargue actividades, te resuma el backlog o mueva estados. Va incluido en todos los planes, incluido el gratuito y el self-hosted.",
+  },
 ];
 
 export default function Faq() {
