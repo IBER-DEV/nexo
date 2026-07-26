@@ -12,13 +12,16 @@ implicaba, porque explica por qué existe este archivo: `backend/entrypoint.sh` 
 migraciones directamente sobre la única base**, sin ensayo previo. Una migración destructiva no
 tenía dónde fallar de forma barata.
 
+Staging existe desde el 2026-07-26 (proyecto `nexo-backend`, entorno `staging`).
+
 | | Producción | Staging |
 |---|---|---|
-| Dominio API | `api.nexoengine.tech` | subdominio propio (ej. `api-staging.…`) |
-| Frontend | Worker `nexo` (`nexoengine.tech`) | Worker aparte, o `*.workers.dev` |
-| Base de datos | Postgres administrado | **Postgres propio, nunca el de producción** |
-| Lemon Squeezy | tienda real | **modo test o tienda aparte** |
-| Correo | Postmark real | Postmark, o `EMAIL_BACKEND` de consola |
+| Dominio API | `api.nexoengine.tech` | `backend-staging-234b.up.railway.app` |
+| Frontend | Worker `nexo` (`nexoengine.tech`) | ninguno todavía — se usa `npm run dev` local |
+| Base de datos | Postgres administrado | Postgres propio (instancia aparte, credenciales propias) |
+| Lemon Squeezy | sin configurar todavía | sin configurar (facturación inerte) |
+| Correo | Postmark real | `EMAIL_BACKEND` de consola, sin token |
+| `SECRET_KEY` | propia | propia (nunca compartida entre entornos) |
 
 ### Conexión a la base: siempre por referencia
 
@@ -62,12 +65,44 @@ variables de entorno. Lo que sí hay que separar es la configuración, y hay dos
 
 ### Procedimiento de despliegue
 
-1. PR a `main` con CI en verde (lint + typecheck + build + 300 tests).
-2. Si el cambio trae migraciones: desplegar primero a **staging** y verificar que
-   `migrate` corre limpio contra datos parecidos a los reales.
+**El backend NO se despliega solo al mergear.** El servicio no está conectado a GitHub
+(`source: null`): cada despliegue es un `railway up` manual desde la máquina. Mergear un PR no
+publica nada.
+
+```bash
+# Desde la raíz del repo. El servicio tiene Root Directory = backend,
+# así que Railway toma ese subdirectorio como contexto de build.
+railway up --service backend --environment staging   # primero staging
+railway up --service backend --environment production
+```
+
+1. PR a `main` con CI en verde (lint + typecheck + build + los tests del backend).
+2. Si el cambio trae migraciones: desplegar primero a **staging** y verificar que `migrate`
+   corre limpio (`entrypoint.sh` lo ejecuta en cada arranque).
 3. Desplegar producción.
 4. Frontend: **siempre `npm run deploy`**, nunca `npm run build && wrangler deploy` — el segundo
    hornea `VITE_API_URL=localhost` y rompe el sitio en silencio (ver CLAUDE.md).
+
+### Root Directory: la configuración que rompe los entornos nuevos
+
+**El servicio `backend` necesita `Root Directory = backend`** (Settings → Source) en *cada*
+entorno. No es opcional y **duplicar un entorno no la copia**.
+
+Sin ella, `railway up` sube la raíz del repositorio git —aunque lo ejecutes desde `backend/`—
+y pasa esto: Railpack encuentra el `package.json` de la raíz, **construye el frontend** y lo
+sirve con Caddy en el puerto 8080 mientras el dominio apunta al 8000 (502 en todos los
+endpoints). Si además fuerzas el Dockerfile, busca `/Dockerfile` en la raíz, no lo encuentra y
+el build falla.
+
+Hay un detalle que despista al diagnosticar: **producción funcionó durante días sin esa
+configuración.** La razón es que `railway redeploy` reconstruye el *snapshot de código ya
+guardado*, no vuelve a subir el directorio; y ese snapshot se había subido desde dentro de
+`backend/` con una versión anterior del CLI, que usaba el directorio actual como contexto. O
+sea: el ajuste faltaba, pero no se notaba mientras nadie hiciera un `railway up` de verdad.
+
+`backend/railway.json` fija el builder (`DOCKERFILE`) en el repo para que eso no dependa del
+dashboard, pero **solo se lee si el contexto de build ya es correcto** — es decir, después de
+poner el Root Directory.
 
 ## Tareas programadas (cron)
 
@@ -134,6 +169,12 @@ usuarios de la demo pública** salvo que se le pase `--force`.
 - **2026-07-26** — Documentado el modelo de dos entornos al detectar que producción era el único
   y contenía datos de `seed_data`. Se agregó `purge_organization` para poder limpiarlos sin
   pelear con los `PROTECT` a mitad de camino, en producción.
+- **2026-07-26** — Entorno `staging` creado y desplegado. En el camino se descubrió que el
+  servicio necesita `Root Directory = backend` en cada entorno y que duplicar no la copia: sin
+  ella, `railway up` construye el *frontend* del repo y lo sirve con Caddy en el puerto
+  equivocado. Producción no lo evidenciaba porque llevaba días sirviéndose de `redeploy`, que
+  reconstruye el snapshot guardado en vez de subir el directorio. Se agregó `backend/railway.json`
+  para versionar el builder en vez de depender del dashboard.
 - **2026-07-26** — Las cinco variables `DB_*` de producción pasaron de valores literales a
   referencias `${{Postgres.*}}`, como prerequisito de poder duplicar el entorno. Se verificó
   antes que las huellas de `PGHOST`/`PGPORT`/`PGDATABASE`/`PGUSER`/`PGPASSWORD` fueran idénticas

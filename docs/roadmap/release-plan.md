@@ -79,9 +79,13 @@ producto/diferenciadores → [product.md](product.md). Planes de implementación
    Tabla completa y los tres principios que la explican en
    [monetization.md](monetization.md).
 6. **Hosting del backend** — 🚧 backend desplegado en Railway (proyecto `nexo-backend`):
-   servicio `backend` (build por `backend/Dockerfile`) + Postgres administrado, wireado por
-   variables de referencia (`${{Postgres.PGHOST}}` etc., no una `DATABASE_URL` — `prod.py` usa
-   `DB_NAME`/`DB_USER`/... por separado). Dominio propio `api.nexoengine.tech` conectado (CNAME
+   servicio `backend` (build por `backend/Dockerfile`, con `Root Directory = backend` — ver
+   [operations.md](../operations.md), sin eso el build construye el frontend) + Postgres
+   administrado. **El procedimiento de despliegue y la operación de los entornos viven en
+   [operations.md](../operations.md)**, no acá. Las variables de base se cablean por referencia
+   (`${{Postgres.PGHOST}}` etc., no una `DATABASE_URL` — `prod.py` usa `DB_NAME`/`DB_USER`/...
+   por separado); estuvieron como valores literales hasta el 2026-07-26, lo que impedía duplicar
+   el entorno. Dominio propio `api.nexoengine.tech` conectado (CNAME
    + TXT de verificación creados vía la API de Hostinger, certificado válido); el dominio
    generado por Railway (`backend-production-c5b3.up.railway.app`) queda como fallback — ambos
    viven en `ALLOWED_HOSTS`. Bug encontrado y corregido en el primer deploy: `prod.py`
