@@ -28,6 +28,7 @@ LOCAL_APPS = [
     "apps.users",
     "apps.activities",
     "apps.notifications",
+    "apps.billing",
 ]
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
@@ -98,7 +99,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # ─── DRF ──────────────────────────────────────────────────────────────────────
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "apps.users.authentication.DemoAwareJWTAuthentication",
+        # Encadena demo de solo lectura + estado de suscripción; ambas son
+        # reglas globales y esta es la única capa que ningún ViewSet
+        # sobreescribe (ver apps/billing/authentication.py).
+        "apps.billing.authentication.BillingAwareJWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
@@ -167,5 +171,19 @@ ANYMAIL = {
 DEMO_EMAIL_TEMPLATE = config("DEMO_EMAIL_TEMPLATE", default="demo-{role}@nexoengine.tech")
 DEMO_ROLES = ["owner", "admin", "coordinator", "member"]
 DEMO_DEFAULT_ROLE = "admin"
+
+# ─── Billing (Fase 1, punto 5: Lemon Squeezy) ─────────────────────────────
+# Todo vacío por defecto a propósito: el self-hosted AGPL no tiene por qué
+# configurar un proveedor de pagos, y sin estas tres variables la
+# facturación queda inerte (nada gatea, los endpoints de cobro responden
+# 503). Ver apps/billing/models.py para las dos reglas que gobiernan el
+# módulo.
+LEMONSQUEEZY_API_KEY = config("LEMONSQUEEZY_API_KEY", default="")
+LEMONSQUEEZY_STORE_ID = config("LEMONSQUEEZY_STORE_ID", default="")
+LEMONSQUEEZY_VARIANT_ID_CLOUD = config("LEMONSQUEEZY_VARIANT_ID_CLOUD", default="")
+# Secreto del webhook: sin él, verify_signature rechaza todo (fallar
+# cerrado — un webhook falsificado puede cambiarle el plan a una org).
+LEMONSQUEEZY_WEBHOOK_SECRET = config("LEMONSQUEEZY_WEBHOOK_SECRET", default="")
+BILLING_TRIAL_DAYS = config("BILLING_TRIAL_DAYS", default=14, cast=int)
 
 from config.jazzmin_settings import JAZZMIN_SETTINGS, JAZZMIN_UI_TWEAKS  # noqa: E402

@@ -59,7 +59,8 @@ python manage.py migrate && python manage.py seed_data && python manage.py runse
 # Backend — Docker (Postgres real, hot-reload)
 docker compose up --build           # localhost:8000
 
-# Tests backend (83 tests: auth, CRUD, visibilidad, tenancy, maestros, sync, organización, plantillas)
+# Tests backend (215 tests: auth, CRUD, visibilidad, tenancy, maestros, sync, organización,
+# plantillas, facturación)
 docker compose exec -T backend python manage.py test
 
 # Sync AppSheet (Google Sheets) — requiere GOOGLE_SHEETS_CREDENTIALS_JSON configurado
@@ -243,9 +244,49 @@ elige "Tengo un código" en `/signup` (el mismo `POST /auth/signup/` con dos mod
 - `GET /auth/access-codes/resolve/?codigo=` es público (preview "Te unirás a X como Y") — la
   entropía del código (~59 bits, alfabeto sin caracteres ambiguos) hace inviable enumerar.
 
+## Fase 1 — Punto 5: Billing con Lemon Squeezy (COMPLETADO — 2026-07-25)
+
+App nueva `backend/apps/billing/` con las cuatro entidades del diseño (`BillingCustomer`,
+`Subscription`, `CheckoutSession`, `WebhookEvent`) y los cuatro sprints construidos: checkout
+hospedado, webhooks firmados, trial de 14 días sin tarjeta y portal de cliente. Endpoints bajo
+`/api/v1/billing/`; UI en Configuración → Facturación (`BillingSettings`) más un banner global
+(`BillingStatusBanner`). Proveedor: Lemon Squeezy como Merchant of Record (Stripe no opera para
+cuentas colombianas — ver `docs/roadmap/launch-strategy.md`).
+
+- **Billing es opt-in y falla abierto para el acceso, cerrado para la firma.** Sin
+  `LEMONSQUEEZY_API_KEY`/`STORE_ID`/`VARIANT_ID_CLOUD` configuradas (el self-hosted AGPL), nada
+  gatea nada y los endpoints de cobro responden 503. Pero `verify_signature` sin
+  `WEBHOOK_SECRET` **rechaza** — un webhook no verificable puede cambiarle el plan a una org.
+- **El enforcement vive en `DEFAULT_AUTHENTICATION_CLASSES`, no en un permission class**
+  (`apps.billing.authentication.BillingAwareJWTAuthentication`, que hereda de
+  `DemoAwareJWTAuthentication` para encadenar ambas reglas en una sola clase). Es el mismo
+  gotcha ya documentado arriba: un ViewSet con `permission_classes` propio anula el default.
+  `/billing/` y `/auth/` quedan exentos — bloquear el endpoint por el que se paga a quien tiene
+  que pagar es un callejón sin salida que solo se sale por soporte manual.
+- **Idempotencia de webhooks por sha256 del cuerpo crudo**, no por un id del proveedor (Lemon
+  Squeezy no garantiza uno). Por eso `WebhookView` lee `request.body` **antes** de tocar
+  `request.data`: el parser de DRF consume el stream y la firma es sobre esos bytes exactos.
+- **El webhook responde 200 aunque el procesamiento falle** (el evento queda `failed` y visible
+  en el admin, que es la cola de trabajo manual). Lemon Squeezy reintenta ante cualquier no-2xx,
+  y los fallos reales de este handler no se arreglan reintentando. Solo la firma inválida da 401.
+- **Ningún sitio escribe `Organization.plan` directo** — siempre `service.sync_organization_plan()`,
+  mismo patrón que `membership.add_member()` para `user.organization` (ADR 0002).
+- **Un trial vencido degrada el plan, no el acceso**; una suscripción `cancelled` con `ends_at`
+  futuro conserva acceso completo. Ambas se apartan de la tabla original del roadmap a
+  propósito — el porqué está en `docs/roadmap/monetization.md`, no lo "corrijas" a la tabla.
+- `manage.py expire_trials` (idempotente, pensado como cron diario en Railway) revierte a
+  Community el plan guardado de los trials vencidos. Sin cron, el único efecto es que ese valor
+  se queda desactualizado — el acceso se resuelve en caliente y no depende de él.
+
 ## Deuda conocida / pendiente
 
 - Sin tests de frontend (solo backend tiene suite).
+- **Límites por plan sin diseñar.** `Organization.plan`/`feature_flags` existen y billing ya los
+  mueve, pero hoy Cloud no restringe nada: la diferencia que otorga un trial o un pago es
+  todavía nominal. Es el siguiente paso natural del punto 5.
+- **Facturación por puestos incompleta.** `Subscription.quantity` se sincroniza desde el
+  webhook, pero nada empuja el número real de usuarios activos al proveedor — con precio por
+  usuario/mes, cobrar de más o de menos depende hoy de que alguien lo ajuste a mano.
 - Catálogos (Cliente/Proceso/Aplicación/Stakeholder) son tablas tipadas fijas — un catálogo
   nuevo (Proveedor, Sucursal...) requiere migración. Un modelo genérico tipo EAV lo evitaría;
   decisión consciente de no hacerlo sin un caso de cliente real (ver ROADMAP, Fase 1 punto 3).
