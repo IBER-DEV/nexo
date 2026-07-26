@@ -94,6 +94,9 @@ class Subscription(models.Model):
     # proveedor porque el trial no pide tarjeta.
     provider_subscription_id = models.CharField(max_length=64, blank=True, default="")
     provider_customer_id = models.CharField(max_length=64, blank=True, default="")
+    # Id del subscription-item en el proveedor: es contra él que se ajustan
+    # los puestos facturados (ver service.sync_seats).
+    provider_item_id = models.CharField(max_length=64, blank=True, default="")
     status = models.CharField(max_length=20, choices=Status.choices)
     # Estado tal cual lo mandó el proveedor (on_trial, unpaid, ...), para
     # diagnosticar sin depender de que el mapeo a dominio sea correcto.

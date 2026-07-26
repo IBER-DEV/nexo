@@ -8,6 +8,7 @@ from apps.users.permissions import IsAdminRole
 
 from . import provider, service
 from .access import current_subscription, level_for_organization
+from .limits import limits_for, usage
 from .models import Subscription
 from .serializers import SubscriptionSerializer
 
@@ -36,6 +37,8 @@ class BillingStateView(APIView):
                 ),
                 "trial_days": settings.BILLING_TRIAL_DAYS,
                 "can_manage": bool(getattr(request.user, "is_admin", False)),
+                "limits": limits_for(org),
+                "usage": usage(org),
             }
         )
 

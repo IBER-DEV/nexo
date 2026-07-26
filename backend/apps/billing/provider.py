@@ -121,6 +121,23 @@ def get_subscription(provider_subscription_id: str) -> dict:
     return normalize_subscription(data)
 
 
+def update_quantity(provider_item_id: str, quantity: int) -> None:
+    """Ajusta los puestos facturados de una suscripción.
+
+    `invoice_immediately=False` a propósito: el prorrateo se cobra en la
+    siguiente factura en vez de emitir un cargo suelto cada vez que entra
+    alguien al equipo. Sumar un miembro no debería producir un email de
+    cobro de tres dólares."""
+    payload = {
+        "data": {
+            "type": "subscription-items",
+            "id": str(provider_item_id),
+            "attributes": {"quantity": quantity, "invoice_immediately": False},
+        }
+    }
+    _request("PATCH", f"/subscription-items/{provider_item_id}", json=payload)
+
+
 def normalize_subscription(data: dict) -> dict:
     """`data` de JSON:API (de un GET o del cuerpo de un webhook) → dict plano
     con los nombres del dominio. Todo lo que el resto del código sabe de
@@ -132,6 +149,9 @@ def normalize_subscription(data: dict) -> dict:
     return {
         "provider_subscription_id": str(data.get("id", "")),
         "provider_customer_id": str(attrs.get("customer_id", "") or ""),
+        # Id del *item*, no de la suscripción: es contra el item que se
+        # ajusta la cantidad de puestos facturados.
+        "provider_item_id": str(item.get("id", "") or ""),
         "provider_status": provider_status,
         "status": STATUS_MAP.get(provider_status, "expired"),
         "variant_id": str(attrs.get("variant_id", "") or ""),

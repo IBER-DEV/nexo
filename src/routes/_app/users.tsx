@@ -42,6 +42,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { activitiesService } from "@/services/activitiesService";
 import { usersService, type TeamMemberUpdate } from "@/services/usersService";
+import { SeatUsage } from "@/components/settings/SeatUsage";
 import { accessCodesService, type AccessCodeInput } from "@/services/accessCodesService";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/providers/AuthProvider";
@@ -147,6 +148,13 @@ function UsersPage() {
         title="Usuarios y equipos"
         description="Gestiona miembros, roles y el acceso a tu organización"
       />
+
+      {/* El medidor va acá y no solo en Facturación: es en esta pantalla
+          donde se decide sumar a alguien, así que es donde el techo tiene
+          que estar a la vista. Se esconde solo si no hay tope. */}
+      <Card className="p-4 max-w-md">
+        <SeatUsage />
+      </Card>
 
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
