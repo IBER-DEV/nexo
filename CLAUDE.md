@@ -278,15 +278,46 @@ cuentas colombianas — ver `docs/roadmap/launch-strategy.md`).
   Community el plan guardado de los trials vencidos. Sin cron, el único efecto es que ese valor
   se queda desactualizado — el acceso se resuelve en caliente y no depende de él.
 
+### Límites por plan (`apps/billing/limits.py`)
+
+Tres principios, cada uno con su razón — no los relajes sin entenderla:
+
+1. **El self-hosted no se limita nunca.** El gate es `provider.is_configured()`, el mismo de la
+   facturación: `plan="community"` significa "self-host libre" (sin techo) o "tier gratuito de
+   Cloud" (5 puestos) según ese flag. Limitar un binario AGPL que corre en el servidor de otro
+   rompe la promesa open core y además es inaplicable.
+2. **El muro es de puestos, no de features.** El core, el sync de Sheets y —cuando exista— MCP
+   van completos en todos los planes. Esconder el diferenciador detrás del plan mata la razón
+   por la que alguien elige Nexo sobre Plane; se cobra por el eje que crece con el valor.
+3. **Un límite bloquea agregar, nunca quita lo que ya existe.** Bajar de plan no desactiva a
+   nadie. Los usuarios desactivados no ocupan puesto: esa es la válvula de escape.
+
+- **Dos puertas ocupan un puesto y las dos están tapadas**: `membership.add_member()` (entrada
+  nueva, incluido el signup con código) y reactivar a alguien vía `PATCH /users/{pk}/`
+  (`UserTeamUpdateSerializer.validate`). Si agregas una tercera, tápala — con solo una abierta el
+  techo es decorativo.
+- **`limits.effective_plan()` resuelve el plan en caliente**, igual que el nivel de acceso: un
+  trial vencido recupera el techo sin esperar al cron de `expire_trials`. Nunca uses
+  `organization.plan` directo para decidir un límite — tendrías los límites de un plan y los
+  permisos de otro.
+- **`service.sync_seats()` empuja los usuarios activos como cantidad facturada** (`quantity` del
+  subscription-item de Lemon Squeezy). Sin esto, "puestos ilimitados en el plan de pago" sería
+  literal. Es **best-effort a propósito**: va en `transaction.on_commit` y se traga los errores
+  del proveedor — nadie debería quedarse sin poder sumar a un compañero por un timeout. La red
+  es `manage.py sync_seats` (idempotente, cron diario).
+
 ## Deuda conocida / pendiente
 
 - Sin tests de frontend (solo backend tiene suite).
-- **Límites por plan sin diseñar.** `Organization.plan`/`feature_flags` existen y billing ya los
-  mueve, pero hoy Cloud no restringe nada: la diferencia que otorga un trial o un pago es
-  todavía nominal. Es el siguiente paso natural del punto 5.
-- **Facturación por puestos incompleta.** `Subscription.quantity` se sincroniza desde el
-  webhook, pero nada empuja el número real de usuarios activos al proveedor — con precio por
-  usuario/mes, cobrar de más o de menos depende hoy de que alguien lo ajuste a mano.
+- **MCP sin construir, y su prerequisito tampoco.** El diferenciador acordado ("conecta Nexo a
+  tu Claude y que él cargue las actividades") necesita primero **tokens de larga vida**: hoy el
+  access token dura 8h y el refresh rota, así que ningún cliente MCP puede mantener sesión. Un
+  `PersonalAccessToken` que herede el rol de su dueño es el paso 1. La cuota por plan del MCP
+  (gratis en todos, con tope distinto) es lo único que se cobrará de esa feature.
+- **Wiki descartada por ahora** (sigue en la lista de "no construir en 12 meses" de
+  `launch-strategy.md`). Que la IA escriba el contenido vía MCP no baja el costo de construirla:
+  igual hacen falta modelo de documentos, editor, versionado, permisos y búsqueda. La versión
+  barata que prueba la misma hipótesis es un campo markdown largo en la actividad.
 - Catálogos (Cliente/Proceso/Aplicación/Stakeholder) son tablas tipadas fijas — un catálogo
   nuevo (Proveedor, Sucursal...) requiere migración. Un modelo genérico tipo EAV lo evitaría;
   decisión consciente de no hacerlo sin un caso de cliente real (ver ROADMAP, Fase 1 punto 3).

@@ -6,9 +6,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.billing.limits import effective_plan, limits_for
+
 from .models import ActivityType, Priority, WorkflowState
 
-SCHEMA_VERSION = 1
+# 2: la organización pasa a incluir `plan` y `limits` — el frontend necesita
+# saber qué otorga el plan para avisar antes de que alguien choque contra un
+# tope, no después de un 400.
+SCHEMA_VERSION = 2
 
 
 class WorkspaceView(APIView):
@@ -54,6 +59,11 @@ class WorkspaceView(APIView):
                 "timezone": org.timezone,
                 "locale": org.locale,
                 "currency": org.currency,
+                # `plan` es el efectivo (un trial vencido ya revirtió a
+                # Community), no el guardado: la UI no puede ofrecer algo
+                # que el API va a rechazar.
+                "plan": effective_plan(org),
+                "limits": limits_for(org),
             },
             "workflow_states": [
                 {

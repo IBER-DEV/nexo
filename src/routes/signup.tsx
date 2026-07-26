@@ -145,7 +145,7 @@ function SignupPage() {
         });
         toast.success("Tu espacio está listo. Vamos a crear tu primera actividad.");
       }
-      navigate({ to: "/" });
+      navigate({ to: "/dashboard" });
     } catch (err) {
       toast.error(fieldErrorMessage(err));
     }

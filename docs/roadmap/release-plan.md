@@ -69,10 +69,15 @@ producto/diferenciadores → [product.md](product.md). Planes de implementación
    `https://api.nexoengine.tech/api/v1/billing/webhook/`. Sin esas variables la facturación
    queda **inerte a propósito** — es el modo correcto del self-hosted AGPL: nada gatea el acceso
    y los endpoints de cobro responden 503. También queda pendiente el cron diario de
-   `manage.py expire_trials` en Railway (sin él, el plan guardado de un trial vencido se queda
-   desactualizado; el acceso no se ve afectado porque se resuelve en caliente) y **los límites
-   por plan**, que siguen sin diseñarse: hoy Cloud no restringe nada, así que el trial otorga
-   una diferencia que todavía es nominal.
+   `manage.py expire_trials` y `manage.py sync_seats` en Railway (sin ellos, el plan guardado de
+   un trial vencido y la cantidad de puestos facturados se quedan desactualizados; el acceso y
+   los límites no se ven afectados porque se resuelven en caliente).
+
+   **Límites por plan** — ✅ definidos e implementados 2026-07-25 (`apps/billing/limits.py`).
+   Techo de 5 usuarios activos en el tier gratuito de Cloud; el self-hosted no se limita nunca y
+   el plan de pago no tiene techo, pero sincroniza los puestos facturados contra el proveedor.
+   Tabla completa y los tres principios que la explican en
+   [monetization.md](monetization.md).
 6. **Hosting del backend** — 🚧 backend desplegado en Railway (proyecto `nexo-backend`):
    servicio `backend` (build por `backend/Dockerfile`) + Postgres administrado, wireado por
    variables de referencia (`${{Postgres.PGHOST}}` etc., no una `DATABASE_URL` — `prod.py` usa
@@ -208,6 +213,14 @@ adelantado. Lista de features → [product.md](product.md).
   GitHub Discussions, y Roadmap de la landing reescrito a 3 bloques de valor para el usuario
   final. Mergeado a `main` (PR #24) y desplegado a producción (Cloudflare Worker + redeploy de
   Railway, migración `organizations.0004_waitlistsignup` aplicada).
+- **2026-07-25** — Límites por plan definidos e implementados, cerrando el punto 5: 5 puestos en
+  el tier gratuito de Cloud, sin techo en self-host ni en el plan de pago (que ahora sí
+  sincroniza la cantidad facturada — antes, "puestos ilimitados" habría sido literal). Se decidió
+  además la estrategia de **MCP**: gratis en todos los planes con cuota por plan, porque "trae tu
+  propia IA" no cuesta inferencia y su trabajo es atraer, no cobrar. La **wiki** queda descartada
+  por ahora: que la IA escriba el contenido no baja el costo de construirla (modelo de
+  documentos, editor, versionado, permisos, búsqueda), así que sigue en la lista de "no construir
+  en 12 meses". Próximo bloqueante de MCP: **tokens de larga vida**, que hoy no existen.
 - **2026-07-25** — Fase 1 punto 5 (billing) implementado: app `apps/billing/` con las cuatro
   entidades diseñadas, checkout hospedado, webhooks firmados con deduplicación por digest del
   cuerpo, trial local de 14 días sin tarjeta y portal de cliente. El enforcement del estado de

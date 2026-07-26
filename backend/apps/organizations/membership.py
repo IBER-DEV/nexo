@@ -33,16 +33,28 @@ class MembershipError(Exception):
 
 
 def add_member(*, user, organization: Organization, rol: str):
+    # Import local: los límites son una regla comercial (apps.billing) y
+    # billing ya importa de organizations — a nivel de módulo sería un ciclo.
+    from apps.billing.limits import LimitExceeded, check_can_add_member
+
     if rol == User.Role.OWNER:
         raise MembershipError("Una organización solo tiene un Owner: el que la fundó.")
     if rol not in User.Role.values:
         raise MembershipError(f"Rol desconocido: {rol!r}")
     if user.organization_id is not None:
         raise MembershipError("Este usuario ya pertenece a una organización.")
+    try:
+        check_can_add_member(organization)
+    except LimitExceeded as exc:
+        raise MembershipError(str(exc)) from exc
     user.organization = organization
     user.rol = rol
     user.save(update_fields=["organization", "rol"])
     track("member_joined", organization=organization, user=user)
+    # Un puesto más que facturar (no-op si la org no paga por puesto).
+    from apps.billing.service import schedule_seat_sync
+
+    schedule_seat_sync(organization)
     return user
 
 

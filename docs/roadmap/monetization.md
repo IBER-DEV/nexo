@@ -70,10 +70,34 @@ configuradas —el caso del self-hosted AGPL— nada gatea nada y los endpoints 
 503), y **una organización sin `Subscription` tiene acceso completo** (solo se degrada a quien
 *tuvo* una suscripción y su estado se deterioró).
 
-`Organization.plan` y `Organization.feature_flags` existen desde el Bloque 1 de multi-tenancy —
-pero **la lógica de límites por plan sigue sin diseñarse**: hoy Cloud no restringe nada, así que
-la diferencia que otorga un trial es todavía nominal. Es el siguiente paso natural de este
-punto.
+## Límites por plan (definidos e implementados 2026-07-25)
+
+| | Self-host | Cloud Free | Cloud Pago | Enterprise |
+|---|---|---|---|---|
+| Usuarios activos | ∞ | **5** | ∞ (facturado por puesto) | ∞ |
+| Core (kanban, backlog, reportes, maestros, flujos) | ✓ | ✓ | ✓ | ✓ |
+| Sync Google Sheets | ✓ | ✓ | ✓ | ✓ |
+| MCP (cuando exista) | ✓ | ✓ cuota baja | ✓ cuota alta | ✓ |
+| Correo transaccional | propio | ✓ | ✓ | ✓ |
+| SSO/SAML, auditoría, SLA | — | — | — | ✓ |
+
+Tres principios detrás de esa tabla:
+
+1. **El self-hosted no se limita nunca.** Limitar un binario AGPL que corre en el servidor de
+   otro rompe la promesa open core y es inaplicable de todas formas. El gate es el mismo que el
+   de la facturación (`provider.is_configured()`).
+2. **El muro es de puestos, no de features.** Esconder el sync de Sheets o el MCP detrás del
+   plan mata la razón por la que alguien elige Nexo sobre Plane. Se cobra por el eje que crece
+   con el valor entregado, y el diferenciador se usa para entrar, no para cobrar.
+3. **Un límite bloquea agregar, nunca quita lo que ya existe.** Bajar de plan no desactiva a
+   nadie; los usuarios desactivados no ocupan puesto.
+
+**MCP va gratis en todos los planes**, con cuota distinta por plan. No cuesta inferencia —el
+usuario conecta su propio Claude— así que lo que se monetiza es el consumo de infraestructura,
+no la capacidad. Gatear el único diferenciador es cómo no lo adopta nadie.
+
+Implementación en `apps/billing/limits.py`; detalle de los seams (las dos puertas que ocupan
+puesto, la sincronización de la cantidad facturada) en `CLAUDE.md`.
 
 ## Bitácora
 
@@ -82,6 +106,11 @@ punto.
 - **2026-07-18** — Billing diseñado: Lemon Squeezy sobre Stripe (bloqueado para Colombia) y
   sobre pasarelas locales (velocidad de lanzamiento vs. carga operativa de DIAN/IVA). Detalle
   completo en [launch-strategy.md](launch-strategy.md).
+- **2026-07-25** — Límites por plan definidos e implementados: techo de 5 puestos en el tier
+  gratuito de Cloud, todo lo demás sin restricción. Se confirmó el 5 ya documentado (frente a
+  bajarlo a 3) priorizando adopción sobre conversión en el lanzamiento. Se decidió además que
+  **MCP será gratis en todos los planes**, con cuota por plan: es el diferenciador de "trae tu
+  propia IA" y no cuesta inferencia, así que su trabajo es atraer, no cobrar.
 - **2026-07-25** — Billing implementado (`backend/apps/billing/`). Al construirlo aparecieron
   las dos excepciones a la tabla de acceso documentadas arriba (cancelada con periodo pagado, y
   trial vencido), ninguna visible desde el diseño en papel: la primera sale de la semántica real

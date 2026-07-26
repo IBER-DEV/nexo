@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSound } from "@/providers/SoundProvider";
+import { SeatUsage } from "@/components/settings/SeatUsage";
 import {
   SUBSCRIPTION_STATUS_LABEL,
   billingService,
@@ -152,6 +153,8 @@ export function BillingSettings() {
             </div>
           )}
         </dl>
+
+        <SeatUsage />
 
         {state.can_manage ? (
           <div className="flex flex-wrap gap-3">

@@ -27,6 +27,13 @@ export interface Subscription {
   created_at: string;
 }
 
+export interface PlanUsage {
+  active_users: number;
+  /** null = sin techo (self-hosted o plan de pago). */
+  max_active_users: number | null;
+  seats_available: number | null;
+}
+
 export interface BillingState {
   /** false en self-hosted: la instancia no tiene proveedor de pagos y nada gatea el acceso. */
   billing_enabled: boolean;
@@ -36,6 +43,8 @@ export interface BillingState {
   trial_available: boolean;
   trial_days: number;
   can_manage: boolean;
+  limits: { max_active_users: number | null };
+  usage: PlanUsage;
 }
 
 export const billingService = {

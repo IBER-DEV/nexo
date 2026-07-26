@@ -20,6 +20,7 @@ from django.utils.dateparse import parse_datetime
 from apps.organizations.funnel import track
 
 from . import provider
+from .access import current_subscription
 from .models import BillingCustomer, CheckoutSession, Subscription, WebhookEvent
 
 logger = logging.getLogger("nexo.billing")
@@ -65,6 +66,58 @@ def sync_organization_plan(subscription: Subscription) -> None:
         org.plan = nuevo
         org.save(update_fields=["plan"])
         track("plan_changed", organization=org, plan=nuevo, subscription_status=subscription.status)
+
+
+# ─── Puestos facturados ───────────────────────────────────────────────────
+
+
+def sync_seats(organization) -> bool:
+    """Empuja el número de usuarios activos como cantidad facturada.
+
+    Sin esto, "puestos ilimitados en el plan de pago" sería literal: alguien
+    paga un puesto y suma treinta gratis. Con precio por usuario/mes es un
+    agujero de ingreso, no un detalle.
+
+    **Best-effort a propósito.** Va después del commit y se traga cualquier
+    error del proveedor: nadie debería quedarse sin poder sumar a un
+    compañero porque Lemon Squeezy tuvo un mal minuto. La reconciliación
+    real es `manage.py sync_seats`, que puede correr como cron.
+    """
+    from .limits import seats_in_use
+
+    sub = current_subscription(organization)
+    if sub is None or not sub.provider_item_id:
+        return False
+    # Solo se ajusta lo que se está cobrando: un trial o una suscripción
+    # expirada no tienen puestos que facturar.
+    if sub.status not in (Subscription.Status.ACTIVE, Subscription.Status.PAST_DUE):
+        return False
+
+    cantidad = seats_in_use(organization)
+    if cantidad == sub.quantity:
+        return False
+
+    try:
+        provider.update_quantity(sub.provider_item_id, cantidad)
+    except (provider.BillingNotConfigured, provider.ProviderError):
+        logger.warning(
+            "no se pudo sincronizar puestos de %s (%s → %s); "
+            "queda para manage.py sync_seats",
+            organization.slug,
+            sub.quantity,
+            cantidad,
+        )
+        return False
+
+    Subscription.objects.filter(pk=sub.pk).update(quantity=cantidad)
+    track("seats_synced", organization=organization, quantity=cantidad)
+    return True
+
+
+def schedule_seat_sync(organization) -> None:
+    """Encola `sync_seats` para después del commit. Único punto que deberían
+    llamar los sitios que cambian la cantidad de usuarios activos."""
+    transaction.on_commit(lambda: sync_seats(organization))
 
 
 # ─── Trial (sprint 3): 14 días, sin tarjeta ───────────────────────────────
@@ -126,6 +179,7 @@ def apply_subscription(organization, normalized: dict) -> Subscription:
         defaults={
             "organization": organization,
             "provider_customer_id": normalized["provider_customer_id"],
+            "provider_item_id": normalized.get("provider_item_id", ""),
             "status": normalized["status"],
             "provider_status": normalized["provider_status"],
             "plan": "cloud",

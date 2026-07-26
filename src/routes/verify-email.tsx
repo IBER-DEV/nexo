@@ -72,7 +72,7 @@ function VerifyEmailPage() {
             </>
           )}
 
-          <Link to="/" className="mt-6 inline-block text-sm text-primary hover:underline">
+          <Link to="/dashboard" className="mt-6 inline-block text-sm text-primary hover:underline">
             Ir al panel
           </Link>
         </Card>

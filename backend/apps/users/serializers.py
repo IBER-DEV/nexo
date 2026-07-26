@@ -86,6 +86,17 @@ class UserTeamUpdateSerializer(serializers.ModelSerializer):
                 {"rol": "Una organización solo tiene un Owner: el que la fundó."}
             )
 
+        # Reactivar es la segunda puerta por la que se ocupa un puesto: sin
+        # este check, el techo del plan se saltea desactivando y volviendo a
+        # activar (add_member solo cubre a quien entra por primera vez).
+        if attrs.get("is_active") is True and not user.is_active:
+            from apps.billing.limits import LimitExceeded, check_can_add_member
+
+            try:
+                check_can_add_member(user.organization)
+            except LimitExceeded as exc:
+                raise serializers.ValidationError({"is_active": str(exc)})
+
         if "coordinador" in attrs:
             # El rol contra el que se valida es el resultante del PATCH.
             rol_final = attrs.get("rol", user.rol)
@@ -112,10 +123,19 @@ class UserTeamUpdateSerializer(serializers.ModelSerializer):
             if new_rol != User.Role.MEMBER:
                 instance.coordinador = None
             instance.rol = new_rol
+        cambia_acceso = (
+            "is_active" in validated_data
+            and validated_data["is_active"] != instance.is_active
+        )
         if "is_active" in validated_data:
             instance.is_active = validated_data["is_active"]
         instance.full_clean()
         instance.save()
+        if cambia_acceso:
+            # Activar o desactivar mueve los puestos facturados.
+            from apps.billing.service import schedule_seat_sync
+
+            schedule_seat_sync(instance.organization)
         return instance
 
 

@@ -32,6 +32,11 @@ export interface ActivityType {
   is_active: boolean;
 }
 
+/** Topes que otorga el plan. `null` = sin techo (self-hosted o plan de pago). */
+export interface PlanLimits {
+  max_active_users: number | null;
+}
+
 export interface WorkspaceOrganization {
   id: number;
   nombre: string;
@@ -40,11 +45,15 @@ export interface WorkspaceOrganization {
   timezone: string;
   locale: string;
   currency: string;
+  /** Plan efectivo: una prueba vencida ya revirtió a community acá. */
+  plan: string;
+  limits: PlanLimits;
 }
 
-/** Payload completo de GET/PATCH /api/v1/organization/ (solo admin). */
-export interface OrganizationDetail extends WorkspaceOrganization {
-  plan: string;
+/** Payload completo de GET/PATCH /api/v1/organization/ (solo admin).
+ *  Sin `limits`: los topes del plan se piden por `/workspace/` o `/billing/`,
+ *  este endpoint es de edición de la organización. */
+export interface OrganizationDetail extends Omit<WorkspaceOrganization, "limits"> {
   appsheet_spreadsheet_id: string;
   appsheet_worksheet_name: string;
 }
