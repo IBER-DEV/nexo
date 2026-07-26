@@ -35,6 +35,35 @@ DEMO_EXEMPT_PATH_SUFFIX = "/auth/demo-login/"
 TOKEN_MANAGEMENT_PATH_FRAGMENT = "/auth/tokens/"
 
 
+# MCP habla JSON-RPC sobre POST: *todas* sus llamadas son escrituras a ojos
+# de HTTP, incluidas las que solo consultan. Aplicarle la regla por verbo
+# dejaría a un token de solo lectura sin poder ni listar actividades. El
+# control equivalente vive por herramienta en `apps/mcp/tools.py`, que llama
+# a `assert_write_allowed` para las que sí escriben.
+METHOD_AGNOSTIC_PATH_FRAGMENT = "/mcp/"
+
+DEMO_READONLY_MESSAGE = "La demo pública es de solo lectura."
+READ_ONLY_TOKEN_MESSAGE = "Este token es de solo lectura."
+
+
+def assert_write_allowed(user, *, token=None) -> None:
+    """¿Puede este usuario escribir, sin mirar el verbo HTTP?
+
+    Es la forma canónica de la regla. `enforce_global_policy` la usa cuando
+    el método no es seguro, y el despachador de MCP la llama directo para
+    las herramientas que escriben — así las dos rutas no pueden divergir.
+    """
+    if getattr(user, "is_demo_readonly", False):
+        raise PermissionDenied(DEMO_READONLY_MESSAGE)
+    if token is not None and token.scope == PersonalAccessToken.Scope.READ:
+        raise PermissionDenied(READ_ONLY_TOKEN_MESSAGE)
+    # Import local: apps.billing importa de apps.users, a nivel de módulo
+    # sería un ciclo.
+    from apps.billing.access import assert_can_write
+
+    assert_can_write(user)
+
+
 def enforce_global_policy(request, user, *, token=None) -> None:
     """Reglas que valen para toda la API, sin importar cómo se autenticó
     quien pide. Corta con 403 o deja pasar.
@@ -42,25 +71,30 @@ def enforce_global_policy(request, user, *, token=None) -> None:
     `token` es el `PersonalAccessToken` cuando la petición se autenticó con
     uno; None cuando viene de una sesión normal.
     """
-    # 1. Demo pública: de solo lectura pase lo que pase. Va primero porque
-    #    es la regla más fuerte — un usuario de demo no escribe ni con la
-    #    facturación al día.
-    if getattr(user, "is_demo_readonly", False) and request.method not in SAFE_METHODS:
-        if not request.path.endswith(DEMO_EXEMPT_PATH_SUFFIX):
-            raise PermissionDenied("La demo pública es de solo lectura.")
+    # Un token nunca gestiona tokens: si pudiera, uno de solo lectura
+    # emitiría uno de escritura y el scope no valdría nada. Va antes que
+    # todo lo demás y sin excepciones de ruta.
+    if token is not None and TOKEN_MANAGEMENT_PATH_FRAGMENT in request.path:
+        raise PermissionDenied(
+            "Los tokens de acceso no pueden gestionar otros tokens: entra a Nexo "
+            "con tu cuenta para crearlos o revocarlos."
+        )
 
-    # 2. Alcance del token de larga vida.
-    if token is not None:
-        if TOKEN_MANAGEMENT_PATH_FRAGMENT in request.path:
-            raise PermissionDenied(
-                "Los tokens de acceso no pueden gestionar otros tokens: entra a Nexo "
-                "con tu cuenta para crearlos o revocarlos."
-            )
-        if token.scope == PersonalAccessToken.Scope.READ and request.method not in SAFE_METHODS:
-            raise PermissionDenied("Este token es de solo lectura.")
+    if METHOD_AGNOSTIC_PATH_FRAGMENT in request.path:
+        # Solo se valida que pueda *entrar*; el permiso de escritura lo
+        # resuelve cada herramienta.
+        from apps.billing.access import assert_can_read
 
-    # 3. Estado de la suscripción. Import local: apps.billing importa de
-    #    apps.users, así que a nivel de módulo sería un ciclo.
+        assert_can_read(user)
+        return
+
+    if request.method not in SAFE_METHODS and not request.path.endswith(
+        DEMO_EXEMPT_PATH_SUFFIX
+    ):
+        assert_write_allowed(user, token=token)
+
+    # El nivel `blocked` corta también las lecturas, y las exenciones de
+    # ruta de facturación solo aplican acá.
     from apps.billing.access import enforce_billing_access
 
     enforce_billing_access(request, user)

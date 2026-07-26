@@ -29,6 +29,7 @@ LOCAL_APPS = [
     "apps.activities",
     "apps.notifications",
     "apps.billing",
+    "apps.mcp",
 ]
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
@@ -122,6 +123,10 @@ REST_FRAMEWORK = {
         # Solo /auth/demo-login/ usa este scope (ver DemoLoginView) — evita
         # que alguien lo golpee en loop; no toca el resto de la API.
         "demo_login": "20/hour",
+        # El tope real de MCP se resuelve por plan en tiempo de petición
+        # (apps/mcp/throttling.py); este valor solo existe porque
+        # SimpleRateThrottle lo exige al construirse.
+        "mcp": "200/day",
     },
 }
 

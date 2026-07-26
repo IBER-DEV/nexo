@@ -53,15 +53,32 @@ def level_for_organization(organization) -> str:
     return sub.access_level
 
 
-def enforce_billing_access(request, user) -> None:
-    """Corta la petición si la suscripción de la organización no da para
-    tanto. La llama `enforce_global_policy` — no se engancha a un mecanismo
-    de autenticación concreto, para que agregar uno nuevo (tokens de larga
-    vida, y mañana OAuth) no la deje afuera por olvido."""
-    if any(fragment in request.path for fragment in EXEMPT_PATH_FRAGMENTS):
-        return
+def assert_can_read(user) -> None:
+    """Método-agnóstica: sirve igual para un GET que para una llamada MCP."""
+    if level_for_organization(getattr(user, "organization", None)) == AccessLevel.BLOCKED:
+        raise PermissionDenied(BLOCKED_MESSAGE)
+
+
+def assert_can_write(user) -> None:
     level = level_for_organization(getattr(user, "organization", None))
     if level == AccessLevel.BLOCKED:
         raise PermissionDenied(BLOCKED_MESSAGE)
-    if level == AccessLevel.READ_ONLY and request.method not in SAFE_METHODS:
+    if level == AccessLevel.READ_ONLY:
         raise PermissionDenied(READ_ONLY_MESSAGE)
+
+
+def enforce_billing_access(request, user) -> None:
+    """Versión HTTP: traduce el verbo a lectura/escritura y delega en las
+    dos de arriba. Se construye sobre ellas y no al revés para que la regla
+    no pueda divergir entre el API REST y MCP —donde todo es POST y el
+    verbo no dice nada sobre si la operación escribe.
+
+    La llama `enforce_global_policy`, no un mecanismo de autenticación
+    concreto: así agregar uno nuevo (tokens de larga vida, mañana OAuth) no
+    la deja afuera por olvido."""
+    if any(fragment in request.path for fragment in EXEMPT_PATH_FRAGMENTS):
+        return
+    if request.method in SAFE_METHODS:
+        assert_can_read(user)
+    else:
+        assert_can_write(user)

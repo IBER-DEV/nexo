@@ -346,12 +346,47 @@ de larga vida para clientes que no pueden mantener una sesión de navegador. End
   caliente de cada petición autenticada por token.
 - Revocar es `revoked_at`, no un DELETE: la fila queda como registro de que ese token existió.
 
+## Servidor MCP (COMPLETADO — 2026-07-26)
+
+`POST /api/v1/mcp/` — JSON-RPC 2.0 sobre HTTP, autenticado con un token de acceso personal.
+Cinco herramientas: `obtener_workspace`, `listar_actividades`, `listar_usuarios`,
+`crear_actividad`, `actualizar_actividad`. App en `backend/apps/mcp/`.
+
+- **Protocolo implementado a mano, sin el SDK de MCP.** El SDK está construido sobre
+  ASGI/Starlette y este backend corre WSGI bajo gunicorn: traerlo obligaría a cambiar el
+  servidor de toda la aplicación por una sola feature. Un servidor de *solo herramientas*
+  necesita un subconjunto chico y estable (`initialize`, `tools/list`, `tools/call`, `ping`).
+- **Sin streaming (SSE).** "Streamable HTTP" lo permite pero no lo exige; con solo herramientas,
+  responder JSON plano a cada POST alcanza. Agregarlo es el día que haya herramientas largas o
+  notificaciones servidor→cliente, no antes.
+- **MCP habla POST siempre, así que el verbo HTTP dejó de indicar si algo escribe.** Por eso la
+  política se partió en `assert_can_read`/`assert_can_write` (método-agnósticas) y
+  `enforce_billing_access` se construye sobre ellas — no al revés, para que la regla no pueda
+  divergir entre el API REST y MCP. `/mcp/` está exento del chequeo por verbo
+  (`METHOD_AGNOSTIC_PATH_FRAGMENT`) y **cada herramienta declara `writes`**; el despachador le
+  exige `assert_write_allowed` antes de ejecutarla. Si agregas una herramienta que escribe y no
+  lo declaras, se salta la regla.
+- **Un token de solo lectura no ve las herramientas que escriben** en `tools/list`. Mostrárselas
+  para después rechazarlas hace que el modelo gaste turnos intentando algo imposible.
+- **Los errores de dominio y de permisos vuelven como `isError: true` dentro del resultado**, no
+  como error de JSON-RPC: así el modelo los lee y puede explicarlos ("tu token es de solo
+  lectura") o corregir el intento. Solo lo que es realmente de protocolo (método desconocido,
+  argumentos faltantes) va como error JSON-RPC.
+- **Ninguna herramienta reimplementa reglas del API.** Las escrituras pasan por
+  `ActivitySerializer` y las lecturas por `activities/visibility.py::visible_activities()`, que
+  se extrajo del `ActivityViewSet` justamente para esto — una regla de visibilidad con dos
+  implementaciones es una fuga esperando a que alguien toque solo una.
+- **Cuota por plan** en `apps/mcp/throttling.py`: gratis en todos los planes, con tope distinto
+  (community 200/día, cloud 5000/día, enterprise sin tope). El self-hosted no se limita nunca —
+  mismo gate `provider.is_configured()` que los puestos.
+
 ## Deuda conocida / pendiente
 
 - Sin tests de frontend (solo backend tiene suite).
-- **MCP sin construir** (su prerequisito ya está: ver la sección de tokens abajo). Falta el
-  servidor en sí y la cuota por plan (gratis en todos, con tope distinto), que es lo único que
-  se cobrará de esa feature.
+- **MCP sin UI ni documentación de conexión.** El servidor funciona, pero un usuario todavía
+  tiene que armar a mano la configuración de su cliente (URL + token). Falta la pantalla que le
+  entregue el bloque de configuración listo para pegar, y decirlo en la landing — hoy el
+  diferenciador existe pero es invisible.
 - **Wiki descartada por ahora** (sigue en la lista de "no construir en 12 meses" de
   `launch-strategy.md`). Que la IA escriba el contenido vía MCP no baja el costo de construirla:
   igual hacen falta modelo de documentos, editor, versionado, permisos y búsqueda. La versión
