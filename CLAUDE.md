@@ -316,6 +316,14 @@ Tres principios, cada uno con su razón — no los relajes sin entenderla:
   literal. Es **best-effort a propósito**: va en `transaction.on_commit` y se traga los errores
   del proveedor — nadie debería quedarse sin poder sumar a un compañero por un timeout. La red
   es `manage.py sync_seats` (idempotente, cron diario).
+- **La cantidad de puestos se fija en tres momentos, y los tres hacen falta.** (1) Al abrir el
+  checkout (`checkout_data.variant_quantities`), para que la *primera* factura ya salga con el
+  equipo completo — sin esto una org de 8 pagaba 1 asiento el primer mes, porque ajustar después
+  solo corrige de la segunda factura en adelante. (2) Al aplicar la suscripción del webhook, por
+  si el equipo cambió entre abrir el checkout y pagar. (3) Cada vez que alguien entra o sale.
+- **`provider.create_checkout()` valida `is_configured()` al entrar**, no solo dentro de
+  `_request()`: armar el payload ya lee las settings (`int(VARIANT_ID_CLOUD)`), así que sin
+  credenciales reventaba con un `ValueError` opaco antes de llegar a la petición.
 
 ## Tokens de acceso personal (COMPLETADO — 2026-07-26)
 
@@ -344,11 +352,6 @@ de larga vida para clientes que no pueden mantener una sesión de navegador. End
 - **MCP sin construir** (su prerequisito ya está: ver la sección de tokens abajo). Falta el
   servidor en sí y la cuota por plan (gratis en todos, con tope distinto), que es lo único que
   se cobrará de esa feature.
-- **El primer cobro sale siempre en 1 puesto.** `provider.create_checkout()` no manda cantidad
-  inicial y `sync_seats` solo corre cuando alguien entra o sale del equipo, así que una
-  organización de 8 personas que actualiza a Cloud paga 1 asiento hasta que muevan a alguien.
-  Se arregla llamando a `schedule_seat_sync` al aplicar la suscripción del webhook. **Arreglar
-  antes de cobrarle a alguien de verdad.**
 - **Wiki descartada por ahora** (sigue en la lista de "no construir en 12 meses" de
   `launch-strategy.md`). Que la IA escriba el contenido vía MCP no baja el costo de construirla:
   igual hacen falta modelo de documentos, editor, versionado, permisos y búsqueda. La versión
