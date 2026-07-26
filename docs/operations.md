@@ -20,17 +20,42 @@ tenía dónde fallar de forma barata.
 | Lemon Squeezy | tienda real | **modo test o tienda aparte** |
 | Correo | Postmark real | Postmark, o `EMAIL_BACKEND` de consola |
 
+### Conexión a la base: siempre por referencia
+
+Las cinco variables de base del servicio `backend` apuntan al servicio Postgres **por
+referencia**, no por valor:
+
+```
+DB_HOST=${{Postgres.PGHOST}}      DB_USER=${{Postgres.PGUSER}}
+DB_PORT=${{Postgres.PGPORT}}      DB_PASSWORD=${{Postgres.PGPASSWORD}}
+DB_NAME=${{Postgres.PGDATABASE}}
+```
+
+Hasta 2026-07-26 estaban como **valores literales**, y eso rompía la duplicación de entornos:
+Railway provisiona un Postgres nuevo con credenciales nuevas al duplicar, así que el backend de
+staging habría intentado entrar a su propio Postgres con la contraseña de producción y no habría
+arrancado. (El *host* no era el problema: `postgres.railway.internal` es DNS de la red privada y
+se resuelve dentro del mismo entorno, así que staging nunca habría tocado los datos de
+producción.) Como efecto secundario, ahora rotar la contraseña de la base tampoco rompe el
+backend.
+
+**El CLI no distingue una referencia de un literal** — `railway variable list`, tanto con
+`--json` como con `--kv`, muestra el valor ya resuelto. Para comprobarlo hay que mirar el
+dashboard, o redesplegar y ver que el servicio arranca. Ojo: `--kv` imprime los secretos sin
+enmascarar.
+
 ### Lo que hay que separar de verdad
 
 El código no necesita un `settings/staging.py`: `config.settings.prod` ya se configura por
 variables de entorno. Lo que sí hay que separar es la configuración, y hay dos trampas:
 
-1. **El webhook de Lemon Squeezy.** Hoy apunta a `api.nexoengine.tech`. Si levantas staging sin
-   tocar esto, los pagos de prueba de staging llegan al backend de **producción** y le cambian
-   el plan a organizaciones reales. Staging necesita su propio webhook (apuntando a su propio
-   dominio) con su propio `LEMONSQUEEZY_WEBHOOK_SECRET`, o directamente dejar las variables de
-   billing vacías: sin ellas la facturación queda inerte y nada gatea nada
-   (`apps/billing/limits.py`).
+1. **El webhook de Lemon Squeezy.** Ojo: a 2026-07-26 **producción todavía no tiene ninguna
+   variable `LEMONSQUEEZY_*`** — la tienda está conectada solo en el `.env` local, así que en
+   producción la facturación está inerte (checkout responde 503 y ningún límite de plan aplica).
+   Cuando se configuren, cada entorno necesita su propio webhook apuntando a su propio dominio,
+   con su propio `LEMONSQUEEZY_WEBHOOK_SECRET`. Compartirlos haría que los pagos de prueba de
+   staging le cambien el plan a organizaciones reales. Lo natural es configurar staging primero
+   (modo test) y producción después.
 2. **`CORS_ALLOWED_ORIGINS` y `ALLOWED_HOSTS`.** Cada entorno lista solo sus propios dominios.
    Copiar los de producción a staging hace que un bug de CORS en staging no se vea, y aparezca
    recién en producción.
@@ -109,3 +134,8 @@ usuarios de la demo pública** salvo que se le pase `--force`.
 - **2026-07-26** — Documentado el modelo de dos entornos al detectar que producción era el único
   y contenía datos de `seed_data`. Se agregó `purge_organization` para poder limpiarlos sin
   pelear con los `PROTECT` a mitad de camino, en producción.
+- **2026-07-26** — Las cinco variables `DB_*` de producción pasaron de valores literales a
+  referencias `${{Postgres.*}}`, como prerequisito de poder duplicar el entorno. Se verificó
+  antes que las huellas de `PGHOST`/`PGPORT`/`PGDATABASE`/`PGUSER`/`PGPASSWORD` fueran idénticas
+  a los literales, así que el cambio resolvía a los mismos valores; y después, con un redeploy
+  real (`SUCCESS`, `/auth/demo-login/` en 200) que el backend siguiera hablando con la base.
