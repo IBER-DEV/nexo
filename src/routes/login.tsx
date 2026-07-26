@@ -40,7 +40,7 @@ function LoginPage() {
     try {
       await login(email, password);
       toast.success("Bienvenido a Nexo");
-      navigate({ to: "/" });
+      navigate({ to: "/dashboard" });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error al iniciar sesión");
     } finally {

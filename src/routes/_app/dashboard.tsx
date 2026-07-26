@@ -32,7 +32,7 @@ import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Rocket } from "lucide-react";
 
-export const Route = createFileRoute("/_app/")({
+export const Route = createFileRoute("/_app/dashboard")({
   head: () => ({
     meta: [
       { title: "Dashboard · Nexo" },

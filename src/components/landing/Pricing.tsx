@@ -45,7 +45,7 @@ export default function Pricing() {
     setEnteringDemo(true);
     try {
       await loginAsDemo();
-      navigate({ to: "/" });
+      navigate({ to: "/dashboard" });
     } catch {
       toast.error("La demo pública no está disponible ahora mismo.");
     } finally {

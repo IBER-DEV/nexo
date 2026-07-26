@@ -16,12 +16,13 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as LandingRouteImport } from './routes/landing'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AppRouteImport } from './routes/_app'
-import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppUsersRouteImport } from './routes/_app/users'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppReportsRouteImport } from './routes/_app/reports'
 import { Route as AppPlaneacionRouteImport } from './routes/_app/planeacion'
 import { Route as AppKanbanRouteImport } from './routes/_app/kanban'
+import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppActivitiesRouteImport } from './routes/_app/activities'
 
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
@@ -58,10 +59,10 @@ const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppIndexRoute = AppIndexRouteImport.update({
+const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AppRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppUsersRoute = AppUsersRouteImport.update({
   id: '/users',
@@ -88,6 +89,11 @@ const AppKanbanRoute = AppKanbanRouteImport.update({
   path: '/kanban',
   getParentRoute: () => AppRoute,
 } as any)
+const AppDashboardRoute = AppDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppActivitiesRoute = AppActivitiesRouteImport.update({
   id: '/activities',
   path: '/activities',
@@ -95,7 +101,7 @@ const AppActivitiesRoute = AppActivitiesRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof AppIndexRoute
+  '/': typeof IndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/landing': typeof LandingRoute
   '/login': typeof LoginRoute
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/verify-email': typeof VerifyEmailRoute
   '/activities': typeof AppActivitiesRoute
+  '/dashboard': typeof AppDashboardRoute
   '/kanban': typeof AppKanbanRoute
   '/planeacion': typeof AppPlaneacionRoute
   '/reports': typeof AppReportsRoute
@@ -110,6 +117,7 @@ export interface FileRoutesByFullPath {
   '/users': typeof AppUsersRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/landing': typeof LandingRoute
   '/login': typeof LoginRoute
@@ -117,15 +125,16 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/verify-email': typeof VerifyEmailRoute
   '/activities': typeof AppActivitiesRoute
+  '/dashboard': typeof AppDashboardRoute
   '/kanban': typeof AppKanbanRoute
   '/planeacion': typeof AppPlaneacionRoute
   '/reports': typeof AppReportsRoute
   '/settings': typeof AppSettingsRoute
   '/users': typeof AppUsersRoute
-  '/': typeof AppIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/landing': typeof LandingRoute
@@ -134,12 +143,12 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/verify-email': typeof VerifyEmailRoute
   '/_app/activities': typeof AppActivitiesRoute
+  '/_app/dashboard': typeof AppDashboardRoute
   '/_app/kanban': typeof AppKanbanRoute
   '/_app/planeacion': typeof AppPlaneacionRoute
   '/_app/reports': typeof AppReportsRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/users': typeof AppUsersRoute
-  '/_app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -152,6 +161,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/verify-email'
     | '/activities'
+    | '/dashboard'
     | '/kanban'
     | '/planeacion'
     | '/reports'
@@ -159,6 +169,7 @@ export interface FileRouteTypes {
     | '/users'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/'
     | '/forgot-password'
     | '/landing'
     | '/login'
@@ -166,14 +177,15 @@ export interface FileRouteTypes {
     | '/signup'
     | '/verify-email'
     | '/activities'
+    | '/dashboard'
     | '/kanban'
     | '/planeacion'
     | '/reports'
     | '/settings'
     | '/users'
-    | '/'
   id:
     | '__root__'
+    | '/'
     | '/_app'
     | '/forgot-password'
     | '/landing'
@@ -182,15 +194,16 @@ export interface FileRouteTypes {
     | '/signup'
     | '/verify-email'
     | '/_app/activities'
+    | '/_app/dashboard'
     | '/_app/kanban'
     | '/_app/planeacion'
     | '/_app/reports'
     | '/_app/settings'
     | '/_app/users'
-    | '/_app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LandingRoute: typeof LandingRoute
@@ -251,12 +264,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_app/': {
-      id: '/_app/'
+    '/': {
+      id: '/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof AppIndexRouteImport
-      parentRoute: typeof AppRoute
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_app/users': {
       id: '/_app/users'
@@ -293,6 +306,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppKanbanRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/dashboard': {
+      id: '/_app/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/activities': {
       id: '/_app/activities'
       path: '/activities'
@@ -305,27 +325,28 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppActivitiesRoute: typeof AppActivitiesRoute
+  AppDashboardRoute: typeof AppDashboardRoute
   AppKanbanRoute: typeof AppKanbanRoute
   AppPlaneacionRoute: typeof AppPlaneacionRoute
   AppReportsRoute: typeof AppReportsRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppUsersRoute: typeof AppUsersRoute
-  AppIndexRoute: typeof AppIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppActivitiesRoute: AppActivitiesRoute,
+  AppDashboardRoute: AppDashboardRoute,
   AppKanbanRoute: AppKanbanRoute,
   AppPlaneacionRoute: AppPlaneacionRoute,
   AppReportsRoute: AppReportsRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppUsersRoute: AppUsersRoute,
-  AppIndexRoute: AppIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LandingRoute: LandingRoute,

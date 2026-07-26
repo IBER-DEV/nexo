@@ -354,7 +354,7 @@ export default function RoleSelector() {
     setEnteringDemo(true);
     try {
       await loginAsDemo(role);
-      navigate({ to: "/" });
+      navigate({ to: "/dashboard" });
     } catch {
       toast.error("La demo pública no está disponible ahora mismo.");
     } finally {

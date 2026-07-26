@@ -24,7 +24,7 @@ import {
 import { useAuth } from "@/providers/AuthProvider";
 
 const items = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Actividades", url: "/activities", icon: ListTodo },
   { title: "Planeación", url: "/planeacion", icon: CalendarRange, planningAccess: true },
   { title: "Kanban", url: "/kanban", icon: KanbanSquare },
@@ -44,7 +44,7 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="h-14 flex-row items-center border-b border-sidebar-border p-0">
-        <Link to="/" className="flex h-full items-center gap-2 px-2">
+        <Link to="/dashboard" className="flex h-full items-center gap-2 px-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
             <NexoMark color="white" className="h-4 w-4" />
           </div>
@@ -60,7 +60,7 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {visibleItems.map((item) => {
-                const active = item.url === "/" ? pathname === "/" : pathname.startsWith(item.url);
+                const active = pathname.startsWith(item.url);
                 return (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild isActive={active} tooltip={item.title}>

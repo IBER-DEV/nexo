@@ -15,7 +15,14 @@ había quedado diferido. Quedan pendientes solo los ítems que requieren produci
 (capturas, GIF, video) o diseñar un mecanismo nuevo (demo pública de solo lectura) — ver el
 detalle en cada sección.
 
-## Landing (`/landing`) — 7/10
+## Landing (`/`, con `/landing` como alias histórico) — 7/10
+
+> **2026-07-25:** la landing pasó de `/landing` a la raíz del dominio. Hasta entonces
+> `nexoengine.tech` servía el dashboard (`<title>Dashboard · Nexo</title>`) y rebotaba a
+> `/login` a quien no tuviera sesión: cualquiera que escribiera el dominio a secas —un
+> visitante, un buscador, el revisor de la pasarela de pagos— chocaba con un muro de login en
+> vez de ver el producto. El dashboard vive ahora en `/dashboard`; `/landing` sigue sirviendo
+> el mismo componente para no romper enlaces ya publicados.
 
 **Fortalezas a conservar:** `BoardSimulator` con plantillas reales (la mejor sección — muestra
 el diferenciador "tu flujo, no el nuestro" con datos verdaderos, no un mock genérico);

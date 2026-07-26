@@ -85,7 +85,7 @@ function UsersPage() {
 
   useEffect(() => {
     if (!isAdmin) {
-      navigate({ to: "/", replace: true });
+      navigate({ to: "/dashboard", replace: true });
     }
   }, [isAdmin, navigate]);
 

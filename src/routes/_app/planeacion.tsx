@@ -78,7 +78,7 @@ function PlaneacionPage() {
 
   useEffect(() => {
     if (!canAccessPlanning) {
-      navigate({ to: "/", replace: true });
+      navigate({ to: "/dashboard", replace: true });
     }
   }, [canAccessPlanning, navigate]);
 
