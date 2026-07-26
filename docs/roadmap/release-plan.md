@@ -23,7 +23,7 @@ Dependabot, repo renombrado y protegido. Detalle: `git show af3d650 --stat`.
 | 3 | Catálogos genéricos / campos personalizados | ⏸️ Pendiente, deuda consciente |
 | 4 | Signup self-service + onboarding | ✅ Completado (2026-07-18), alcance Bloque A+B+D |
 | 4c | Gestión de miembros y acceso a organizaciones | ✅ Completado (2026-07-18) |
-| 5 | Billing (Lemon Squeezy) | 📋 Diseñado (2026-07-18), sin implementar |
+| 5 | Billing (Lemon Squeezy) | ✅ Implementado (2026-07-25), falta conectar la tienda real |
 | 6 | Hosting del backend | 🚧 En progreso (2026-07-20) — backend en Railway + frontend en Cloudflare Workers |
 | 7 | Landing, README y primer minuto (pre-lanzamiento) | ✅ Completado (2026-07-21), falta contenido real (capturas/video/OG image) |
 
@@ -54,14 +54,25 @@ producto/diferenciadores → [product.md](product.md). Planes de implementación
      una tabla física `Membership` (ver ADR
      [0002](../adr/0002-membership-como-servicio-no-como-tabla.md) para el porqué y el punto
      de reapertura). Incluye además cambio de rol y desactivación de miembros desde la UI.
-5. **Billing** — 📋 diseñado 2026-07-18, sin implementar. Stripe descartado (no opera para
-   cuentas colombianas); proveedor elegido es **Lemon Squeezy** (Merchant of Record) por
-   velocidad de lanzamiento sobre margen — razonamiento completo en
-   [launch-strategy.md](launch-strategy.md), arquitectura de entidades/webhooks en
-   [monetization.md](monetization.md). Plan de sprints: (1) Checkout — SDK de Lemon Squeezy,
-   botón "Actualizar a Cloud", checkout hospedado; (2) Webhooks — endpoint firmado e
-   idempotente que actualiza `Organization.plan`; (3) Trial — 14 días sin tarjeta, conversión
-   desde la app; (4) Customer Portal — cambio de método de pago, cancelación, facturas.
+5. **Billing** — ✅ implementado 2026-07-25 (app `backend/apps/billing/`, 47 tests). Los cuatro
+   sprints del plan original están construidos: **Checkout** hospedado (`POST
+   /billing/checkout/`), **Webhooks** firmados e idempotentes (`POST /billing/webhook/`),
+   **Trial** de 14 días sin tarjeta (`POST /billing/trial/`) y **Customer Portal** (`GET
+   /billing/portal/`). Stripe descartado (no opera para cuentas colombianas); proveedor es
+   **Lemon Squeezy** (Merchant of Record) — razonamiento en
+   [launch-strategy.md](launch-strategy.md), entidades y política de acceso en
+   [monetization.md](monetization.md).
+
+   **Falta para cobrar de verdad:** crear la tienda y el producto en Lemon Squeezy, y poner las
+   cuatro variables (`LEMONSQUEEZY_API_KEY`/`STORE_ID`/`VARIANT_ID_CLOUD`/`WEBHOOK_SECRET`, ver
+   `backend/.env.example`) en el servicio de Railway, con el webhook apuntando a
+   `https://api.nexoengine.tech/api/v1/billing/webhook/`. Sin esas variables la facturación
+   queda **inerte a propósito** — es el modo correcto del self-hosted AGPL: nada gatea el acceso
+   y los endpoints de cobro responden 503. También queda pendiente el cron diario de
+   `manage.py expire_trials` en Railway (sin él, el plan guardado de un trial vencido se queda
+   desactualizado; el acceso no se ve afectado porque se resuelve en caliente) y **los límites
+   por plan**, que siguen sin diseñarse: hoy Cloud no restringe nada, así que el trial otorga
+   una diferencia que todavía es nominal.
 6. **Hosting del backend** — 🚧 backend desplegado en Railway (proyecto `nexo-backend`):
    servicio `backend` (build por `backend/Dockerfile`) + Postgres administrado, wireado por
    variables de referencia (`${{Postgres.PGHOST}}` etc., no una `DATABASE_URL` — `prod.py` usa
@@ -197,6 +208,15 @@ adelantado. Lista de features → [product.md](product.md).
   GitHub Discussions, y Roadmap de la landing reescrito a 3 bloques de valor para el usuario
   final. Mergeado a `main` (PR #24) y desplegado a producción (Cloudflare Worker + redeploy de
   Railway, migración `organizations.0004_waitlistsignup` aplicada).
+- **2026-07-25** — Fase 1 punto 5 (billing) implementado: app `apps/billing/` con las cuatro
+  entidades diseñadas, checkout hospedado, webhooks firmados con deduplicación por digest del
+  cuerpo, trial local de 14 días sin tarjeta y portal de cliente. El enforcement del estado de
+  suscripción se colgó de `DEFAULT_AUTHENTICATION_CLASSES`
+  (`BillingAwareJWTAuthentication`, que hereda de `DemoAwareJWTAuthentication`) y no de un
+  permission class, por la razón ya documentada en CLAUDE.md: un ViewSet con
+  `permission_classes` propio anula el default y la regla se cae en silencio. Dos decisiones de
+  producto que se apartan de la tabla original de [launch-strategy.md](launch-strategy.md), y
+  el porqué de cada una, en [monetization.md](monetization.md).
 - **2026-07-18** — Estrategia de lanzamiento de Nexo Cloud y billing definida (documentada en
   [launch-strategy.md](launch-strategy.md)): auditoría competitiva de Plane, tesis vertical, ICP
   explícito, qué no construir en 12 meses, y billing con Lemon Squeezy en vez de Stripe (bloqueado

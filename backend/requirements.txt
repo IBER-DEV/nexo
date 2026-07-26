@@ -12,3 +12,6 @@ google-auth==2.35.0
 gunicorn==23.0.0
 whitenoise==6.8.2
 django-anymail[postmark]==11.1
+# Dependencia directa desde apps/billing/provider.py (antes solo llegaba
+# como transitiva de gspread).
+requests==2.32.3
