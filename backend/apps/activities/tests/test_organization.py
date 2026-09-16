@@ -34,12 +34,11 @@ class OrganizationDetailTests(APITestCase):
     def test_slug_and_plan_are_read_only(self):
         self.client.force_authenticate(self.admin)
         res = self.client.patch(
-            "/api/v1/organization/", {"slug": "hackeado", "plan": "enterprise"}, format="json"
+            "/api/v1/organization/", {"slug": "hackeado"}, format="json"
         )
         self.assertEqual(res.status_code, status.HTTP_200_OK, res.data)
         self.org.refresh_from_db()
         self.assertEqual(self.org.slug, "orgdetail")
-        self.assertEqual(self.org.plan, "community")
 
     def test_admin_only_sees_own_org(self):
         other_org = make_org("otradetail", "Otra Detail")

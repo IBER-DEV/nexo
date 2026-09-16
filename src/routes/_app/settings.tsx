@@ -15,12 +15,11 @@ import { MasterCrudSection } from "@/components/settings/MasterCrudSection";
 import { WorkflowStatesManager } from "@/components/settings/WorkflowStatesManager";
 import { PrioritiesManager } from "@/components/settings/PrioritiesManager";
 import { OrganizationSettings } from "@/components/settings/OrganizationSettings";
-import { BillingSettings } from "@/components/settings/BillingSettings";
 import { AccessTokensSection } from "@/components/settings/AccessTokensSection";
 import { McpSection } from "@/components/settings/McpSection";
 import { useState } from "react";
 
-const TABS = ["cuenta", "maestros", "organizacion", "facturacion"] as const;
+const TABS = ["cuenta", "maestros", "organizacion"] as const;
 type SettingsTab = (typeof TABS)[number];
 
 export const Route = createFileRoute("/_app/settings")({
@@ -30,8 +29,8 @@ export const Route = createFileRoute("/_app/settings")({
       { name: "description", content: "Preferencias del workspace y cuenta." },
     ],
   }),
-  // `?tab=` deja que el banner de facturación aterrice directo en su
-  // pestaña en vez de dejar al usuario buscándola.
+  // `?tab=` permite enlazar directo a una pestaña en vez de dejar al
+  // usuario buscándola.
   validateSearch: (search: Record<string, unknown>): { tab?: SettingsTab } => {
     const tab = search.tab;
     return TABS.includes(tab as SettingsTab) ? { tab: tab as SettingsTab } : {};
@@ -55,7 +54,6 @@ function SettingsPage() {
           <TabsTrigger value="cuenta">Cuenta</TabsTrigger>
           {isAdmin && <TabsTrigger value="maestros">Maestros</TabsTrigger>}
           {isAdmin && <TabsTrigger value="organizacion">Organización</TabsTrigger>}
-          <TabsTrigger value="facturacion">Facturación</TabsTrigger>
         </TabsList>
 
         <div key={tab} className="animate-fade-in mt-4">
@@ -180,13 +178,6 @@ function SettingsPage() {
               <OrganizationSettings />
             </TabsContent>
           )}
-
-          {/* Visible para todos los roles a propósito: el estado de la
-              suscripción afecta a quien no puede pagarla igual que a quien
-              sí. El componente ya esconde los botones según `can_manage`. */}
-          <TabsContent value="facturacion" className="mt-0">
-            <BillingSettings />
-          </TabsContent>
         </div>
       </Tabs>
     </div>

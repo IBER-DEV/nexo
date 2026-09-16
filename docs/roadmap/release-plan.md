@@ -2,7 +2,7 @@
 
 Este archivo es sobre **estado y orden de entrega** — no sobre qué es cada feature (→
 [product.md](product.md)), por qué está hecha así por dentro (→ [architecture.md](architecture.md))
-o cómo se cobra (→ [monetization.md](monetization.md)).
+ni sobre licencia y costos (→ [sustainability.md](sustainability.md)).
 
 ## Fase 0 — Preparación Open Source
 
@@ -12,7 +12,7 @@ Licencia AGPL-3.0, CI (frontend + backend), primera suite de tests (12), imagen 
 
 Dependabot, repo renombrado y protegido. Detalle: `git show af3d650 --stat`.
 
-## Fase 1 — Fundaciones SaaS (habilita el plan Cloud)
+## Fase 1 — Fundaciones SaaS (habilita Nexo Cloud)
 
 **Estado: 🚧 En progreso.** Es el ~60% del esfuerzo total de toda la estrategia.
 
@@ -23,7 +23,7 @@ Dependabot, repo renombrado y protegido. Detalle: `git show af3d650 --stat`.
 | 3 | Catálogos genéricos / campos personalizados | ⏸️ Pendiente, deuda consciente |
 | 4 | Signup self-service + onboarding | ✅ Completado (2026-07-18), alcance Bloque A+B+D |
 | 4c | Gestión de miembros y acceso a organizaciones | ✅ Completado (2026-07-18) |
-| 5 | Billing (Lemon Squeezy) | ✅ Implementado (2026-07-25), falta conectar la tienda real |
+| 5 | ~~Billing (Lemon Squeezy)~~ | ❌ **Eliminado (2026-09-15)** — Nexo es gratis en todas sus versiones ([ADR 0003](../adr/0003-nexo-es-gratis.md)) |
 | 6 | Hosting del backend | 🚧 En progreso (2026-07-20) — backend en Railway + frontend en Cloudflare Workers |
 | 7 | Landing, README y primer minuto (pre-lanzamiento) | ✅ Completado (2026-07-21), falta contenido real (capturas/video/OG image) |
 
@@ -54,30 +54,20 @@ producto/diferenciadores → [product.md](product.md). Planes de implementación
      una tabla física `Membership` (ver ADR
      [0002](../adr/0002-membership-como-servicio-no-como-tabla.md) para el porqué y el punto
      de reapertura). Incluye además cambio de rol y desactivación de miembros desde la UI.
-5. **Billing** — ✅ implementado 2026-07-25 (app `backend/apps/billing/`, 47 tests). Los cuatro
-   sprints del plan original están construidos: **Checkout** hospedado (`POST
-   /billing/checkout/`), **Webhooks** firmados e idempotentes (`POST /billing/webhook/`),
-   **Trial** de 14 días sin tarjeta (`POST /billing/trial/`) y **Customer Portal** (`GET
-   /billing/portal/`). Stripe descartado (no opera para cuentas colombianas); proveedor es
-   **Lemon Squeezy** (Merchant of Record) — razonamiento en
-   [launch-strategy.md](launch-strategy.md), entidades y política de acceso en
-   [monetization.md](monetization.md).
+5. **Billing** — ❌ **eliminado el 2026-09-15.** Se implementó completo el 2026-07-25 (app
+   `backend/apps/billing/` con Lemon Squeezy: checkout hospedado, webhooks firmados e
+   idempotentes, trial de 14 días sin tarjeta, portal de cliente y techo de 5 puestos en el tier
+   gratuito de Cloud), pero **nunca llegó a cobrarle a nadie**: las variables `LEMONSQUEEZY_*`
+   jamás se configuraron en producción, así que la facturación estuvo inerte desde el primer día.
 
-   **Falta para cobrar de verdad:** crear la tienda y el producto en Lemon Squeezy, y poner las
-   cuatro variables (`LEMONSQUEEZY_API_KEY`/`STORE_ID`/`VARIANT_ID_CLOUD`/`WEBHOOK_SECRET`, ver
-   `backend/.env.example`) en el servicio de Railway, con el webhook apuntando a
-   `https://api.nexoengine.tech/api/v1/billing/webhook/`. Sin esas variables la facturación
-   queda **inerte a propósito** — es el modo correcto del self-hosted AGPL: nada gatea el acceso
-   y los endpoints de cobro responden 503. También queda pendiente el cron diario de
-   `manage.py expire_trials` y `manage.py sync_seats` en Railway (sin ellos, el plan guardado de
-   un trial vencido y la cantidad de puestos facturados se quedan desactualizados; el acceso y
-   los límites no se ven afectados porque se resuelven en caliente).
+   Nexo pasa a ser **gratis en todas sus versiones, Cloud incluido**, y el módulo se borró en vez
+   de dejarse apagado — consultaba el estado de la suscripción en cada petición autenticada, y un
+   webhook capaz de cambiarle el plan a una organización no debe quedar dormido esperando un
+   `.env` mal copiado. Decisión, alcance y qué sí sobrevivió (la lista de espera de Cloud, la
+   licencia AGPL, la cuota de MCP con otro sentido) en
+   [ADR 0003](../adr/0003-nexo-es-gratis.md); el modelo actual, en
+   [sustainability.md](sustainability.md).
 
-   **Límites por plan** — ✅ definidos e implementados 2026-07-25 (`apps/billing/limits.py`).
-   Techo de 5 usuarios activos en el tier gratuito de Cloud; el self-hosted no se limita nunca y
-   el plan de pago no tiene techo, pero sincroniza los puestos facturados contra el proveedor.
-   Tabla completa y los tres principios que la explican en
-   [monetization.md](monetization.md).
 6. **Hosting del backend** — 🚧 backend desplegado en Railway (proyecto `nexo-backend`):
    servicio `backend` (build por `backend/Dockerfile`, con `Root Directory = backend` — ver
    [operations.md](../operations.md), sin eso el build construye el frontend) + Postgres
@@ -179,15 +169,15 @@ exactamente el punto de partida de este hosting.
 **Estado: 🚧 prerequisito resuelto, servidor sin construir.**
 
 El diferenciador acordado ("conecta Nexo a tu Claude y que él cargue tus actividades") no
-necesita que Nexo pague inferencia: el usuario trae su propia IA. Por eso MCP va **gratis en
-todos los planes**, con cuota por plan — su trabajo es atraer, no cobrar (ver
-[monetization.md](monetization.md)).
+necesita que Nexo pague inferencia: el usuario trae su propia IA. Ese era el argumento para no
+cobrarlo cuando había planes; hoy no se cobra nada, así que de la cuota solo queda el tope de
+infraestructura (`MCP_DAILY_LIMIT`, sin valor por defecto).
 
 | # | Paso | Estado |
 |---|---|---|
 | 1 | Tokens de larga vida (`PersonalAccessToken`) | ✅ Completado (2026-07-26) |
 | 2 | Servidor MCP (herramientas sobre el API existente) | ✅ Completado (2026-07-26) |
-| 3 | Cuota de MCP por plan | ✅ Completado (2026-07-26) |
+| 3 | Cuota de MCP | ✅ Completado (2026-07-26), reformulada a `MCP_DAILY_LIMIT` el 2026-09-15 |
 | 4 | UI de conexión + mensaje en la landing | ✅ Completado (2026-07-26) |
 
 El paso 1 era el bloqueante real: el access token dura 8h y el refresh rota, así que ningún
@@ -208,10 +198,11 @@ IA?"), que es donde se explica que no pagamos inferencia porque el usuario trae 
 **Lo que queda es contenido, no código:** una guía paso a paso y una demo grabada del flujo
 "pídele a Claude que cargue tus actividades".
 
-## Fase 2 — Enterprise
+## Fase 2 — features de organización grande
 
-**Estado: 💤 No empezar todavía.** Se construye contra el primer contrato real, no por
-adelantado. Lista de features → [product.md](product.md).
+**Estado: 💤 No empezar todavía.** Se construye contra el primer caso real, no por adelantado.
+Ya no es una edición de pago: cuando exista, va gratis como todo lo demás. Lista de features →
+[product.md](product.md).
 
 ## Bitácora de hitos
 
@@ -283,8 +274,15 @@ adelantado. Lista de features → [product.md](product.md).
   permission class, por la razón ya documentada en CLAUDE.md: un ViewSet con
   `permission_classes` propio anula el default y la regla se cae en silencio. Dos decisiones de
   producto que se apartan de la tabla original de [launch-strategy.md](launch-strategy.md), y
-  el porqué de cada una, en [monetization.md](monetization.md).
+  el porqué de cada una, en [sustainability.md](sustainability.md).
 - **2026-07-18** — Estrategia de lanzamiento de Nexo Cloud y billing definida (documentada en
   [launch-strategy.md](launch-strategy.md)): auditoría competitiva de Plane, tesis vertical, ICP
   explícito, qué no construir en 12 meses, y billing con Lemon Squeezy en vez de Stripe (bloqueado
   para cuentas colombianas). Punto 5 pasa de "sin diseñar" a "diseñado, sin implementar".
+- **2026-09-15** — **Billing eliminado por completo.** Nexo pasa a ser gratis en todas sus
+  versiones, Cloud incluido: se borraron la app `apps/billing/`, el campo `Organization.plan`,
+  los límites de puestos, los dos crons (`expire_trials`, `sync_seats`) y toda la UI de
+  facturación. La cuota de MCP dejó de ser "por plan" y pasó a `MCP_DAILY_LIMIT` (default: sin
+  tope). El enforcement global que menciona la entrada anterior sigue existiendo en
+  `enforce_global_policy`, ahora solo con las reglas de demo y alcance de token. Razonamiento
+  completo en [ADR 0003](../adr/0003-nexo-es-gratis.md).

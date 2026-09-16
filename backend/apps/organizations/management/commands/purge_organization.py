@@ -85,7 +85,7 @@ class Command(BaseCommand):
             "stakeholders": Stakeholder.objects.filter(organization=org).count(),
         }
 
-        self.stdout.write(f"Organización: {org.nombre} (slug={org.slug}, plan={org.plan})")
+        self.stdout.write(f"Organización: {org.nombre} (slug={org.slug})")
         for etiqueta, cantidad in inventario.items():
             self.stdout.write(f"  {cantidad:>5}  {etiqueta}")
 

@@ -9,7 +9,7 @@ así que esta es la única capa realmente global.
 
 **Por qué una función y no una jerarquía de clases:** antes el enforcement
 estaba dentro de `authenticate()` y se encadenaba por herencia
-(`BillingAware` heredaba de `DemoAware`). Eso funcionaba mientras hubo un
+(una clase por regla, heredando de la anterior). Eso funcionaba mientras hubo un
 solo mecanismo de autenticación, pero al agregar tokens de larga vida quedó
 claro el problema: un mecanismo nuevo entra por otra clase y se salta todas
 las reglas sin que nada avise. `enforce_global_policy` es el punto único que
@@ -57,11 +57,6 @@ def assert_write_allowed(user, *, token=None) -> None:
         raise PermissionDenied(DEMO_READONLY_MESSAGE)
     if token is not None and token.scope == PersonalAccessToken.Scope.READ:
         raise PermissionDenied(READ_ONLY_TOKEN_MESSAGE)
-    # Import local: apps.billing importa de apps.users, a nivel de módulo
-    # sería un ciclo.
-    from apps.billing.access import assert_can_write
-
-    assert_can_write(user)
 
 
 def enforce_global_policy(request, user, *, token=None) -> None:
@@ -81,23 +76,14 @@ def enforce_global_policy(request, user, *, token=None) -> None:
         )
 
     if METHOD_AGNOSTIC_PATH_FRAGMENT in request.path:
-        # Solo se valida que pueda *entrar*; el permiso de escritura lo
-        # resuelve cada herramienta.
-        from apps.billing.access import assert_can_read
-
-        assert_can_read(user)
+        # Entrar a /mcp/ no exige nada extra; el permiso de escritura lo
+        # resuelve cada herramienta llamando a `assert_write_allowed`.
         return
 
     if request.method not in SAFE_METHODS and not request.path.endswith(
         DEMO_EXEMPT_PATH_SUFFIX
     ):
         assert_write_allowed(user, token=token)
-
-    # El nivel `blocked` corta también las lecturas, y las exenciones de
-    # ruta de facturación solo aplican acá.
-    from apps.billing.access import enforce_billing_access
-
-    enforce_billing_access(request, user)
 
 
 class NexoJWTAuthentication(JWTAuthentication):

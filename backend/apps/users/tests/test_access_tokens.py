@@ -13,8 +13,6 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from apps.activities.tests.factories import activity_payload, make_activity, make_user
-from apps.billing.models import Subscription
-from apps.billing.tests.test_access import BILLING_ON, make_subscription
 from apps.users.models import PersonalAccessToken
 
 
@@ -158,28 +156,6 @@ class GlobalPolicyTests(APITestCase):
 
     def _auth(self, raw):
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {raw}")
-
-    @override_settings(**BILLING_ON)
-    def test_un_token_no_escapa_al_estado_de_la_suscripcion(self):
-        """Sin la política compartida, un token con la organización en
-        `past_due` podría escribir mientras el navegador no puede."""
-        make_subscription(self.org, status=Subscription.Status.PAST_DUE)
-        _, raw = PersonalAccessToken.issue(user=self.user, nombre="MCP")
-        self._auth(raw)
-        self.assertEqual(self.client.get("/api/v1/activities/").status_code, status.HTTP_200_OK)
-        res = self.client.post(
-            "/api/v1/activities/", activity_payload(self.user), format="json"
-        )
-        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
-
-    @override_settings(**BILLING_ON)
-    def test_una_suscripcion_expirada_bloquea_tambien_por_token(self):
-        make_subscription(self.org, status=Subscription.Status.EXPIRED)
-        _, raw = PersonalAccessToken.issue(user=self.user, nombre="MCP")
-        self._auth(raw)
-        self.assertEqual(
-            self.client.get("/api/v1/activities/").status_code, status.HTTP_403_FORBIDDEN
-        )
 
     def test_un_token_de_la_demo_publica_no_escribe(self):
         demo = make_user(

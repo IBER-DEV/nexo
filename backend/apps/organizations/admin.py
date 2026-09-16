@@ -28,9 +28,9 @@ class OrganizationAddForm(forms.ModelForm):
 
 @admin.register(Organization)
 class OrganizationAdmin(admin.ModelAdmin):
-    list_display = ["nombre", "slug", "codigo_prefix", "plan", "is_active", "created_at"]
+    list_display = ["nombre", "slug", "codigo_prefix", "is_active", "created_at"]
     search_fields = ["nombre", "slug"]
-    list_filter = ["plan", "is_active"]
+    list_filter = ["is_active"]
     prepopulated_fields = {"slug": ["nombre"]}
 
     def get_form(self, request, obj=None, **kwargs):

@@ -125,17 +125,16 @@ estrategia:
       `mesa_ayuda`)
 - [x] Registro self-service (organización + primer usuario, auto-login)
 - [x] Códigos de acceso para incorporar miembros a una organización existente
+- [x] Servidor MCP: conecta tu propio asistente de IA con un token de acceso personal
 - [ ] Catálogos genéricos / campos personalizados (deuda consciente, sin caso de cliente real)
-- [ ] Billing (Lemon Squeezy)
-- [ ] Hosting del backend en producción
+- [ ] Nexo Cloud: la instancia alojada por nosotros (gratis, igual que el resto)
 
 Detalle completo en [docs/roadmap/release-plan.md](docs/roadmap/release-plan.md).
 
 ## Documentación
 
 - [CLAUDE.md](CLAUDE.md) — contexto técnico, decisiones de arquitectura y gotchas conocidos.
-- [docs/ROADMAP.md](docs/ROADMAP.md) — estrategia open core y fases del producto (Community
-  / Cloud / Enterprise).
+- [docs/ROADMAP.md](docs/ROADMAP.md) — producto, arquitectura y fases de entrega.
 
 ## Contribuir
 

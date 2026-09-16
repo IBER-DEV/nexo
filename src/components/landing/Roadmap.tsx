@@ -39,8 +39,7 @@ const PHASES: Phase[] = [
     title: "En desarrollo",
     era: "Próximamente",
     items: [
-      "Plan Cloud: nosotros alojamos y actualizamos por ti, sin que toques un servidor",
-      "Facturación simple por número de usuarios activos",
+      "Nexo Cloud: nosotros alojamos y actualizamos por ti, sin que toques un servidor — gratis, igual que el resto",
       "Respaldos automáticos administrados",
     ],
     badge: "en construcción",

@@ -23,13 +23,14 @@ const COMMUNITY_FEATURES = [
   "Sync opcional con Google Sheets/AppSheet",
 ];
 
-// $5–10 usd/usuario/mes y Enterprise (contrato anual) son la meta de precio
-// documentada en docs/ROADMAP.md — Cloud/Enterprise todavía no están construidos (Fase 1/2).
+// Cloud también es gratis: no hay tier de pago que construir, solo el
+// alojamiento. La lista de espera existe por cupo de infraestructura —
+// pagamos los servidores— y no por precio. Ver docs/roadmap/monetization.md.
 const CLOUD_FEATURES = [
+  "Exactamente el mismo producto, sin features recortadas",
   "Alojado por nosotros, actualizaciones automáticas",
   "Backups administrados",
-  "SSO/SAML y auditoría (Enterprise)",
-  "Soporte prioritario",
+  "Sin límite de usuarios ni tarjeta de crédito",
 ];
 
 export default function Pricing() {
@@ -100,14 +101,14 @@ export default function Pricing() {
           className="mx-auto max-w-2xl text-center"
         >
           <span className="font-mono text-xs uppercase tracking-widest text-emerald-400">
-            {"// precios y modelo open core"}
+            {"// precios"}
           </span>
           <h2 className="mt-4 font-display text-4xl font-bold tracking-tight text-white md:text-6xl">
-            Abierto en el <span className="text-gradient-flow">núcleo</span>.
+            Gratis. <span className="text-gradient-flow">Todo</span>.
           </h2>
           <p className="mt-5 text-sm leading-relaxed text-gray-400 md:text-lg">
-            Autoaloja el motor completo gratis, para siempre. Cloud y Enterprise están en el roadmap
-            — todavía no son un producto activo.
+            Sin planes, sin límite de usuarios, sin tarjeta. El motor completo bajo AGPL-3.0 en tu
+            servidor, y —cuando abramos— el mismo producto alojado por nosotros, también gratis.
           </p>
         </motion.div>
 
@@ -126,9 +127,9 @@ export default function Pricing() {
                 <Container className="h-5 w-5" />
               </span>
               <div>
-                <h3 className="font-display text-lg font-bold text-white">Community</h3>
+                <h3 className="font-display text-lg font-bold text-white">Self-hosted</h3>
                 <p className="font-mono text-[10px] uppercase tracking-widest text-gray-500">
-                  self-hosted · disponible hoy
+                  en tu servidor · disponible hoy
                 </p>
               </div>
             </div>
@@ -167,7 +168,7 @@ export default function Pricing() {
                 >
                   Crear cuenta
                 </Link>{" "}
-                aplica solo si vas a instalar Nexo en tu servidor o a usar Cloud.
+                aplica cuando vayas a usarlo en serio.
               </p>
               <button
                 onClick={copyCmd}
@@ -192,7 +193,7 @@ export default function Pricing() {
             </div>
           </motion.div>
 
-          {/* Cloud / Enterprise — en el roadmap, no disponible aún */}
+          {/* Nexo Cloud — mismo producto, también gratis; falta abrirlo */}
           <motion.div
             variants={fadeUp}
             initial="hidden"
@@ -210,23 +211,23 @@ export default function Pricing() {
                   <Cloud className="h-5 w-5" />
                 </span>
                 <div>
-                  <h3 className="font-display text-lg font-bold text-white">Cloud / Enterprise</h3>
+                  <h3 className="font-display text-lg font-bold text-white">Nexo Cloud</h3>
                   <p className="font-mono text-[10px] uppercase tracking-widest text-gray-500">
-                    hospedado por nosotros · fase 1/2
+                    alojado por nosotros · próximamente
                   </p>
                 </div>
               </div>
               <div className="mt-7 flex items-baseline gap-2.5">
                 <span className="font-display text-5xl font-bold tracking-tight text-white">
-                  $5–10
+                  $0
                 </span>
-                <span className="font-mono text-xs uppercase tracking-widest text-gray-400">
-                  / usuario / mes
+                <span className="font-mono text-xs uppercase tracking-widest text-emerald-400">
+                  / también gratis
                 </span>
               </div>
               <p className="mt-1.5 text-xs text-gray-500">
-                Estimado para el lanzamiento — el precio final se confirma antes de abrir el acceso
-                beta.
+                La lista de espera es por cupo de infraestructura, no por precio: los servidores los
+                pagamos nosotros y abrimos por tandas.
               </p>
               <ul className="mt-7 flex-1 space-y-3.5">
                 {CLOUD_FEATURES.map((f) => (
@@ -239,7 +240,7 @@ export default function Pricing() {
               {joinedWaitlist ? (
                 <div className="mt-9 flex w-full items-center justify-center gap-2.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-6 py-3 text-sm font-medium text-emerald-300">
                   <CheckCircle2 className="h-4 w-4" />
-                  Listo. Te avisaremos por correo cuando abramos el acceso beta.
+                  Listo. Te avisaremos por correo en cuanto abramos tu cupo.
                 </div>
               ) : (
                 <form onSubmit={joinWaitlist} className="mt-9 space-y-2.5">
@@ -277,7 +278,7 @@ export default function Pricing() {
           custom={3}
           className="mt-10 text-center font-mono text-xs text-gray-600"
         >
-          núcleo bajo AGPL-3.0 · sin feature flags en self-hosted · exporta tus datos cuando quieras
+          AGPL-3.0 · ninguna feature detrás de un pago · exporta tus datos cuando quieras
         </motion.p>
         <motion.p
           variants={fadeUp}

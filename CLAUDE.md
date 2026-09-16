@@ -1,11 +1,14 @@
 # CLAUDE.md
 
 Contexto de proyecto para Claude Code. Léelo al empezar cualquier sesión nueva — evita
-re-descubrir decisiones ya tomadas. El roadmap (producto, arquitectura, monetización, plan de
+re-descubrir decisiones ya tomadas. El roadmap (producto, arquitectura, sostenibilidad, plan de
 entrega) vive en [docs/ROADMAP.md](docs/ROADMAP.md) — es un índice a `docs/roadmap/*.md` y
 `docs/adr/`; este archivo es sobre el código en su estado actual.
 
 ## Qué es Nexo
+
+**Gratis en todas sus versiones, Cloud incluido** — no hay planes, pasarela de pagos ni
+features detrás de un muro (ADR 0003). Si vas a agregar un límite, no puede ser "del plan".
 
 Plataforma open source de gestión de actividades para equipos de TI: backlog, planeación
 semanal/mensual, Kanban, reportes, roles (admin/coordinador/miembro). Nació como herramienta
@@ -59,8 +62,8 @@ python manage.py migrate && python manage.py seed_data && python manage.py runse
 # Backend — Docker (Postgres real, hot-reload)
 docker compose up --build           # localhost:8000
 
-# Tests backend (215 tests: auth, CRUD, visibilidad, tenancy, maestros, sync, organización,
-# plantillas, facturación)
+# Tests backend (225 tests: auth, CRUD, visibilidad, tenancy, maestros, sync, organización,
+# plantillas, tokens, MCP)
 docker compose exec -T backend python manage.py test
 
 # Sync AppSheet (Google Sheets) — requiere GOOGLE_SHEETS_CREDENTIALS_JSON configurado
@@ -149,15 +152,15 @@ diseño completo.
 - **Toda regla global vive en `enforce_global_policy`, no en una clase de autenticación.** Hay
   dos mecanismos (`NexoJWTAuthentication` para el navegador y
   `PersonalAccessTokenAuthentication` para tokens de larga vida) y **ambos** la llaman. Antes el
-  enforcement estaba dentro de `authenticate()` y se encadenaba por herencia
-  (`BillingAwareJWTAuthentication` heredaba de `DemoAwareJWTAuthentication`, ambas ya
-  eliminadas); eso funcionaba con un solo mecanismo, pero el segundo habría entrado por otra
-  clase salteándose demo y facturación sin que nada avisara. Si agregas un tercero (OAuth), su
-  única obligación es llamar a esa función.
-- **Un test no debe depender de la *ausencia* de configuración.** Los cuatro tests del caso
-  self-hosted usan `@override_settings(**BILLING_OFF)` explícito: sin eso pasaban en CI (sin
-  credenciales) y empezaban a fallar en la máquina de quien ya conectó su tienda de Lemon
-  Squeezy — el peor modo de fallo posible. Ya pasó una vez.
+  enforcement estaba dentro de `authenticate()` y se encadenaba por herencia (una clase de
+  autenticación por regla, heredando de la anterior, todas ya eliminadas); eso funcionaba con un
+  solo mecanismo, pero el segundo habría entrado por otra clase salteándose las reglas sin que
+  nada avisara. Si agregas un tercero (OAuth), su única obligación es llamar a esa función.
+- **Un test no debe depender de la *ausencia* de configuración.** Un test que pasa solo porque
+  una variable de entorno no está puesta pasa en CI y falla en la máquina de quien sí la
+  configuró — el peor modo de fallo posible. Ya pasó una vez (con las credenciales de la
+  facturación, que ya no existe). Si el comportamiento depende de una setting, ponla explícita
+  con `@override_settings` en ambos sentidos.
 
 ## CI (`.github/workflows/ci.yml`)
 
@@ -255,75 +258,32 @@ elige "Tengo un código" en `/signup` (el mismo `POST /auth/signup/` con dos mod
 - `GET /auth/access-codes/resolve/?codigo=` es público (preview "Te unirás a X como Y") — la
   entropía del código (~59 bits, alfabeto sin caracteres ambiguos) hace inviable enumerar.
 
-## Fase 1 — Punto 5: Billing con Lemon Squeezy (COMPLETADO — 2026-07-25)
+## Facturación: ELIMINADA (2026-09-15) — no la reintroduzcas por inercia
 
-App nueva `backend/apps/billing/` con las cuatro entidades del diseño (`BillingCustomer`,
-`Subscription`, `CheckoutSession`, `WebhookEvent`) y los cuatro sprints construidos: checkout
-hospedado, webhooks firmados, trial de 14 días sin tarjeta y portal de cliente. Endpoints bajo
-`/api/v1/billing/`; UI en Configuración → Facturación (`BillingSettings`) más un banner global
-(`BillingStatusBanner`). Proveedor: Lemon Squeezy como Merchant of Record (Stripe no opera para
-cuentas colombianas — ver `docs/roadmap/launch-strategy.md`).
+Existió: `backend/apps/billing/` con Lemon Squeezy (checkout, webhooks firmados, trial de 14
+días, portal de cliente), planes `community`/`cloud`/`enterprise` en `Organization.plan` y un
+techo de 5 puestos en el tier gratuito de Cloud. **Se borró entero** — app, campo, tablas
+(migración `organizations.0005`), UI, crons y variables `LEMONSQUEEZY_*`. Nexo es gratis en
+todas sus versiones. Razonamiento en [docs/adr/0003-nexo-es-gratis.md](docs/adr/0003-nexo-es-gratis.md).
 
-- **Billing es opt-in y falla abierto para el acceso, cerrado para la firma.** Sin
-  `LEMONSQUEEZY_API_KEY`/`STORE_ID`/`VARIANT_ID_CLOUD` configuradas (el self-hosted AGPL), nada
-  gatea nada y los endpoints de cobro responden 503. Pero `verify_signature` sin
-  `WEBHOOK_SECRET` **rechaza** — un webhook no verificable puede cambiarle el plan a una org.
-- **El enforcement vive en `enforce_global_policy`, no en un permission class**
-  (`apps.billing.access.enforce_billing_access`, llamada desde
-  `apps/users/authentication.py`). Es el mismo gotcha ya documentado arriba: un ViewSet con
-  `permission_classes` propio anula el default. `/billing/` y `/auth/` quedan exentos —
-  bloquear el endpoint por el que se paga a quien tiene que pagar es un callejón sin salida que
-  solo se sale por soporte manual.
-- **Idempotencia de webhooks por sha256 del cuerpo crudo**, no por un id del proveedor (Lemon
-  Squeezy no garantiza uno). Por eso `WebhookView` lee `request.body` **antes** de tocar
-  `request.data`: el parser de DRF consume el stream y la firma es sobre esos bytes exactos.
-- **El webhook responde 200 aunque el procesamiento falle** (el evento queda `failed` y visible
-  en el admin, que es la cola de trabajo manual). Lemon Squeezy reintenta ante cualquier no-2xx,
-  y los fallos reales de este handler no se arreglan reintentando. Solo la firma inválida da 401.
-- **Ningún sitio escribe `Organization.plan` directo** — siempre `service.sync_organization_plan()`,
-  mismo patrón que `membership.add_member()` para `user.organization` (ADR 0002).
-- **Un trial vencido degrada el plan, no el acceso**; una suscripción `cancelled` con `ends_at`
-  futuro conserva acceso completo. Ambas se apartan de la tabla original del roadmap a
-  propósito — el porqué está en `docs/roadmap/monetization.md`, no lo "corrijas" a la tabla.
-- `manage.py expire_trials` (idempotente, pensado como cron diario en Railway) revierte a
-  Community el plan guardado de los trials vencidos. Sin cron, el único efecto es que ese valor
-  se queda desactualizado — el acceso se resuelve en caliente y no depende de él.
+Lo que hay que saber al tocar código hoy:
 
-### Límites por plan (`apps/billing/limits.py`)
-
-Tres principios, cada uno con su razón — no los relajes sin entenderla:
-
-1. **El self-hosted no se limita nunca.** El gate es `provider.is_configured()`, el mismo de la
-   facturación: `plan="community"` significa "self-host libre" (sin techo) o "tier gratuito de
-   Cloud" (5 puestos) según ese flag. Limitar un binario AGPL que corre en el servidor de otro
-   rompe la promesa open core y además es inaplicable.
-2. **El muro es de puestos, no de features.** El core, el sync de Sheets y —cuando exista— MCP
-   van completos en todos los planes. Esconder el diferenciador detrás del plan mata la razón
-   por la que alguien elige Nexo sobre Plane; se cobra por el eje que crece con el valor.
-3. **Un límite bloquea agregar, nunca quita lo que ya existe.** Bajar de plan no desactiva a
-   nadie. Los usuarios desactivados no ocupan puesto: esa es la válvula de escape.
-
-- **Dos puertas ocupan un puesto y las dos están tapadas**: `membership.add_member()` (entrada
-  nueva, incluido el signup con código) y reactivar a alguien vía `PATCH /users/{pk}/`
-  (`UserTeamUpdateSerializer.validate`). Si agregas una tercera, tápala — con solo una abierta el
-  techo es decorativo.
-- **`limits.effective_plan()` resuelve el plan en caliente**, igual que el nivel de acceso: un
-  trial vencido recupera el techo sin esperar al cron de `expire_trials`. Nunca uses
-  `organization.plan` directo para decidir un límite — tendrías los límites de un plan y los
-  permisos de otro.
-- **`service.sync_seats()` empuja los usuarios activos como cantidad facturada** (`quantity` del
-  subscription-item de Lemon Squeezy). Sin esto, "puestos ilimitados en el plan de pago" sería
-  literal. Es **best-effort a propósito**: va en `transaction.on_commit` y se traga los errores
-  del proveedor — nadie debería quedarse sin poder sumar a un compañero por un timeout. La red
-  es `manage.py sync_seats` (idempotente, cron diario).
-- **La cantidad de puestos se fija en tres momentos, y los tres hacen falta.** (1) Al abrir el
-  checkout (`checkout_data.variant_quantities`), para que la *primera* factura ya salga con el
-  equipo completo — sin esto una org de 8 pagaba 1 asiento el primer mes, porque ajustar después
-  solo corrige de la segunda factura en adelante. (2) Al aplicar la suscripción del webhook, por
-  si el equipo cambió entre abrir el checkout y pagar. (3) Cada vez que alguien entra o sale.
-- **`provider.create_checkout()` valida `is_configured()` al entrar**, no solo dentro de
-  `_request()`: armar el payload ya lee las settings (`int(VARIANT_ID_CLOUD)`), así que sin
-  credenciales reventaba con un `ValueError` opaco antes de llegar a la petición.
+- **No existe `Organization.plan`.** Si algo necesita ramificar por "tipo de organización", no
+  lo hay: todas son iguales. Los feature flags (`DEFAULT_FEATURE_FLAGS` en
+  `apps/organizations/models.py`) existen para *apagar* una feature ante un problema, no para
+  venderla, y no tienen dimensión de plan.
+- **No hay límite de puestos.** `membership.add_member()` y la reactivación por
+  `PATCH /users/{pk}/` eran las dos puertas que lo aplicaban; ya no consultan nada. Sumar a
+  alguien no puede fallar por cupo.
+- **`enforce_global_policy` sigue siendo el punto único de reglas globales**, pero ahora solo
+  con demo de solo lectura y alcance del token. El gotcha que lo originó (un ViewSet con
+  `permission_classes` propio anula el default de DRF) sigue vigente y es la razón de que exista.
+- **La cuota de MCP ya no es "por plan"**: es `MCP_DAILY_LIMIT` (settings), una protección de
+  infraestructura del operador, sin valor por defecto = sin tope. Ver `apps/mcp/throttling.py`.
+- **`WaitlistSignup` se queda.** No es captura de leads para vender: Nexo Cloud abre por tandas
+  porque los servidores los pagamos nosotros, y esa es la única razón por la que hay lista.
+- **La licencia sigue siendo AGPL-3.0.** El motivo cambió (ya no protege un negocio Cloud, sí la
+  reciprocidad); la licencia no.
 
 ## Tokens de acceso personal (COMPLETADO — 2026-07-26)
 
@@ -360,12 +320,11 @@ Cinco herramientas: `obtener_workspace`, `listar_actividades`, `listar_usuarios`
   responder JSON plano a cada POST alcanza. Agregarlo es el día que haya herramientas largas o
   notificaciones servidor→cliente, no antes.
 - **MCP habla POST siempre, así que el verbo HTTP dejó de indicar si algo escribe.** Por eso la
-  política se partió en `assert_can_read`/`assert_can_write` (método-agnósticas) y
-  `enforce_billing_access` se construye sobre ellas — no al revés, para que la regla no pueda
-  divergir entre el API REST y MCP. `/mcp/` está exento del chequeo por verbo
-  (`METHOD_AGNOSTIC_PATH_FRAGMENT`) y **cada herramienta declara `writes`**; el despachador le
-  exige `assert_write_allowed` antes de ejecutarla. Si agregas una herramienta que escribe y no
-  lo declaras, se salta la regla.
+  regla de escritura vive en `assert_write_allowed(user, token=...)`, que es método-agnóstica:
+  `enforce_global_policy` la llama cuando el verbo no es seguro, y el despachador de MCP la
+  llama directo — así las dos rutas no pueden divergir. `/mcp/` está exento del chequeo por
+  verbo (`METHOD_AGNOSTIC_PATH_FRAGMENT`) y **cada herramienta declara `writes`**. Si agregas
+  una herramienta que escribe y no lo declaras, se salta la regla.
 - **Un token de solo lectura no ve las herramientas que escriben** en `tools/list`. Mostrárselas
   para después rechazarlas hace que el modelo gaste turnos intentando algo imposible.
 - **Los errores de dominio y de permisos vuelven como `isError: true` dentro del resultado**, no
@@ -376,9 +335,10 @@ Cinco herramientas: `obtener_workspace`, `listar_actividades`, `listar_usuarios`
   `ActivitySerializer` y las lecturas por `activities/visibility.py::visible_activities()`, que
   se extrajo del `ActivityViewSet` justamente para esto — una regla de visibilidad con dos
   implementaciones es una fuga esperando a que alguien toque solo una.
-- **Cuota por plan** en `apps/mcp/throttling.py`: gratis en todos los planes, con tope distinto
-  (community 200/día, cloud 5000/día, enterprise sin tope). El self-hosted no se limita nunca —
-  mismo gate `provider.is_configured()` que los puestos.
+- **Cuota en `apps/mcp/throttling.py`: `MCP_DAILY_LIMIT` (settings), por usuario, sin valor por
+  defecto = sin tope.** No es un muro comercial —MCP es gratis, como todo— sino una protección
+  de infraestructura que decide quien opera la instancia: en self-hosted el servidor lo paga él.
+  Era una tabla de topes por plan; si vuelves a ver algo así, es un residuo.
 - **La configuración de conexión se le entrega armada al usuario** (`McpConnection.tsx`, en
   Configuración → Cuenta). El bloque con el token real solo puede aparecer en el diálogo de
   "token creado", que es el único momento en que existe en claro; la tarjeta permanente
@@ -398,7 +358,8 @@ tocar código:
   (usuarios `demo-*` con `is_demo_readonly`, 42 actividades). Borrarla rompe los botones
   "Probar como {rol}". La org `acme` sí es ruido: se limpia con
   `manage.py purge_organization acme` (dry-run por defecto).
-- **Dos crons pendientes de programar**, ninguno bloqueante: `expire_trials` y `sync_seats`.
+- **No hay crons.** Los dos que había (`expire_trials`, `sync_seats`) se fueron con la
+  facturación; nada queda que se desincronice con el tiempo.
 
 ## Deuda conocida / pendiente
 

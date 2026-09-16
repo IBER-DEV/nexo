@@ -14,11 +14,10 @@ class OrganizationSerializer(serializers.ModelSerializer):
             "timezone",
             "locale",
             "currency",
-            "plan",
             "appsheet_spreadsheet_id",
             "appsheet_worksheet_name",
         ]
-        read_only_fields = ["id", "slug", "plan"]
+        read_only_fields = ["id", "slug"]
 
 
 class WaitlistJoinSerializer(serializers.Serializer):
