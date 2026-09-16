@@ -24,7 +24,7 @@ export const landingHead = {
     {
       name: "description",
       content:
-        "Backlog, planeación, Kanban y reportes con flujos configurables por organización: elige una plantilla, ajusta estados y prioridades, e invita a tu equipo con un código de acceso. Crea tu espacio en minutos. Open source bajo AGPL-3.0, autoalojable con Docker.",
+        "Gratis y sin límite de usuarios. Backlog, planeación, Kanban y reportes con flujos configurables por organización: elige una plantilla, ajusta estados y prioridades, e invita a tu equipo con un código de acceso. Conecta tu propio asistente de IA por MCP. Open source bajo AGPL-3.0, alojado por nosotros o autoalojable con Docker.",
     },
   ],
   links: [

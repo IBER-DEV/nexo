@@ -29,6 +29,7 @@ const PHASES: Phase[] = [
       "Reportes y métricas de avance por persona, equipo y periodo",
       "Sincronización opcional con Google Sheets, si ya vives ahí",
       "Conecta tu propio asistente de IA y pídele que cargue actividades o te resuma el backlog",
+      "Nexo Cloud: creas tu organización y trabajas al instante, sin instalar ni pagar nada",
     ],
     badge: "core del producto",
     icon: Check,
@@ -39,8 +40,8 @@ const PHASES: Phase[] = [
     title: "En desarrollo",
     era: "Próximamente",
     items: [
-      "Nexo Cloud: nosotros alojamos y actualizamos por ti, sin que toques un servidor — gratis, igual que el resto",
       "Respaldos automáticos administrados",
+      "Guía paso a paso y demo en video de la conexión con tu asistente de IA",
     ],
     badge: "en construcción",
     icon: MoveRight,

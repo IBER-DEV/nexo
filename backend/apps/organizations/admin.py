@@ -47,6 +47,12 @@ class OrganizationAdmin(admin.ModelAdmin):
 
 @admin.register(WaitlistSignup)
 class WaitlistSignupAdmin(admin.ModelAdmin):
+    """Solo lectura: nadie se anota ya (ver el modelo). Esta pantalla existe
+    para exportar los correos pendientes de avisar que Cloud abrió."""
+
     list_display = ["email", "source", "created_at"]
     search_fields = ["email"]
     list_filter = ["source"]
+
+    def has_add_permission(self, request):
+        return False

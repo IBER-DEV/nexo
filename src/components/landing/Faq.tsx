@@ -18,7 +18,7 @@ const QUESTIONS = [
   },
   {
     q: "¿Cobran extra por las funciones de IA?",
-    a: "No cobramos por nada, empezando por la IA: Nexo no paga inferencia. Conectas tu propio asistente (Claude u otro cliente compatible con MCP) con un token que generas desde Configuración, y le pides que cargue actividades, te resuma el backlog o mueva estados.",
+    a: "No cobramos por nada, empezando por la IA: Nexo no paga inferencia. Ya está disponible, no es un plan a futuro — generas un token en Configuración → Cuenta, Nexo te entrega el bloque de configuración listo para pegar, y tu propio Claude (o cualquier cliente compatible con MCP) puede cargar actividades, resumirte el backlog o mover estados.",
   },
   {
     q: "¿Gratis de verdad? ¿Dónde está el truco?",

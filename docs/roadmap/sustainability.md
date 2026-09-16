@@ -20,9 +20,10 @@ Una sola edición del producto, disponible de dos maneras:
 | Usuarios | sin límite | sin límite |
 | Quién paga la infraestructura | tú | nosotros |
 
-No hay un "tier gratuito" con techo: no existe un plan superior al que empujar. Que Cloud tenga
-lista de espera no es un embudo de conversión — es cupo real de servidores, y es la única
-diferencia operativa entre las dos columnas.
+No hay un "tier gratuito" con techo: no existe un plan superior al que empujar. **Cloud está
+abierto**: `/auth/signup/` entrega una organización completa en el acto, sin lista de espera,
+sin tarjeta y sin prueba que venza. La única diferencia entre las dos columnas es quién paga el
+servidor.
 
 ### Consecuencias para el diseño del código
 
@@ -58,8 +59,10 @@ no hay edición Enterprise que licenciar aparte.
 Ser gratis no es ser gratuito de producir. Los costos reales, y por qué hoy son asumibles:
 
 - **Infraestructura de Cloud** (Railway + Postgres + correo transaccional). Es el único costo que
-  crece con los usuarios, y por eso Cloud abre por tandas con lista de espera en vez de registro
-  abierto: el límite es la factura del servidor, no una decisión comercial.
+  crece con los usuarios. Hubo una lista de espera pensada para abrir por tandas; se quitó el
+  2026-09-16 porque el registro ya estaba abierto y funcionando desde la Fase 1 punto 4 — la
+  lista no retenía a nadie, solo desinformaba. Si el costo aprieta, la salida es cerrar el
+  registro de verdad, no simular una fila.
 - **IA: cero.** Nexo no paga inferencia. El usuario conecta su propio cliente MCP con su propia
   cuenta. Este es el motivo por el que el diferenciador más caro de la categoría acá no cuesta
   nada — y por el que regalarlo es sostenible.
@@ -77,6 +80,10 @@ promesa está escrita en la landing (sección de precios y FAQ) y se rompe en p�
   sobre pasarelas locales. Razonamiento en [launch-strategy.md](launch-strategy.md).
 - **2026-07-25** — Límites por plan definidos e implementados (5 puestos en el tier gratuito de
   Cloud); MCP declarado gratis en todos los planes.
+- **2026-09-16** — Se quitó la lista de espera de Cloud y MCP pasó de "roadmap" a "disponible"
+  en la landing. Ninguna de las dos era cierta: `/auth/signup/` llevaba abierto desde la Fase 1
+  punto 4, y el servidor MCP estaba en producción desde el 2026-07-26. La tabla
+  `WaitlistSignup` se conserva como archivo de solo lectura hasta avisarle a quien se anotó.
 - **2026-09-15** — **Nexo pasa a ser gratis en todas sus versiones, Cloud incluido.** Se eliminó
   la app `billing` completa (Lemon Squeezy, suscripciones, checkout, webhooks, trials), el campo
   `Organization.plan`, los límites de puestos y los dos crons asociados. Decisión y alcance en
