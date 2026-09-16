@@ -28,7 +28,6 @@ LOCAL_APPS = [
     "apps.users",
     "apps.activities",
     "apps.notifications",
-    "apps.billing",
     "apps.mcp",
 ]
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -101,8 +100,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         # Dos mecanismos, una sola política: ambos llaman a
-        # `enforce_global_policy` (demo de solo lectura, alcance del token,
-        # estado de la suscripción). Esta es la única capa que ningún
+        # `enforce_global_policy` (demo de solo lectura, alcance del
+        # token). Esta es la única capa que ningún
         # ViewSet sobreescribe — ver apps/users/authentication.py.
         # El de tokens va primero porque descarta rápido lo que no lleva el
         # prefijo `nxo_` y le deja el paso al JWT.
@@ -123,10 +122,10 @@ REST_FRAMEWORK = {
         # Solo /auth/demo-login/ usa este scope (ver DemoLoginView) — evita
         # que alguien lo golpee en loop; no toca el resto de la API.
         "demo_login": "20/hour",
-        # El tope real de MCP se resuelve por plan en tiempo de petición
-        # (apps/mcp/throttling.py); este valor solo existe porque
+        # El tope real de MCP sale de MCP_DAILY_LIMIT en tiempo de
+        # petición (apps/mcp/throttling.py); este valor solo existe porque
         # SimpleRateThrottle lo exige al construirse.
-        "mcp": "200/day",
+        "mcp": "1000/day",
     },
 }
 
@@ -181,18 +180,12 @@ DEMO_EMAIL_TEMPLATE = config("DEMO_EMAIL_TEMPLATE", default="demo-{role}@nexoeng
 DEMO_ROLES = ["owner", "admin", "coordinator", "member"]
 DEMO_DEFAULT_ROLE = "admin"
 
-# ─── Billing (Fase 1, punto 5: Lemon Squeezy) ─────────────────────────────
-# Todo vacío por defecto a propósito: el self-hosted AGPL no tiene por qué
-# configurar un proveedor de pagos, y sin estas tres variables la
-# facturación queda inerte (nada gatea, los endpoints de cobro responden
-# 503). Ver apps/billing/models.py para las dos reglas que gobiernan el
-# módulo.
-LEMONSQUEEZY_API_KEY = config("LEMONSQUEEZY_API_KEY", default="")
-LEMONSQUEEZY_STORE_ID = config("LEMONSQUEEZY_STORE_ID", default="")
-LEMONSQUEEZY_VARIANT_ID_CLOUD = config("LEMONSQUEEZY_VARIANT_ID_CLOUD", default="")
-# Secreto del webhook: sin él, verify_signature rechaza todo (fallar
-# cerrado — un webhook falsificado puede cambiarle el plan a una org).
-LEMONSQUEEZY_WEBHOOK_SECRET = config("LEMONSQUEEZY_WEBHOOK_SECRET", default="")
-BILLING_TRIAL_DAYS = config("BILLING_TRIAL_DAYS", default=14, cast=int)
+# ─── MCP ──────────────────────────────────────────────────────────────────
+# Nexo es gratis en todas sus versiones, así que la cuota de MCP no es un
+# muro comercial: es la única protección de la infraestructura que atiende
+# las llamadas. Vacío = sin tope, que es lo correcto para un self-hosted
+# (el operador ya paga su propio servidor); quien aloje una instancia
+# pública para terceros le pone un número.
+MCP_DAILY_LIMIT = config("MCP_DAILY_LIMIT", default=None, cast=lambda v: int(v) if v else None)
 
 from config.jazzmin_settings import JAZZMIN_SETTINGS, JAZZMIN_UI_TWEAKS  # noqa: E402

@@ -1,33 +1,31 @@
 # Producto: qué es Nexo y para quién
 
-Este archivo es sobre **qué construimos y por qué**, no sobre precios (→
-[monetization.md](monetization.md)) ni sobre cómo está hecho por dentro (→
+Este archivo es sobre **qué construimos y por qué**, no sobre licencia y costos (→
+[sustainability.md](sustainability.md)) ni sobre cómo está hecho por dentro (→
 [architecture.md](architecture.md)). Para saber qué está hecho y qué falta ahora mismo, ver
 [release-plan.md](release-plan.md).
 
 ## Contexto
 
 Nexo nació como herramienta interna (antes "FlowDesk") para un equipo de TI. Se decidió
-convertirla en producto open source con un modelo de monetización de tres niveles (ver
-[monetization.md](monetization.md)).
+convertirla en producto open source. Arrancó con un modelo open core de tres niveles; desde el
+2026-09-15 **es gratis en todas sus versiones** y ese modelo desapareció (→
+[ADR 0003](../adr/0003-nexo-es-gratis.md)).
 
-## Modelo: Open Core
+## Modelo: un solo producto, gratis
 
-Un solo producto — el núcleo es libre, las capas de conveniencia (Cloud) y cumplimiento
-corporativo (Enterprise) se cobran. Mismo modelo que GitLab, Cal.com o Mattermost.
+No hay ediciones. Lo que existe son dos formas de correr **el mismo producto completo**:
+self-hosted (AGPL-3.0, en tu servidor) o Nexo Cloud (alojado por nosotros). Ninguna feature vive
+detrás de un plan, y no hay límite de usuarios en ninguna de las dos.
 
-**Regla para decidir en qué plan va cada feature nueva:**
-- ¿Un equipo pequeño lo necesita para trabajar? → **Community**
-- ¿Es conveniencia/operación (hosting, backups, updates)? → **Cloud**
-- ¿Lo exige un departamento de compras o de seguridad? → **Enterprise**
+**Regla para decidir qué se construye** (ya no "en qué plan va"):
+- ¿Un equipo pequeño lo necesita para trabajar? → **se construye**, va para todos.
+- ¿Es operación de la instancia alojada (backups, updates, dominio)? → **es trabajo de Cloud**,
+  no una feature del producto.
+- ¿Lo exige un departamento de compras o de seguridad (SSO, auditoría)? → **Fase 2**, contra un
+  caso real — y también gratis cuando exista.
 
-| | Community | Cloud | Enterprise |
-|---|---|---|---|
-| Qué es | Self-hosted, código libre | Alojado por nosotros, multi-tenant | Nube dedicada o self-hosted |
-| Incluye | Kanban, backlog, planeación, reportes, sync AppSheet | Community + updates automáticos, backups, dominio propio | Cloud + SSO/SAML, auditoría, multi-organización |
-| Soporte | Comunidad (Discussions) | Email < 24h | 24/7 con SLA |
-
-(Precios y lógica de facturación → [monetization.md](monetization.md).)
+(Licencia, costos reales y por qué esto es sostenible → [sustainability.md](sustainability.md).)
 
 ## Diferenciadores de producto
 
@@ -61,17 +59,20 @@ real: SSO/SAML, LDAP, SCIM, marketplace de apps, wiki colaborativa completa, AI 
 compleja, motor de automatización estilo Zapier. Todas caben en la Fase 2 de abajo cuando (y si)
 hay un contrato real detrás.
 
-## Fase 2 — Enterprise (features)
+## Fase 2 — features de organización grande
 
-**Estado: 💤 No empezar todavía.** Se construye contra el primer contrato real, no por
-adelantado — llegan solos si Community/Cloud funcionan. (Fechas y orden de ejecución →
+**Estado: 💤 No empezar todavía.** Se construye contra el primer caso real, no por adelantado.
+Ya no se llaman "Enterprise" ni se cobran: son simplemente lo último de la lista. (Fechas y
+orden de ejecución →
 [release-plan.md](release-plan.md).)
 
 - SSO/SAML (`python3-saml` o Keycloak como broker), SCIM para provisioning
 - Audit log: tabla append-only de quién-hizo-qué (el patrón de los `signals` de
   `apps/activities` para el sync de AppSheet es el mismo mecanismo, ya probado)
 - RBAC avanzado, multi-organización a nivel de cuenta
-- Licenciamiento del código `ee/` (ver [monetization.md](monetization.md) para el porqué)
+
+La carpeta `ee/` con licencia comercial que contemplaba el plan original **no se va a crear** —
+ver [sustainability.md](sustainability.md).
 
 ## Decisión de producto pendiente — el concepto núcleo
 

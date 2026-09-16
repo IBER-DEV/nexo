@@ -1,24 +1,21 @@
-"""Cuota de MCP por plan.
+"""Cuota de MCP.
 
-MCP va **gratis en todos los planes** — es el diferenciador de "trae tu
-propia IA" y no nos cuesta inferencia, así que su trabajo es atraer, no
-cobrar (ver docs/roadmap/monetization.md). Lo que sí cuesta es la
-infraestructura que atiende las llamadas, y eso es lo que se acota.
+Nexo es gratis en todas sus versiones, así que esto no es un muro comercial
+—no hay nada que desbloquear pagando—: es la única protección de la
+infraestructura que atiende las llamadas.
 
-Igual que los límites de puestos: **el self-hosted no se limita nunca**. El
-gate es `provider.is_configured()`, el mismo de la facturación.
+Por eso el tope es una decisión del operador (`MCP_DAILY_LIMIT`) y no del
+software: en un self-hosted el servidor lo paga quien lo corre y el valor
+por defecto es "sin tope"; quien aloje una instancia pública para terceros
+le pone un número.
 """
+from django.conf import settings
 from rest_framework.throttling import SimpleRateThrottle
 
-# Llamadas por día y por usuario. `None` = sin tope.
-PLAN_RATES = {
-    "community": 200,
-    "cloud": 5000,
-    "enterprise": None,
-}
+DURATION_SECONDS = 86400
 
 
-class McpPlanThrottle(SimpleRateThrottle):
+class McpDailyThrottle(SimpleRateThrottle):
     scope = "mcp"
 
     def get_cache_key(self, request, view):
@@ -28,24 +25,19 @@ class McpPlanThrottle(SimpleRateThrottle):
         return self.cache_format % {"scope": self.scope, "ident": user.pk}
 
     def allow_request(self, request, view):
-        from apps.billing.limits import effective_plan
-        from apps.billing.provider import is_configured
-
-        if not is_configured():
-            return True  # self-hosted: sin cuota
+        limite = getattr(settings, "MCP_DAILY_LIMIT", None)
+        if limite is None:
+            return True  # sin tope: el caso por defecto
 
         user = getattr(request, "user", None)
         if user is None or not user.is_authenticated:
             return True  # el rechazo por no autenticado ya lo hizo la vista
 
-        limite = PLAN_RATES.get(effective_plan(user.organization), PLAN_RATES["community"])
-        if limite is None:
-            return True
-
-        # SimpleRateThrottle lee `self.rate` en __init__; acá el plan se
-        # resuelve por petición, así que se arma a mano.
+        # SimpleRateThrottle lee `self.rate` en __init__; acá el tope se
+        # resuelve por petición (settings pueden cambiar con
+        # override_settings en tests), así que se arma a mano.
         self.num_requests = limite
-        self.duration = 86400
+        self.duration = DURATION_SECONDS
         self.key = self.get_cache_key(request, view)
         if self.key is None:
             return True
@@ -60,4 +52,4 @@ class McpPlanThrottle(SimpleRateThrottle):
     def get_rate(self):
         # El rate real se calcula por petición en allow_request; este valor
         # solo evita que SimpleRateThrottle falle al construirse.
-        return "200/day"
+        return "1000/day"

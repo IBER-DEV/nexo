@@ -10,7 +10,7 @@ const QUESTIONS = [
   },
   {
     q: "¿Puedo exportar mis datos?",
-    a: "Sí, en cualquier momento. Es tu base de datos Postgres — no hay formato propietario ni feature flag que la bloquee en la versión self-hosted.",
+    a: "Sí, en cualquier momento. Es tu base de datos Postgres — no hay formato propietario ni feature flag que la bloquee.",
   },
   {
     q: "¿Qué pasa si dejan de mantenerlo?",
@@ -18,7 +18,11 @@ const QUESTIONS = [
   },
   {
     q: "¿Cobran extra por las funciones de IA?",
-    a: "No, y no vamos a hacerlo: Nexo no paga inferencia. Conectas tu propio asistente (Claude u otro cliente compatible con MCP) con un token que generas desde Configuración, y le pides que cargue actividades, te resuma el backlog o mueva estados. Va incluido en todos los planes, incluido el gratuito y el self-hosted.",
+    a: "No cobramos por nada, empezando por la IA: Nexo no paga inferencia. Conectas tu propio asistente (Claude u otro cliente compatible con MCP) con un token que generas desde Configuración, y le pides que cargue actividades, te resuma el backlog o mueva estados.",
+  },
+  {
+    q: "¿Gratis de verdad? ¿Dónde está el truco?",
+    a: "No hay truco ni versión recortada: Nexo es gratis en todas sus formas, incluida la que alojamos nosotros, y no existe un plan de pago que desbloquee nada. Todas las funciones —flujos configurables, reportes, sync con Sheets, conexión a tu propia IA— están disponibles para todos, sin límite de usuarios. Si algún día eso cambia, lo dirá esta página antes de que te afecte.",
   },
 ];
 

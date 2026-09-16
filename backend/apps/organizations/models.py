@@ -4,25 +4,20 @@ from django.db import models
 
 from .scoping import OrgManager
 
-# Feature flags que cada plan trae activados por defecto. Un flag presente en
-# Organization.feature_flags siempre gana sobre estos defaults — así soporte
-# puede activar/desactivar features puntuales sin cambiar el plan.
-PLAN_DEFAULT_FLAGS = {
-    "community": {"sheets_sync": True},
-    "cloud": {"sheets_sync": True},
-    "enterprise": {"sheets_sync": True},
-}
+# Feature flags activados por defecto para toda organización. Un flag
+# presente en Organization.feature_flags siempre gana sobre estos defaults —
+# así soporte puede apagar una feature puntual en una org sin tocar código.
+#
+# Nexo es gratis en todas sus versiones: esta tabla no depende de ningún
+# plan, y ninguna feature vive detrás de un pago. Si agregas un flag acá,
+# es para poder *apagarlo* ante un problema, no para venderlo.
+DEFAULT_FEATURE_FLAGS = {"sheets_sync": True}
 
 
 class Organization(models.Model):
     """Tenant: toda la data de negocio (usuarios, actividades, maestros)
     cuelga de una organización. No confundir con el catálogo Cliente, que es
     la empresa-cliente de una actividad."""
-
-    class Plan(models.TextChoices):
-        COMMUNITY = "community", "Community"
-        CLOUD = "cloud", "Cloud"
-        ENTERPRISE = "enterprise", "Enterprise"
 
     nombre = models.CharField(max_length=200)
     slug = models.SlugField(unique=True)
@@ -32,7 +27,6 @@ class Organization(models.Model):
     timezone = models.CharField(max_length=50, default="America/Bogota")
     locale = models.CharField(max_length=10, default="es")
     currency = models.CharField(max_length=3, default="USD")
-    plan = models.CharField(max_length=20, choices=Plan.choices, default=Plan.COMMUNITY)
     feature_flags = models.JSONField(default=dict, blank=True)
     is_active = models.BooleanField(default=True)
     appsheet_spreadsheet_id = models.CharField(max_length=100, blank=True, default="")
@@ -58,7 +52,7 @@ class Organization(models.Model):
     def has_feature(self, name: str) -> bool:
         if name in self.feature_flags:
             return bool(self.feature_flags[name])
-        return bool(PLAN_DEFAULT_FLAGS.get(self.plan, {}).get(name, False))
+        return bool(DEFAULT_FEATURE_FLAGS.get(name, False))
 
     @property
     def owner(self):
@@ -69,8 +63,9 @@ class Organization(models.Model):
 
 
 class WaitlistSignup(models.Model):
-    """Lead del plan Cloud/Enterprise (landing → card de precios): captura el
-    email de quien quiere que le avisemos cuando abramos el acceso beta. No
+    """Lead de Nexo Cloud (landing → card de precios): captura el email de
+    quien quiere que le avisemos cuando abramos el acceso alojado (gratis,
+    pero con cupo — la infraestructura la pagamos nosotros). No
     hay Organization todavía — es anterior a cualquier signup. `email` es
     unique y el alta es get_or_create (ver WaitlistJoinSerializer): reenviar
     el mismo formulario dos veces no duplica el lead."""

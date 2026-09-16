@@ -109,7 +109,7 @@ class SignupView(APIView):
 
 
 class WaitlistJoinView(APIView):
-    """Lead del plan Cloud/Enterprise (card de precios de la landing): sin
+    """Lead de Nexo Cloud (card de precios de la landing): sin
     auth, sin organización todavía — solo guarda el email para avisar cuando
     abra el acceso beta. Idempotente por email (ver WaitlistJoinSerializer)."""
 

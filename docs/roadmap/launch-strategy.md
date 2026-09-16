@@ -1,11 +1,15 @@
 # Estrategia de lanzamiento de Nexo Cloud
 
-**Definida:** 2026-07-18. Fuente de verdad para la Fase 1 punto 5 (Billing,
-[release-plan.md](release-plan.md)) y para el lanzamiento comercial de Nexo Cloud. Este archivo
-es sobre **por qué el negocio toma estas decisiones**, no sobre qué se construye (→
-[product.md](product.md)) ni cómo está hecho por dentro (→ [architecture.md](architecture.md)).
-Precios y licencia siguen viviendo en [monetization.md](monetization.md); este archivo es el
-razonamiento detrás de esos números y de la elección de proveedor de pagos.
+**Definida:** 2026-07-18. Este archivo es sobre **por qué el negocio toma estas decisiones**,
+no sobre qué se construye (→ [product.md](product.md)) ni cómo está hecho por dentro (→
+[architecture.md](architecture.md)).
+
+> ⚠️ **Parcialmente superado (2026-09-15).** La sección "Billing" y todo lo que asume cobro
+> quedaron como **registro histórico**: Nexo es gratis en todas sus versiones, Cloud incluido,
+> y la app de facturación se eliminó — ver [ADR 0003](../adr/0003-nexo-es-gratis.md) y
+> [sustainability.md](sustainability.md). El resto del archivo (auditoría competitiva de Plane,
+> tesis vertical, ICP, qué no construir en 12 meses) sigue vigente y es la razón por la que vale
+> la pena no borrarlo.
 
 ## La pregunta que gobierna todo
 
@@ -67,7 +71,12 @@ Trampas de tiempo — no reabrir sin un caso de cliente real que lo justifique:
 (Coincide y refuerza la lista de Fase 2 — Enterprise en [product.md](product.md), que ya
 establece que esas features "llegan solas si Community/Cloud funcionan".)
 
-## Billing: por qué Lemon Squeezy y no Stripe
+## Billing: por qué Lemon Squeezy y no Stripe *(histórico)*
+
+> Esta sección describe una decisión que se implementó y luego se revirtió. Se conserva porque
+> el análisis de pasarelas para un founder en Colombia seguiría siendo válido si alguna vez hay
+> que reabrir el tema — no porque describa el estado actual.
+
 
 **Hecho confirmado:** Stripe no opera nativamente para cuentas colombianas — descartado como
 solución inicial, no por preferencia sino por imposibilidad práctica para un founder solo en
@@ -87,12 +96,10 @@ velocidad: el tiempo desde "quiero probar Nexo" hasta "Nexo ya me cobró". Wompi
 local) se agrega **solo cuando exista demanda real** de factura DIAN de un cliente empresarial —
 no antes (ver Riesgo 3 abajo).
 
-### Arquitectura mínima de billing
+### Arquitectura mínima de billing *(nunca vigente ya)*
 
-Ya existe (Bloque 1 de multi-tenancy + signup): `Organization`, `plan`, `feature_flags`,
-membership, owner, signup self-service.
-
-Falta diseñar/construir:
+Lo que sigue es el diseño tal como se planteó en 2026-07-18. Se construyó completo el
+2026-07-25 y se eliminó el 2026-09-15 sin haber cobrado nunca:
 
 - **Entidades:** `BillingCustomer`, `Subscription`, `CheckoutSession`, `WebhookEvent`.
 - **Webhooks mínimos:** `subscription_created`, `subscription_updated`,
@@ -146,10 +153,12 @@ para el ICP. Convención: `app.`/`api.`/`docs.` como subdominios, `hola@` para c
 ## La definición de éxito
 
 Nexo no necesita ser el próximo Plane. La primera señal de que el producto encontró su espacio:
-un equipo de TI se registra, crea una organización, invita a sus compañeros con un código, mueve
-actividades durante una semana y paga USD 5-10 por usuario sin que Iber tenga que ayudarles por
-WhatsApp. Cuando eso ocurra repetidamente, Nexo cruzó la frontera entre proyecto personal y
-startup real.
+un equipo de TI se registra, crea una organización, invita a sus compañeros con un código y
+mueve actividades durante una semana sin que Iber tenga que ayudarles por WhatsApp. Cuando eso
+ocurra repetidamente y el equipo siga ahí al mes siguiente, Nexo encontró su espacio.
+
+(La definición original terminaba en "y paga USD 5-10 por usuario". Desde el 2026-09-15 la
+métrica es uso sostenido, no conversión: no hay nada que cobrar.)
 
 ## Bitácora
 
@@ -157,5 +166,8 @@ startup real.
   vertical (no horizontal), ICP explícito, lista de "qué no construir en 12 meses", y decisión
   de billing (Lemon Squeezy sobre Stripe, bloqueado por cuentas colombianas, y sobre pasarelas
   locales, por velocidad de lanzamiento vs. carga operativa de DIAN/IVA). Reemplaza la mención
-  de Stripe en [monetization.md](monetization.md) y en el punto 5 de
+  de Stripe en [sustainability.md](sustainability.md) y en el punto 5 de
   [release-plan.md](release-plan.md).
+- **2026-09-15** — La decisión de billing de esta página queda revertida: Nexo pasa a ser gratis
+  en todas sus versiones y el módulo de facturación se elimina. La sección "Billing" se conserva
+  marcada como histórica. Ver [ADR 0003](../adr/0003-nexo-es-gratis.md).

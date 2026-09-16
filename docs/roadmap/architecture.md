@@ -1,7 +1,7 @@
 # Arquitectura: decisiones técnicas que no son obvias leyendo el código
 
 Este archivo registra **por qué** el sistema está hecho como está — no qué se construye (→
-[product.md](product.md)) ni cómo se cobra (→ [monetization.md](monetization.md)). Decisiones
+[product.md](product.md)) ni cómo se cobra (→ [sustainability.md](sustainability.md)). Decisiones
 grandes con consecuencias a largo plazo (ej. el modelo de dominio central) tienen su propio ADR
 en [`docs/adr/`](../adr/) en vez de vivir solo acá; este archivo indexa esas decisiones y
 documenta las de tamaño medio directamente.

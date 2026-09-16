@@ -19,7 +19,6 @@ Staging existe desde el 2026-07-26 (proyecto `nexo-backend`, entorno `staging`).
 | Dominio API | `api.nexoengine.tech` | `backend-staging-234b.up.railway.app` |
 | Frontend | Worker `nexo` (`nexoengine.tech`) | ninguno todavía — se usa `npm run dev` local |
 | Base de datos | Postgres administrado | Postgres propio (instancia aparte, credenciales propias) |
-| Lemon Squeezy | sin configurar todavía | sin configurar (facturación inerte) |
 | Correo | Postmark real | `EMAIL_BACKEND` de consola, sin token |
 | `SECRET_KEY` | propia | propia (nunca compartida entre entornos) |
 
@@ -52,13 +51,9 @@ enmascarar.
 El código no necesita un `settings/staging.py`: `config.settings.prod` ya se configura por
 variables de entorno. Lo que sí hay que separar es la configuración, y hay dos trampas:
 
-1. **El webhook de Lemon Squeezy.** Ojo: a 2026-07-26 **producción todavía no tiene ninguna
-   variable `LEMONSQUEEZY_*`** — la tienda está conectada solo en el `.env` local, así que en
-   producción la facturación está inerte (checkout responde 503 y ningún límite de plan aplica).
-   Cuando se configuren, cada entorno necesita su propio webhook apuntando a su propio dominio,
-   con su propio `LEMONSQUEEZY_WEBHOOK_SECRET`. Compartirlos haría que los pagos de prueba de
-   staging le cambien el plan a organizaciones reales. Lo natural es configurar staging primero
-   (modo test) y producción después.
+1. **Las credenciales de correo.** Staging usa el `EMAIL_BACKEND` de consola y sin token: un
+   correo de verificación disparado por una prueba de staging no debe llegarle a una persona
+   real, ni gastar la cuota del dominio de producción.
 2. **`CORS_ALLOWED_ORIGINS` y `ALLOWED_HOSTS`.** Cada entorno lista solo sus propios dominios.
    Copiar los de producción a staging hace que un bug de CORS en staging no se vea, y aparezca
    recién en producción.
@@ -106,18 +101,13 @@ poner el Root Directory.
 
 ## Tareas programadas (cron)
 
-Dos comandos idempotentes que hoy **no están programados**. Sin ellos nada se rompe, pero los
-valores guardados se van desincronizando de la realidad.
+**Ninguna.** Los dos crons que había (`expire_trials` y `sync_seats`) existían solo para
+mantener al día el plan y los puestos facturados de cada organización; se fueron junto con la
+facturación (2026-09-15). No hay nada más que se desincronice con el tiempo.
 
-| Comando | Frecuencia | Qué pasa si no corre |
-|---|---|---|
-| `python manage.py expire_trials` | diaria | El `plan` guardado de un trial vencido se queda en `cloud`. El *acceso* y los *límites* no se ven afectados: se resuelven en caliente (`limits.effective_plan`). |
-| `python manage.py sync_seats` | diaria | La cantidad facturada queda desactualizada si un empujón en caliente falló (es best-effort a propósito, para no bloquear a alguien que suma un compañero por un timeout del proveedor). |
-
-Ambos aceptan `--dry-run` para ver qué harían sin escribir.
-
-En Railway se configuran creando un servicio con el mismo repo/imagen, un **Cron Schedule**
-(ej. `0 6 * * *`) y ese comando como start command en lugar de gunicorn.
+Si alguna vez hace falta uno, en Railway se configura creando un servicio con el mismo
+repo/imagen, un **Cron Schedule** (ej. `0 6 * * *`) y ese comando como start command en lugar
+de gunicorn.
 
 ## Respaldos
 
@@ -159,13 +149,16 @@ usuarios de la demo pública** salvo que se le pase `--force`.
   **no** en `seed_data.py`, para que el self-hosted siga siendo cómodo. `get_or_create` no
   resetea la contraseña de un usuario existente, así que volver a correr `seed_data` en Railway
   no deshace la rotación.
-- **Pendiente:** el `LEMONSQUEEZY_WEBHOOK_SECRET` de producción se creó con 6 caracteres.
-  Funciona (HMAC acepta cualquier string) pero es corto para lo que protege — quién puede
-  cambiarle el plan a una organización. Rotar por uno largo y aleatorio, actualizándolo en los
-  dos lados a la vez: el `.env` del servicio y el webhook en el dashboard de Lemon Squeezy.
+- **Variables que se pueden borrar del servicio en Railway:** las `LEMONSQUEEZY_*` y
+  `BILLING_TRIAL_DAYS`, si alguna quedó cargada. Ya no las lee nadie; dejarlas solo confunde a
+  quien revise la configuración. La cuenta de Lemon Squeezy se puede cerrar.
 
 ## Bitácora
 
+- **2026-09-15** — Se eliminó la facturación entera (app `billing`, Lemon Squeezy, planes,
+  límites de puestos, trials). Nexo pasa a ser gratis en todas sus versiones, Cloud incluido.
+  La migración `organizations.0005` borra el campo `plan` y tumba las tablas `billing_*`; los
+  dos crons de la sección anterior dejaron de existir.
 - **2026-07-26** — Documentado el modelo de dos entornos al detectar que producción era el único
   y contenía datos de `seed_data`. Se agregó `purge_organization` para poder limpiarlos sin
   pelear con los `PROTECT` a mitad de camino, en producción.

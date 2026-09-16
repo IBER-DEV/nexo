@@ -1,6 +1,10 @@
-"""Cuota de MCP por plan: gratis en todos, con tope distinto."""
+"""Cuota de MCP: decisión del operador, no un muro comercial.
+
+Nexo es gratis en todas sus versiones, así que no hay un tope "del plan
+gratis" que se levante pagando. Lo único que se acota es la infraestructura
+que atiende las llamadas, y eso lo decide quien corre la instancia.
+"""
 import json
-from unittest.mock import patch
 
 from django.core.cache import cache
 from django.test import override_settings
@@ -8,7 +12,6 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from apps.activities.tests.factories import make_user
-from apps.billing.tests.test_access import BILLING_OFF, BILLING_ON
 from apps.users.models import PersonalAccessToken
 
 URL = "/api/v1/mcp/"
@@ -33,34 +36,25 @@ class ThrottleTests(APITestCase):
             content_type="application/json",
         )
 
-    @override_settings(**BILLING_OFF)
-    def test_el_self_hosted_no_tiene_cuota(self):
-        """Mismo principio que los puestos: no se limita un binario AGPL que
-        corre en el servidor de otro."""
-        with patch.dict("apps.mcp.throttling.PLAN_RATES", {"community": 1}):
-            self.assertEqual(self.ping().status_code, status.HTTP_200_OK)
-            self.assertEqual(self.ping().status_code, status.HTTP_200_OK)
+    @override_settings(MCP_DAILY_LIMIT=None)
+    def test_sin_limite_configurado_no_hay_cuota(self):
+        """El default: un self-hosted paga su propio servidor, el software no
+        tiene por qué racionárselo."""
+        for _ in range(5):
             self.assertEqual(self.ping().status_code, status.HTTP_200_OK)
 
-    @override_settings(**BILLING_ON)
-    def test_el_tier_gratuito_tiene_tope(self):
-        with patch.dict("apps.mcp.throttling.PLAN_RATES", {"community": 2}):
-            self.assertEqual(self.ping().status_code, status.HTTP_200_OK)
-            self.assertEqual(self.ping().status_code, status.HTTP_200_OK)
-            self.assertEqual(self.ping().status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+    @override_settings(MCP_DAILY_LIMIT=2)
+    def test_el_operador_puede_poner_un_tope(self):
+        self.assertEqual(self.ping().status_code, status.HTTP_200_OK)
+        self.assertEqual(self.ping().status_code, status.HTTP_200_OK)
+        self.assertEqual(self.ping().status_code, status.HTTP_429_TOO_MANY_REQUESTS)
 
-    @override_settings(**BILLING_ON)
-    def test_el_plan_de_pago_tiene_un_tope_mas_alto(self):
-        self.user.organization.plan = "cloud"
-        self.user.organization.save(update_fields=["plan"])
-        with patch.dict("apps.mcp.throttling.PLAN_RATES", {"community": 1, "cloud": 10}):
-            self.assertEqual(self.ping().status_code, status.HTTP_200_OK)
-            self.assertEqual(self.ping().status_code, status.HTTP_200_OK)
-
-    @override_settings(**BILLING_ON)
-    def test_enterprise_no_tiene_tope(self):
-        self.user.organization.plan = "enterprise"
-        self.user.organization.save(update_fields=["plan"])
-        with patch.dict("apps.mcp.throttling.PLAN_RATES", {"enterprise": None}):
-            for _ in range(3):
-                self.assertEqual(self.ping().status_code, status.HTTP_200_OK)
+    @override_settings(MCP_DAILY_LIMIT=1)
+    def test_el_tope_es_por_usuario_no_global(self):
+        """Una instancia con cupo compartido entre todos sería inusable en
+        cuanto haya dos personas con MCP conectado."""
+        self.assertEqual(self.ping().status_code, status.HTTP_200_OK)
+        otro = make_user("otra@test.com", "Otra", rol="admin")
+        _, raw = PersonalAccessToken.issue(user=otro, nombre="MCP")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {raw}")
+        self.assertEqual(self.ping().status_code, status.HTTP_200_OK)

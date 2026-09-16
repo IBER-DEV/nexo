@@ -8,8 +8,6 @@ from rest_framework.test import APITestCase
 
 from apps.activities.models import Activity
 from apps.activities.tests.factories import ensure_masters, make_activity, make_user
-from apps.billing.models import Subscription
-from apps.billing.tests.test_access import BILLING_ON, make_subscription
 from apps.mcp.protocol import METHOD_NOT_FOUND, PROTOCOL_VERSION
 from apps.users.models import PersonalAccessToken
 
@@ -249,19 +247,3 @@ class PoliticaTests(McpTestCase):
         self.assertTrue(resultado["isError"])
         self.assertIn("demo", resultado["content"][0]["text"].lower())
         self.assertEqual(Activity.objects.count(), antes)
-
-    @override_settings(**BILLING_ON)
-    def test_una_suscripcion_vencida_deja_leer_pero_no_escribir(self):
-        make_subscription(self.org, status=Subscription.Status.PAST_DUE)
-        self.auth()
-        self.assertIn("Migrar el ERP", self.text("listar_actividades"))
-        resultado = self.call("crear_actividad", {"nombre": "colada"})
-        self.assertTrue(resultado["isError"])
-        self.assertIn("solo lectura", resultado["content"][0]["text"].lower())
-
-    @override_settings(**BILLING_ON)
-    def test_una_suscripcion_expirada_cierra_mcp_entero(self):
-        make_subscription(self.org, status=Subscription.Status.EXPIRED)
-        self.auth()
-        res = self.rpc("tools/list")
-        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)

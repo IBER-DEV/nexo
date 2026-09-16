@@ -17,7 +17,7 @@ from rest_framework.views import APIView
 from apps.users.models import PersonalAccessToken
 
 from .protocol import INTERNAL_ERROR, PARSE_ERROR, error, handle_message
-from .throttling import McpPlanThrottle
+from .throttling import McpDailyThrottle
 from .tools import ToolContext
 
 logger = logging.getLogger("nexo.mcp")
@@ -25,7 +25,7 @@ logger = logging.getLogger("nexo.mcp")
 
 class McpView(APIView):
     permission_classes = [IsAuthenticated]
-    throttle_classes = [McpPlanThrottle]
+    throttle_classes = [McpDailyThrottle]
 
     def get(self, request):
         """Descubrimiento: qué es esto y cómo se habla. No es parte del
