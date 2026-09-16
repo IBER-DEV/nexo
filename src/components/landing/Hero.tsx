@@ -69,7 +69,7 @@ export default function Hero() {
           transition={{ duration: 1, ease: EASE, delay: 0.38 }}
           className="font-display text-5xl font-bold leading-[1.1] tracking-tighter text-white md:text-[88px]"
         >
-          El motor open-core
+          El motor open source
           <br />
           para equipos de <span className="text-gradient-flow">TI</span>.
         </motion.h1>
@@ -82,7 +82,10 @@ export default function Hero() {
         >
           Backlog, planeación, Kanban y reportes — con el flujo de <em>tu</em> equipo, no el
           nuestro: elige una plantilla al crear tu espacio, ajusta estados y prioridades sin tocar
-          código, e invita con un código de acceso. Open source bajo AGPL-3.0.
+          código, e invita con un código de acceso. Conecta tu propio Claude por MCP y pídele que
+          cargue el backlog.{" "}
+          <strong className="font-semibold text-gray-300">Gratis, sin límite de usuarios</strong> —
+          alojado por nosotros o en tu servidor. AGPL-3.0.
         </motion.p>
 
         <motion.div

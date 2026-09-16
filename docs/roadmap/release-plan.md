@@ -63,8 +63,8 @@ producto/diferenciadores → [product.md](product.md). Planes de implementación
    Nexo pasa a ser **gratis en todas sus versiones, Cloud incluido**, y el módulo se borró en vez
    de dejarse apagado — consultaba el estado de la suscripción en cada petición autenticada, y un
    webhook capaz de cambiarle el plan a una organización no debe quedar dormido esperando un
-   `.env` mal copiado. Decisión, alcance y qué sí sobrevivió (la lista de espera de Cloud, la
-   licencia AGPL, la cuota de MCP con otro sentido) en
+   `.env` mal copiado. Decisión, alcance y qué sí sobrevivió (la licencia AGPL, la cuota de MCP
+   con otro sentido) en
    [ADR 0003](../adr/0003-nexo-es-gratis.md); el modelo actual, en
    [sustainability.md](sustainability.md).
 
@@ -286,3 +286,11 @@ Ya no es una edición de pago: cuando exista, va gratis como todo lo demás. Lis
   tope). El enforcement global que menciona la entrada anterior sigue existiendo en
   `enforce_global_policy`, ahora solo con las reglas de demo y alcance de token. Razonamiento
   completo en [ADR 0003](../adr/0003-nexo-es-gratis.md).
+- **2026-09-16** — **Nexo Cloud y MCP dejan de anunciarse como futuros: los dos ya estaban en
+  producción.** Se quitó la lista de espera de la landing (formulario, `POST /auth/waitlist/` y
+  `authService.joinWaitlist`) y la card de Cloud pasa a un CTA de registro: `/auth/signup/`
+  llevaba abierto desde el punto 4 de esta misma fase, así que la fila no retenía a nadie —
+  convivía con un botón "Crea tu espacio gratis" que ya entregaba la organización. En paralelo,
+  MCP pasó de `status: "roadmap"` a `"disponible"` en el Nexo Engine: estuvo dos meses escondido
+  tras esa etiqueta pese a haberse desplegado el 2026-07-26. `WaitlistSignup` queda como archivo
+  de solo lectura hasta avisarle a quien se anotó.

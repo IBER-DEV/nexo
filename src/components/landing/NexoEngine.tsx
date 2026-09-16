@@ -23,10 +23,15 @@ type Capability = {
   status: "disponible" | "roadmap";
 };
 
-// Grounded en el estado real del código y en docs/ROADMAP.md — "disponible"
-// solo para lo que ya existe hoy (AGPL, sync AppSheet, API REST del propio
-// backend). Todo lo demás es dirección de producto, marcado como roadmap,
-// no una promesa de fecha.
+// Grounded en el estado real del código — "disponible" SOLO para lo que ya
+// corre en producción. Todo lo demás es dirección de producto, marcado como
+// roadmap, no una promesa de fecha.
+//
+// MCP estuvo marcado como roadmap dos meses después de estar desplegado
+// (`POST /api/v1/mcp/`, servidor JSON-RPC con cinco herramientas, vivo desde
+// el 2026-07-26). Si mandas algo a producción, muévelo acá el mismo día: el
+// diferenciador más fuerte del producto estuvo escondido tras una etiqueta
+// que decía "algún día".
 const CAPABILITIES: Capability[] = [
   {
     id: "open-source",
@@ -51,6 +56,14 @@ const CAPABILITIES: Capability[] = [
     status: "disponible",
   },
   {
+    id: "mcp",
+    label: "MCP",
+    description:
+      "Conecta tu propio Claude a Nexo y pídele que cargue actividades o te resuma el backlog.",
+    icon: Blocks,
+    status: "disponible",
+  },
+  {
     id: "automatizaciones",
     label: "Automatizaciones",
     description: "Reglas y disparadores sobre actividades y cambios de estado.",
@@ -69,13 +82,6 @@ const CAPABILITIES: Capability[] = [
     label: "Webhooks",
     description: "Notifica a otros sistemas cuando algo cambia en Nexo.",
     icon: Webhook,
-    status: "roadmap",
-  },
-  {
-    id: "mcp",
-    label: "MCP",
-    description: "Conecta Nexo a agentes de IA como fuente de datos y de acciones.",
-    icon: Blocks,
     status: "roadmap",
   },
   {
@@ -124,7 +130,7 @@ export default function NexoEngine() {
         </motion.div>
 
         {/* Disponible hoy — tarjetas grandes, la que gana peso visual */}
-        <div className="mt-16 grid gap-5 sm:grid-cols-3">
+        <div className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {AVAILABLE.map((cap, i) => (
             <motion.div
               key={cap.id}

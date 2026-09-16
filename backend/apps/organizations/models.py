@@ -63,12 +63,18 @@ class Organization(models.Model):
 
 
 class WaitlistSignup(models.Model):
-    """Lead de Nexo Cloud (landing → card de precios): captura el email de
-    quien quiere que le avisemos cuando abramos el acceso alojado (gratis,
-    pero con cupo — la infraestructura la pagamos nosotros). No
-    hay Organization todavía — es anterior a cualquier signup. `email` es
-    unique y el alta es get_or_create (ver WaitlistJoinSerializer): reenviar
-    el mismo formulario dos veces no duplica el lead."""
+    """Archivo cerrado: leads de cuando Nexo Cloud todavía no estaba abierto.
+
+    **Ya no se escribe nadie acá.** La lista de espera se quitó el 2026-09-16
+    porque Cloud está disponible y es gratis: `/auth/signup/` entrega una
+    organización completa en el acto, así que anotarse para "recibir aviso"
+    era un embudo sin nada al final. Se borraron el endpoint público
+    (`POST /auth/waitlist/`) y el formulario de la landing.
+
+    La tabla sobrevive a propósito y por una sola razón: son correos de gente
+    que pidió que le avisáramos. Ese aviso todavía se les debe. Una vez
+    enviado, esto se puede borrar con una migración — no antes.
+    """
 
     email = models.EmailField(unique=True)
     source = models.CharField(max_length=50, default="pricing_cloud")

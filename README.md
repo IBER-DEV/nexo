@@ -127,7 +127,7 @@ estrategia:
 - [x] Códigos de acceso para incorporar miembros a una organización existente
 - [x] Servidor MCP: conecta tu propio asistente de IA con un token de acceso personal
 - [ ] Catálogos genéricos / campos personalizados (deuda consciente, sin caso de cliente real)
-- [ ] Nexo Cloud: la instancia alojada por nosotros (gratis, igual que el resto)
+- [x] Nexo Cloud: la instancia alojada por nosotros — abierta y gratis, sin lista de espera
 
 Detalle completo en [docs/roadmap/release-plan.md](docs/roadmap/release-plan.md).
 

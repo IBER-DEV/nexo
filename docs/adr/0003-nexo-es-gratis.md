@@ -62,8 +62,12 @@ Dejarlo con las credenciales vacías era la opción barata. Se descartó por tre
 - **La licencia sigue siendo AGPL-3.0.** El motivo original (proteger el negocio Cloud de
   reventa) ya no aplica, pero la reciprocidad sí: quien ofrezca Nexo modificado como servicio
   publica sus modificaciones. Ver [sustainability.md](../roadmap/sustainability.md).
-- **La lista de espera de Cloud se queda** (`WaitlistSignup`). No es captura de leads para
-  vender: es cupo de infraestructura, porque los servidores los pagamos nosotros.
+- ~~**La lista de espera de Cloud se queda**~~ — **revertido al día siguiente (2026-09-16).**
+  Al quitar el precio quedó a la vista que la lista no protegía ningún cupo: el botón "Crea tu
+  espacio gratis" del Hero ya entregaba una organización Cloud completa, a centímetros del
+  formulario que prometía "te avisaremos cuando abramos". Se quitó el formulario y el endpoint
+  `POST /auth/waitlist/`; la tabla queda como archivo de solo lectura hasta avisarle a quien se
+  anotó que Cloud está abierto.
 - **La cuota de MCP se queda, con otro sentido.** Ya no es un tope por plan sino
   `MCP_DAILY_LIMIT`, una protección de infraestructura que configura quien opera la instancia,
   con default "sin tope".

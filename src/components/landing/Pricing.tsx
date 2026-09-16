@@ -1,11 +1,18 @@
 import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { Check, CheckCircle2, Cloud, Container, Copy, Loader2, Mail, Rocket } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  Cloud,
+  Container,
+  Copy,
+  Loader2,
+  Rocket,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/providers/AuthProvider";
-import { ApiError } from "@/lib/api";
-import { authService } from "@/services/authService";
 import { fadeUp } from "./anim";
 import { NEXO_REPO_URL } from "./NexoBrandMark";
 
@@ -23,9 +30,10 @@ const COMMUNITY_FEATURES = [
   "Sync opcional con Google Sheets/AppSheet",
 ];
 
-// Cloud también es gratis: no hay tier de pago que construir, solo el
-// alojamiento. La lista de espera existe por cupo de infraestructura —
-// pagamos los servidores— y no por precio. Ver docs/roadmap/monetization.md.
+// Cloud está disponible y es gratis: el mismo producto, alojado por nosotros.
+// La lista de espera que vivía acá se quitó el 2026-09-16 — era un embudo sin
+// nada al final: `/auth/signup/` lleva abierto desde el punto 4 de la Fase 1 y
+// ya entregaba una organización completa. Ver docs/roadmap/sustainability.md.
 const CLOUD_FEATURES = [
   "Exactamente el mismo producto, sin features recortadas",
   "Alojado por nosotros, actualizaciones automáticas",
@@ -36,9 +44,6 @@ const CLOUD_FEATURES = [
 export default function Pricing() {
   const [copied, setCopied] = useState(false);
   const [enteringDemo, setEnteringDemo] = useState(false);
-  const [email, setEmail] = useState("");
-  const [joiningWaitlist, setJoiningWaitlist] = useState(false);
-  const [joinedWaitlist, setJoinedWaitlist] = useState(false);
   const { loginAsDemo } = useAuth();
   const navigate = useNavigate();
 
@@ -51,23 +56,6 @@ export default function Pricing() {
       toast.error("La demo pública no está disponible ahora mismo.");
     } finally {
       setEnteringDemo(false);
-    }
-  };
-
-  const joinWaitlist = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setJoiningWaitlist(true);
-    try {
-      await authService.joinWaitlist(email);
-      setJoinedWaitlist(true);
-    } catch (err) {
-      const message =
-        err instanceof ApiError
-          ? "Ese correo no se ve bien — revísalo e intenta de nuevo."
-          : "No pudimos guardar tu correo. Intenta de nuevo.";
-      toast.error(message);
-    } finally {
-      setJoiningWaitlist(false);
     }
   };
 
@@ -193,7 +181,7 @@ export default function Pricing() {
             </div>
           </motion.div>
 
-          {/* Nexo Cloud — mismo producto, también gratis; falta abrirlo */}
+          {/* Nexo Cloud — mismo producto, gratis y disponible hoy */}
           <motion.div
             variants={fadeUp}
             initial="hidden"
@@ -203,7 +191,7 @@ export default function Pricing() {
             className="relative rounded-2xl bg-gradient-to-br from-indigo-500 via-emerald-500/70 to-emerald-400 p-px transition-transform duration-500 hover:-translate-y-1"
           >
             <span className="absolute -top-3.5 left-1/2 z-10 -translate-x-1/2 rounded-full bg-gradient-to-r from-indigo-500 to-emerald-500 px-4 py-1 font-mono text-[10px] font-semibold uppercase tracking-widest text-white shadow-[0_0_20px_-2px_rgba(52,211,153,0.6)]">
-              en el roadmap
+              disponible ahora
             </span>
             <div className="flex h-full flex-col rounded-2xl bg-ink p-8">
               <div className="flex items-center gap-3">
@@ -213,7 +201,7 @@ export default function Pricing() {
                 <div>
                   <h3 className="font-display text-lg font-bold text-white">Nexo Cloud</h3>
                   <p className="font-mono text-[10px] uppercase tracking-widest text-gray-500">
-                    alojado por nosotros · próximamente
+                    alojado por nosotros · sin instalar nada
                   </p>
                 </div>
               </div>
@@ -226,8 +214,8 @@ export default function Pricing() {
                 </span>
               </div>
               <p className="mt-1.5 text-xs text-gray-500">
-                La lista de espera es por cupo de infraestructura, no por precio: los servidores los
-                pagamos nosotros y abrimos por tandas.
+                Sin tarjeta, sin lista de espera y sin período de prueba que venza. Creas tu
+                organización y ya estás trabajando.
               </p>
               <ul className="mt-7 flex-1 space-y-3.5">
                 {CLOUD_FEATURES.map((f) => (
@@ -237,35 +225,18 @@ export default function Pricing() {
                   </li>
                 ))}
               </ul>
-              {joinedWaitlist ? (
-                <div className="mt-9 flex w-full items-center justify-center gap-2.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-6 py-3 text-sm font-medium text-emerald-300">
-                  <CheckCircle2 className="h-4 w-4" />
-                  Listo. Te avisaremos por correo en cuanto abramos tu cupo.
-                </div>
-              ) : (
-                <form onSubmit={joinWaitlist} className="mt-9 space-y-2.5">
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="tu@empresa.com"
-                    className="w-full rounded-full border border-hairline bg-surface px-5 py-3 text-sm text-white placeholder:text-gray-500 focus:border-emerald-500/60 focus:outline-none"
-                  />
-                  <button
-                    type="submit"
-                    disabled={joiningWaitlist}
-                    className="flex w-full items-center justify-center gap-2.5 rounded-full bg-gradient-to-r from-indigo-500 to-emerald-500 px-6 py-3 text-sm font-semibold text-white transition-all duration-300 animate-pulse-glow hover:brightness-110 disabled:opacity-60"
-                  >
-                    {joiningWaitlist ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Mail className="h-4 w-4" />
-                    )}
-                    Unirse a la lista de espera
-                  </button>
-                </form>
-              )}
+              <div className="mt-9 space-y-3">
+                <Link
+                  to="/signup"
+                  className="flex w-full items-center justify-center gap-2.5 rounded-full bg-gradient-to-r from-indigo-500 to-emerald-500 px-6 py-3 text-sm font-semibold text-white transition-all duration-300 animate-pulse-glow hover:brightness-110"
+                >
+                  Crear mi organización gratis
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <p className="text-center text-xs text-gray-500">
+                  Toma menos de un minuto. Después invitas a tu equipo con un código de acceso.
+                </p>
+              </div>
             </div>
           </motion.div>
         </div>

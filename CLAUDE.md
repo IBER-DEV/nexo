@@ -280,8 +280,11 @@ Lo que hay que saber al tocar código hoy:
   `permission_classes` propio anula el default de DRF) sigue vigente y es la razón de que exista.
 - **La cuota de MCP ya no es "por plan"**: es `MCP_DAILY_LIMIT` (settings), una protección de
   infraestructura del operador, sin valor por defecto = sin tope. Ver `apps/mcp/throttling.py`.
-- **`WaitlistSignup` se queda.** No es captura de leads para vender: Nexo Cloud abre por tandas
-  porque los servidores los pagamos nosotros, y esa es la única razón por la que hay lista.
+- **`WaitlistSignup` es un archivo cerrado, no una feature.** La lista de espera se quitó el
+  2026-09-16 (no protegía ningún cupo: el signup público ya entregaba una org Cloud completa).
+  No hay endpoint de alta y el admin es de solo lectura. La tabla sigue ahí por una única razón:
+  son correos de gente a la que todavía se le debe el aviso de que Cloud abrió. Después de
+  enviarlo, se borra con una migración.
 - **La licencia sigue siendo AGPL-3.0.** El motivo cambió (ya no protege un negocio Cloud, sí la
   reciprocidad); la licencia no.
 
