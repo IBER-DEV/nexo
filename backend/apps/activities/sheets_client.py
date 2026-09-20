@@ -120,7 +120,10 @@ def activity_to_row(activity) -> dict:
         "Empresa": activity.cliente.nombre if activity.cliente_id else "",
         "Proceso": activity.proceso.nombre if activity.proceso_id else "",
         "Aplicacion": activity.aplicacion.nombre if activity.aplicacion_id else "",
-        "Proyecto": activity.proyecto,
+        # `proyecto` es un FK desde activities.0010, pero la columna de la
+        # hoja sigue siendo texto: es un contrato externo ya comunicado y
+        # no se renombra ni cambia de tipo. Se escribe el nombre.
+        "Proyecto": activity.proyecto.nombre if activity.proyecto_id else "",
         "NombreAct": activity.nombre,
         "DescripcionAct": activity.descripcion,
         "Responsable": activity.responsable.nombre,

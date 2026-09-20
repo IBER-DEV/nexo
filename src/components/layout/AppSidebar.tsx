@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard,
   ListTodo,
+  FolderKanban,
   CalendarRange,
   KanbanSquare,
   BarChart3,
@@ -26,6 +27,7 @@ import { useAuth } from "@/providers/AuthProvider";
 const items = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Actividades", url: "/activities", icon: ListTodo },
+  { title: "Proyectos", url: "/projects", icon: FolderKanban },
   { title: "Planeación", url: "/planeacion", icon: CalendarRange, planningAccess: true },
   { title: "Kanban", url: "/kanban", icon: KanbanSquare },
   { title: "Reportes", url: "/reports", icon: BarChart3, planningAccess: true },

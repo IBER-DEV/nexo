@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { activitiesService } from "@/services/activitiesService";
@@ -147,7 +147,7 @@ function ActivitiesPage() {
       if (filterInicioHasta && inicio > dateOnly(filterInicioHasta)) return false;
       if (
         q &&
-        !`${a.id} ${a.nombre} ${a.descripcion} ${a.responsable} ${a.stakeholder} ${a.empresa} ${a.proceso} ${a.aplicacion}`
+        !`${a.id} ${a.nombre} ${a.descripcion} ${a.responsable} ${a.stakeholder} ${a.empresa} ${a.proceso} ${a.aplicacion} ${a.proyecto}`
           .toLowerCase()
           .includes(q)
       )
@@ -199,6 +199,7 @@ function ActivitiesPage() {
   const exportCSV = () => {
     const headers = [
       "ID",
+      "Proyecto",
       "Empresa",
       "Proceso",
       "Aplicación",
@@ -212,6 +213,7 @@ function ActivitiesPage() {
     ];
     const rows = filtered.map((a) => [
       a.id,
+      a.proyecto,
       a.empresa,
       a.proceso,
       a.aplicacion,
@@ -246,6 +248,12 @@ function ActivitiesPage() {
     }
     play("success");
     qc.invalidateQueries({ queryKey: ["activities"] });
+    // Guardar puede haber creado una fila de catálogo al vuelo (empresa,
+    // proceso, aplicación, proyecto vía ComboboxCreatable) — sin esto, el
+    // formulario de la próxima actividad no la vería hasta que expire el
+    // staleTime de 60s de "activities-meta".
+    qc.invalidateQueries({ queryKey: ["activities-meta"] });
+    qc.invalidateQueries({ queryKey: ["projects"] });
     setOpenForm(false);
     setEditing(null);
   };
@@ -398,6 +406,7 @@ function ActivitiesPage() {
               <TableHeader className="bg-muted/40">
                 <TableRow>
                   <SortableHead onClick={() => toggleSort("id")}>ID</SortableHead>
+                  <TableHead>Proyecto</TableHead>
                   <TableHead>Empresa</TableHead>
                   <TableHead>Proceso</TableHead>
                   <TableHead>Aplicación</TableHead>
@@ -416,7 +425,7 @@ function ActivitiesPage() {
                 {isLoading &&
                   Array.from({ length: 6 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 10 }).map((__, j) => (
+                      {Array.from({ length: 11 }).map((__, j) => (
                         <TableCell key={j}>
                           <Skeleton className="h-5 w-full" />
                         </TableCell>
@@ -425,7 +434,7 @@ function ActivitiesPage() {
                   ))}
                 {!isLoading && paged.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-16">
+                    <TableCell colSpan={11} className="text-center py-16">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <Search className="h-8 w-8 opacity-50" />
                         <p className="font-medium text-foreground">Sin resultados</p>
@@ -441,6 +450,19 @@ function ActivitiesPage() {
                     <TableRow key={a.id} className="hover:bg-muted/30">
                       <TableCell className="font-mono text-xs font-semibold text-primary">
                         {a.id}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {a.proyecto_id ? (
+                          <Link
+                            to="/projects/$projectId"
+                            params={{ projectId: String(a.proyecto_id) }}
+                            className="hover:text-primary hover:underline"
+                          >
+                            {a.proyecto}
+                          </Link>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Sin proyecto</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-sm">{a.empresa}</TableCell>
                       <TableCell className="text-sm">{a.proceso}</TableCell>

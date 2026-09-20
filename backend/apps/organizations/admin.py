@@ -23,7 +23,10 @@ class OrganizationAddForm(forms.ModelForm):
 
     class Meta:
         model = Organization
-        fields = "__all__"
+        # Los contadores de secuencia quedan fuera del alta: una
+        # organización nueva siempre arranca en 1 (ver readonly_fields en
+        # OrganizationAdmin para por qué tampoco se editan después).
+        exclude = ["next_activity_numero", "next_project_numero"]
 
 
 @admin.register(Organization)
@@ -32,6 +35,12 @@ class OrganizationAdmin(admin.ModelAdmin):
     search_fields = ["nombre", "slug"]
     list_filter = ["is_active"]
     prepopulated_fields = {"slug": ["nombre"]}
+    # Visibles para diagnóstico, no editables: el modelo pide consumir estas
+    # secuencias solo vía SequenceService, y un contador retrocedido a mano
+    # genera códigos duplicados (la UniqueConstraint por org lo convierte en
+    # un 500 al crear la siguiente actividad o proyecto). Corregirlos es
+    # trabajo de shell, con intención explícita, no un input de formulario.
+    readonly_fields = ["next_activity_numero", "next_project_numero"]
 
     def get_form(self, request, obj=None, **kwargs):
         if obj is None:

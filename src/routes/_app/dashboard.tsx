@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { activitiesService } from "@/services/activitiesService";
+import { projectsService } from "@/services/projectsService";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useAuth } from "@/providers/AuthProvider";
@@ -26,6 +27,7 @@ import { PriorityBadge } from "@/components/activities/PriorityBadge";
 import { PulseBand } from "@/components/dashboard/PulseBand";
 import { InsightCard } from "@/components/dashboard/InsightCard";
 import { LoadRing } from "@/components/dashboard/LoadRing";
+import { ProjectsPulse } from "@/components/dashboard/ProjectsPulse";
 import { useWorkspace } from "@/providers/WorkspaceProvider";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -67,17 +69,18 @@ function EmptyDashboard() {
         </div>
         <div className="space-y-1.5">
           <h3 className="text-lg font-semibold">
-            Tu espacio está listo — falta la primera actividad
+            Tu espacio está listo — falta el primer proyecto
           </h3>
           <p className="max-w-md text-sm text-muted-foreground">
-            En cuanto la crees, obtendrá el código{" "}
-            <span className="font-mono font-medium text-foreground">{prefix}-0001</span> y este
+            Un proyecto agrupa las actividades y calcula su avance solo, a partir de cuántas están
+            finalizadas — obtendrá el código{" "}
+            <span className="font-mono font-medium text-foreground">{prefix}-P001</span> y este
             dashboard empieza a mostrar métricas reales de tu equipo.
           </p>
         </div>
         <Button asChild size="lg" className="gap-2">
-          <Link to="/activities" search={{ q: "", new: true }}>
-            Crear mi primera actividad
+          <Link to="/projects" search={{ new: true }}>
+            Crear mi primer proyecto
           </Link>
         </Button>
         {user?.rol === "owner" && (
@@ -101,8 +104,16 @@ function DashboardPage() {
     queryKey: ["activities"],
     queryFn: () => activitiesService.list(),
   });
+  // Necesaria solo para decidir el empty state (abajo): sin actividades
+  // pero con un proyecto ya creado no es "espacio vacío", es un proyecto
+  // recién empezado — mostrar el dashboard normal (con ProjectsPulse) en
+  // vez de repetir "crea tu primer proyecto" sobre uno que ya existe.
+  const { data: projects, isLoading: loadingProjects } = useQuery({
+    queryKey: ["projects"],
+    queryFn: () => projectsService.list(),
+  });
 
-  if (isLoading || !data) {
+  if (isLoading || !data || loadingProjects || !projects) {
     return (
       <div className="space-y-6">
         <PageHeader title="Pulso del equipo" description="Resumen ejecutivo del equipo TI" />
@@ -124,7 +135,7 @@ function DashboardPage() {
     );
   }
 
-  if (data.length === 0) {
+  if (data.length === 0 && projects.length === 0) {
     return <EmptyDashboard />;
   }
 
@@ -308,6 +319,8 @@ function DashboardPage() {
         <MetricCard label="Vencidas" value={vencidas} accent="danger" />
         <MetricCard label="Backlog" value={backlog} accent="warning" />
       </div>
+
+      <ProjectsPulse />
 
       <div className="grid lg:grid-cols-2 gap-4">
         {canSeeTeamBreakdown && loadRings.length > 0 && (

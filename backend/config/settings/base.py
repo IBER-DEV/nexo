@@ -27,6 +27,7 @@ LOCAL_APPS = [
     "apps.organizations",
     "apps.users",
     "apps.activities",
+    "apps.projects",
     "apps.notifications",
     "apps.mcp",
 ]

@@ -42,7 +42,7 @@ def _row_changed(instance: Activity, data: dict) -> bool:
         _nombre(instance.cliente) != data["empresa"]
         or _nombre(instance.proceso) != data["proceso"]
         or _nombre(instance.aplicacion) != data["aplicacion"]
-        or instance.proyecto != data["proyecto"]
+        or _nombre(instance.proyecto) != data["proyecto"]
         or instance.nombre != data["nombre"]
         or instance.descripcion != data["descripcion"]
         or instance.responsable_id != data["responsable_id"]
@@ -132,7 +132,9 @@ class Command(BaseCommand):
                 numero = parse_codigo(flowdesk_id) if flowdesk_id else None
                 instance = (
                     Activity.objects.for_org(org)
-                    .select_related("cliente", "proceso", "aplicacion", "stakeholder", "estado")
+                    .select_related(
+                        "cliente", "proceso", "aplicacion", "stakeholder", "estado", "proyecto"
+                    )
                     .filter(numero=numero)
                     .first()
                     if numero

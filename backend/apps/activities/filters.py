@@ -19,6 +19,10 @@ class ActivityFilter(django_filters.FilterSet):
     prioridad = django_filters.ModelMultipleChoiceFilter(queryset=_priorities_qs)
     categoria = django_filters.CharFilter(field_name="estado__categoria")
     responsable_id = django_filters.NumberFilter(field_name="responsable__id")
+    proyecto_id = django_filters.NumberFilter(field_name="proyecto__id")
+    # "Sin proyecto" es una vista que el gestor necesita de verdad: es la
+    # bandeja de trabajo huérfano que nadie está midiendo.
+    sin_proyecto = django_filters.BooleanFilter(field_name="proyecto", lookup_expr="isnull")
     empresa = django_filters.CharFilter(field_name="cliente__nombre", lookup_expr="icontains")
     aplicacion = django_filters.CharFilter(field_name="aplicacion__nombre", lookup_expr="icontains")
     mes_planeacion = django_filters.CharFilter(lookup_expr="iexact")
@@ -31,6 +35,8 @@ class ActivityFilter(django_filters.FilterSet):
             "prioridad",
             "categoria",
             "responsable_id",
+            "proyecto_id",
+            "sin_proyecto",
             "empresa",
             "aplicacion",
             "mes_planeacion",

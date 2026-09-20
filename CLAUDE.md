@@ -18,7 +18,7 @@ interna (antes "FlowDesk"), ahora en transición a producto open core (ver ROADM
 
 ```
 src/              Frontend: TanStack Start + React 19 + Tailwind v4 + shadcn/ui
-backend/          Django 5 + DRF, apps: activities, users
+backend/          Django 5 + DRF, apps: activities, projects, users
 docs/             Roadmap y documentación de producto
 docker-compose.yml, backend/Dockerfile   Solo el backend (ver por qué, abajo)
 ```
@@ -62,8 +62,8 @@ python manage.py migrate && python manage.py seed_data && python manage.py runse
 # Backend — Docker (Postgres real, hot-reload)
 docker compose up --build           # localhost:8000
 
-# Tests backend (225 tests: auth, CRUD, visibilidad, tenancy, maestros, sync, organización,
-# plantillas, tokens, MCP)
+# Tests backend (259 tests: auth, CRUD, visibilidad, tenancy, maestros, sync, organización,
+# plantillas, tokens, MCP, proyectos)
 docker compose exec -T backend python manage.py test
 
 # Sync AppSheet (Google Sheets) — requiere GOOGLE_SHEETS_CREDENTIALS_JSON configurado
@@ -349,6 +349,48 @@ Cinco herramientas: `obtener_workspace`, `listar_actividades`, `listar_usuarios`
   sale de `API_BASE_URL` (`lib/api.ts`), no está hardcodeada — un self-hosted la necesita
   apuntando a su propio dominio.
 
+## Proyectos (COMPLETADO — 2026-09-20)
+
+Antes de esto no había forma de responder "¿cómo va mi proyecto?": `Activity.proyecto` era un
+`CharField` de texto libre que **solo** llenaba el sync de Sheets, no estaba en `types.ts`, no
+se podía filtrar y no aparecía en ninguna pantalla. Ahora `Project` (`backend/apps/projects/`)
+es un modelo de primera clase y el avance se **deriva**, no se teclea.
+
+- **`Project` es un contenedor, no una segunda unidad de trabajo** — no reabre el punto 3 de
+  [ADR 0001](docs/adr/0001-unidad-de-trabajo-en-nexo.md) (no hace falta un `WorkItem` paraguas).
+  Sí sigue su regla 1: objeto de dominio propio que reutiliza `for_org()` y el mixin de scoping.
+- **No existe un campo `avance`, a propósito.** Sale de `projects/progress.py`:
+  finalizadas / (total − canceladas), con `WorkflowState.categoria` como única fuente de verdad
+  (nunca `estado.slug`). Un porcentaje manual se congela y termina mintiendo peor que no tenerlo.
+  Las canceladas salen del *denominador*: 5 hechas + 5 canceladas es 100%, no 50%.
+- **La salud (`en_tiempo`/`en_riesgo`/`atrasado`/…) también se calcula en cada lectura.** Sin
+  `fecha_fin_estimada` un proyecto nunca puede estar atrasado — es el campo que hace medible el
+  compromiso, por eso el formulario lo explica en vez de dejarlo suelto.
+- **GOTCHA GRANDE — el scoping por rol se aplica como subconsulta sobre `pk`, no como
+  `.filter(activities__...)`.** Django reutiliza el JOIN de un filtro sobre relación
+  multi-valuada en los `Count()` que se anoten después: con la versión "corta", un miembro ve el
+  avance calculado **solo sobre sus actividades** (medido: 1 de 4 → 0% en un proyecto al 75%).
+  Ver `projects/visibility.py` y el test `ProjectMetricsVisibilityTests`, que falla si alguien
+  lo "simplifica". Regla de producto detrás: **el rol decide qué proyectos ves, no qué tan
+  avanzados están** — las métricas son del proyecto entero; la *lista* de actividades sí filtra.
+- **`Activity.proyecto` acepta dos entradas: `proyecto` (nombre) y `proyecto_id`.** El nombre
+  existe porque la columna `Proyecto` de la Google Sheet y el import de Excel solo conocen texto
+  (get-or-create, como los catálogos); el id es el que usa la UI. Si llegan los dos, gana el id.
+  Ninguno declara `source` en el serializer — dos campos DRF al mismo source se pisan; ambos se
+  resuelven a mano en `validate()`.
+- **La columna `Proyecto` de Sheets sigue siendo texto** (contrato externo, igual que
+  `FlowDeskID`): `sheets_client.activity_to_row()` escribe `proyecto.nombre`, no el objeto.
+- **`select_related` debe incluir `proyecto__organization`**, no solo `proyecto`:
+  `Project.codigo` lee `organization.codigo_prefix` y sin eso serializar una lista dispara una
+  consulta por fila (ya está en `activities/visibility.py::RELATED`).
+- **Migración `activities.0010` es a mano y no la que genera `makemigrations`.** El autogenerado
+  es un `AlterField` CharField→FK que perdería los nombres existentes; la real hace
+  rename → add FK → `RunPython` → drop, y es reversible.
+- **Secuencia propia**: código `{PREFIX}-P001` vía `SequenceService.next(org, name="project")`
+  (`SequenceService.COUNTERS` mapea nombre lógico → contador en `Organization`). Los contadores
+  son `readonly_fields` en el admin: retrocederlos a mano genera códigos duplicados.
+- Escribir proyectos requiere rol de planeación (admin/coordinador); leerlos, cualquier miembro.
+
 ## Operación (entornos, crons, respaldos)
 
 Runbook completo en [docs/operations.md](docs/operations.md). Lo que hay que tener presente al
@@ -367,6 +409,10 @@ tocar código:
 ## Deuda conocida / pendiente
 
 - Sin tests de frontend (solo backend tiene suite).
+- **Los proyectos de la demo salen casi todos en rojo.** No es un bug del cálculo: las 42
+  actividades que siembra `seed_data` tienen fechas aleatorias en una ventana ya vencida, así
+  que arrastran el semáforo. Si la demo pública va a mostrar /projects, hay que sembrar fechas
+  más benignas — es cosmético del seed, no de `progress.py`.
 - **MCP sin documentación larga ni video.** La UI ya entrega la configuración lista para pegar y
   la landing lo menciona (Roadmap + FAQ), pero no hay una guía paso a paso ni una demo grabada
   del flujo "pídele a Claude que cargue tus actividades" — que es justo lo que haría entender el

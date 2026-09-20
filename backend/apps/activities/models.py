@@ -264,7 +264,18 @@ class Activity(models.Model):
     tipo = models.ForeignKey(
         ActivityType, on_delete=models.SET_NULL, null=True, blank=True, related_name="activities"
     )
-    proyecto = models.CharField(max_length=200, blank=True, default="")
+    # Antes era un CharField de texto libre que solo llenaba el sync de
+    # Sheets. Ahora es una relación real: ver apps/projects/models.py y la
+    # migración activities.0010, que convirtió cada texto distinto en una
+    # fila. SET_NULL y no PROTECT porque archivar un proyecto no debe
+    # bloquearse por tener actividades — la actividad sobrevive suelta.
+    proyecto = models.ForeignKey(
+        "projects.Project",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="activities",
+    )
     nombre = models.CharField(max_length=200)
     descripcion = models.TextField(blank=True)
     responsable = models.ForeignKey(

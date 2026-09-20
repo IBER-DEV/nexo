@@ -1,5 +1,6 @@
 from datetime import date
 from rest_framework import serializers
+from apps.projects.models import Project
 from apps.users.models import User
 from .models import Activity, ActivityType, Cliente, Priority, Proceso, Aplicacion, Stakeholder, WorkflowState
 
@@ -42,6 +43,20 @@ class ActivitySerializer(serializers.ModelSerializer):
     stakeholder = serializers.CharField(
         max_length=100, write_only=True, allow_blank=True, required=False
     )
+
+    # Proyecto: dos puertas de entrada al mismo FK, a propósito.
+    # - `proyecto` (nombre) mantiene intacto el contrato externo de la
+    #   columna "Proyecto" de la Google Sheet y del import de Excel, que
+    #   solo conocen el texto. Resuelve get-or-create como los catálogos.
+    # - `proyecto_id` es la que usa la UI, donde el usuario elige de una
+    #   lista y un rename del proyecto no debe romper el vínculo.
+    # Si llegan las dos, gana el id (es la más precisa). Ninguna de las dos
+    # declara `source`: ambas se resuelven a mano en validate() — dos
+    # campos DRF apuntando al mismo source se pisarían en validated_data.
+    proyecto = serializers.CharField(
+        max_length=200, write_only=True, allow_blank=True, required=False
+    )
+    proyecto_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
 
     # Maestros configurables por org: viajan por id. required=False porque
     # el estado se puede auto-calcular desde las fechas y la prioridad tiene
@@ -99,6 +114,7 @@ class ActivitySerializer(serializers.ModelSerializer):
             "proceso",
             "aplicacion",
             "proyecto",
+            "proyecto_id",
             "nombre",
             "descripcion",
             "responsable",
@@ -124,6 +140,40 @@ class ActivitySerializer(serializers.ModelSerializer):
         if existing is not None:
             return existing
         return model.objects.create(organization=org, nombre=value)
+
+    def _resolve_project_by_id(self, value):
+        """Valida que el proyecto exista y sea de la organización del
+        request. El chequeo de organización no es opcional: sin él, mandar
+        un `proyecto_id` de otro tenant amarraría la actividad a datos
+        ajenos (segunda línea de defensa multi-tenant, igual que los
+        querysets acotados en __init__)."""
+        if value in (None, ""):
+            return None
+        org = self._request_org()
+        if org is None:
+            raise serializers.ValidationError({"proyecto_id": "Usuario sin organización"})
+        project = Project.objects.for_org(org).filter(pk=value).first()
+        if project is None:
+            raise serializers.ValidationError({"proyecto_id": "Proyecto no encontrado"})
+        return project
+
+    def _get_or_create_project(self, value: str):
+        """Resuelve un proyecto por nombre, creándolo si no existe.
+
+        Es la puerta que usan el sync de Sheets y el import de Excel, que
+        solo conocen el texto de la columna "Proyecto". El proyecto nace
+        desnudo (sin líder ni fechas) y alguien lo completa después desde
+        /projects — igual que un catálogo creado al vuelo."""
+        value = value.strip()
+        if not value:
+            return None
+        org = self._request_org()
+        if org is None:
+            raise serializers.ValidationError("Usuario sin organización")
+        existing = Project.objects.for_org(org).filter(nombre__iexact=value).first()
+        if existing is not None:
+            return existing
+        return Project.objects.create(organization=org, nombre=value)
 
     def validate_mes_planeacion(self, value: str | None) -> str | None:
         if value in (None, ""):
@@ -156,6 +206,14 @@ class ActivitySerializer(serializers.ModelSerializer):
             attrs["stakeholder"] = self._get_or_create_catalog(
                 Stakeholder, attrs.pop("stakeholder")
             )
+
+        # El id gana sobre el nombre cuando llegan los dos (ver la
+        # declaración de ambos campos, arriba).
+        if "proyecto_id" in attrs:
+            attrs.pop("proyecto", None)
+            attrs["proyecto"] = self._resolve_project_by_id(attrs.pop("proyecto_id"))
+        elif "proyecto" in attrs:
+            attrs["proyecto"] = self._get_or_create_project(attrs.pop("proyecto"))
 
         responsable = attrs.get("responsable")
         if responsable is None and instance is not None:
@@ -242,6 +300,12 @@ class ActivitySerializer(serializers.ModelSerializer):
         data["proceso"] = instance.proceso.nombre if instance.proceso_id else ""
         data["aplicacion"] = instance.aplicacion.nombre if instance.aplicacion_id else ""
         data["stakeholder"] = instance.stakeholder.nombre if instance.stakeholder_id else ""
+        # Ambos campos son write_only, así que super() no los incluye: se
+        # arman acá. El nombre es para mostrar; el id, para que el
+        # formulario de edición preseleccione el proyecto.
+        data["proyecto"] = instance.proyecto.nombre if instance.proyecto_id else ""
+        data["proyecto_id"] = instance.proyecto_id
+        data["proyecto_codigo"] = instance.proyecto.codigo if instance.proyecto_id else ""
         return data
 
     def get_id(self, obj) -> str:

@@ -4,6 +4,7 @@ import { ChevronRight } from "lucide-react";
 const LABELS: Record<string, string> = {
   "": "Dashboard",
   activities: "Actividades",
+  projects: "Proyectos",
   planeacion: "Planeación",
   kanban: "Kanban",
   reports: "Reportes",

@@ -7,6 +7,7 @@ urlpatterns = [
         path("auth/", include("apps.users.urls")),
         path("users/", include("apps.users.urls_users")),
         path("activities/", include("apps.activities.urls")),
+        path("projects/", include("apps.projects.urls")),
         path("organization/", include("apps.organizations.urls")),
         path("access-codes/", include("apps.organizations.urls_access_codes")),
         path("mcp/", include("apps.mcp.urls")),

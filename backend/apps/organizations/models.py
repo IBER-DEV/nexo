@@ -31,8 +31,10 @@ class Organization(models.Model):
     is_active = models.BooleanField(default=True)
     appsheet_spreadsheet_id = models.CharField(max_length=100, blank=True, default="")
     appsheet_worksheet_name = models.CharField(max_length=100, blank=True, default="")
-    # Secuencia de Activity.numero — consumir solo vía SequenceService.
+    # Secuencias de Activity.numero y Project.numero — consumir solo vía
+    # SequenceService (ver SequenceService.COUNTERS).
     next_activity_numero = models.PositiveIntegerField(default=1)
+    next_project_numero = models.PositiveIntegerField(default=1)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -11,6 +11,7 @@ from django.db import connection
 from apps.organizations.models import Organization
 from apps.users.models import User
 from apps.activities.org_templates import apply_template
+from apps.projects.models import Project
 from apps.activities.models import (
     Activity,
     ActivityType,
@@ -38,6 +39,20 @@ EMPRESAS = ["Acme Corp", "Globex", "Initech", "Umbrella", "Soylent"]
 APLICACIONES = ["SAP ERP", "Salesforce CRM", "Oracle DB", "Jira Cloud", "Power BI", "Active Directory"]
 PROCESOS = ["Facturación", "Compras", "RRHH", "Soporte N2", "Infraestructura", "Seguridad"]
 STAKEHOLDERS = ["Gerencia Comercial", "Operaciones", "Finanzas", "Recursos Humanos", "Dirección TI"]
+
+# Proyectos de la org demo. Los offsets de fecha son relativos a hoy y están
+# elegidos para que la demo muestre un semáforo de cada color —en tiempo,
+# en riesgo, atrasado, cerrado y sin fecha—; si los cambias, revisá que
+# /projects siga mostrando variedad y no una sola columna de verde.
+# `sin_proyecto` queda a propósito: parte de las actividades no se asigna a
+# ninguno, para que se vea la bandeja de trabajo huérfano.
+PROYECTOS = [
+    {"nombre": "Migración a SAP S/4HANA", "estado": "active", "inicio": -90, "fin": 45},
+    {"nombre": "Portal de autoservicio", "estado": "active", "inicio": -60, "fin": 10},
+    {"nombre": "Hardening de Active Directory", "estado": "active", "inicio": -120, "fin": -15},
+    {"nombre": "Tablero de BI comercial", "estado": "done", "inicio": -180, "fin": -30},
+    {"nombre": "Renovación de licencias", "estado": "planned", "inicio": None, "fin": None},
+]
 NOMBRES = [
     "Migración de base de datos",
     "Integración API de pagos",
@@ -210,6 +225,22 @@ class Command(BaseCommand):
             for n in STAKEHOLDERS
         }
 
+        self.stdout.write("Seeding projects...")
+        hoy = date.today()
+        proyectos = []
+        for spec in PROYECTOS:
+            proyecto, _ = Project.objects.get_or_create(
+                organization=org,
+                nombre=spec["nombre"],
+                defaults={
+                    "estado": spec["estado"],
+                    "lider": ana or demo_coordinator,
+                    "fecha_inicio": hoy + timedelta(days=spec["inicio"]) if spec["inicio"] else None,
+                    "fecha_fin_estimada": hoy + timedelta(days=spec["fin"]) if spec["fin"] else None,
+                },
+            )
+            proyectos.append(proyecto)
+
         self.stdout.write("Seeding activities...")
         rand = mulberry32(42)
 
@@ -218,6 +249,7 @@ class Command(BaseCommand):
 
         today = date.today()
         created_count = 0
+        nuevas_pks: set[int] = set()
 
         for i in range(1, 43):
             days_back = int(rand() * 60)
@@ -237,8 +269,13 @@ class Command(BaseCommand):
             mes_planeacion = inicio.strftime("%Y-%m")
 
             user = pick(users)
+            # ~1 de cada 6 queda sin proyecto: es la bandeja de trabajo
+            # huérfano que /projects deja ver (filtro `sin_proyecto`).
+            sorteo = int(rand() * (len(proyectos) + 1))
+            proyecto = proyectos[sorteo] if sorteo < len(proyectos) else None
             defaults = {
                 "organization": org,
+                "proyecto": proyecto,
                 "cliente": clientes[pick(EMPRESAS)],
                 "proceso": procesos[pick(PROCESOS)],
                 "aplicacion": aplicaciones[pick(APLICACIONES)],
@@ -257,10 +294,36 @@ class Command(BaseCommand):
             activity, created = Activity.objects.get_or_create(pk=i, defaults=defaults)
             if created:
                 created_count += 1
+                nuevas_pks.add(activity.pk)
 
         self.stdout.write(self.style.SUCCESS(
             f"\nDone. {created_count} activities created (existing ones untouched)."
         ))
+
+        # Backfill de proyecto para actividades que ya existían antes de que
+        # los proyectos existieran (la org `demo` de producción es el caso
+        # real: sus 42 actividades son anteriores a esta feature). Solo toca
+        # las que están en NULL —nunca reasigna— así que es idempotente y no
+        # pisa lo que alguien haya acomodado a mano.
+        #
+        # Excluye las creadas en esta misma corrida: el sorteo del bucle ya
+        # decidió cuáles quedan sin proyecto a propósito (la bandeja de
+        # trabajo huérfano que muestra el filtro `sin_proyecto`), y sin esta
+        # exclusión el backfill se las comía — una siembra desde cero
+        # terminaba sin una sola actividad suelta.
+        huerfanas = Activity.objects.filter(organization=org, proyecto__isnull=True).exclude(
+            pk__in=nuevas_pks
+        )
+        backfilled = 0
+        for actividad in huerfanas:
+            if actividad.pk % 6 == 0:
+                continue
+            Activity.objects.filter(pk=actividad.pk).update(
+                proyecto=proyectos[actividad.pk % len(proyectos)]
+            )
+            backfilled += 1
+        if backfilled:
+            self.stdout.write(self.style.SUCCESS(f"{backfilled} activities linked to a project."))
 
         # demo-member necesita ser responsable de algo — ActivityViewSet
         # filtra a member a solo lo suyo (responsable/created_by). Sin esto

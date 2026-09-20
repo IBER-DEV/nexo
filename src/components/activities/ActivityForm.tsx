@@ -13,17 +13,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ComboboxCreatable } from "@/components/ui/combobox-creatable";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import type { Activity, ActivityInput } from "@/lib/types";
+import type { Activity, ActivityInput, Project } from "@/lib/types";
 import { activitiesService } from "@/services/activitiesService";
+import { projectsService } from "@/services/projectsService";
 import { usersService } from "@/services/usersService";
 import { useAuth } from "@/providers/AuthProvider";
 import { useWorkspace } from "@/providers/WorkspaceProvider";
+
+/** Radix Select no admite un item con value="", así que el "sin valor"
+ *  necesita un centinela propio. */
+const SIN_PROYECTO = "__none__";
+
+const isClosed = (p: Project) => p.estado === "done" || p.estado === "cancelled";
 
 const schema = z.object({
   empresa: z.string(),
@@ -33,6 +41,7 @@ const schema = z.object({
   descripcion: z.string().max(500),
   responsable_id: z.number({ error: "Requerido" }).int().positive("Requerido"),
   stakeholder: z.string().min(1, "Requerido"),
+  proyecto_id: z.number().int().positive().nullable(),
   mes_planeacion: z.string().regex(/^\d{4}-\d{2}$/, "Formato YYYY-MM"),
   semana_planeacion: z.number().int().min(1).max(5),
   prioridad_id: z.number({ error: "Requerido" }).int().positive("Requerido"),
@@ -75,6 +84,12 @@ export function ActivityForm({
     staleTime: 60000,
   });
 
+  const { data: projects = [] } = useQuery({
+    queryKey: ["projects"],
+    queryFn: () => projectsService.list(),
+    staleTime: 60000,
+  });
+
   const options = {
     empresas: meta?.empresas ?? [],
     procesos: meta?.procesos ?? [],
@@ -101,6 +116,7 @@ export function ActivityForm({
       descripcion: defaultValues?.descripcion ?? "",
       responsable_id: defaultValues?.responsable_id ?? user?.id ?? (undefined as unknown as number),
       stakeholder: defaultValues?.stakeholder ?? "",
+      proyecto_id: defaultValues?.proyecto_id ?? null,
       mes_planeacion: defaultMes,
       semana_planeacion: defaultSemana,
       prioridad_id:
@@ -121,6 +137,7 @@ export function ActivityForm({
       descripcion: v.descripcion,
       responsable_id: v.responsable_id,
       stakeholder: v.stakeholder,
+      proyecto_id: v.proyecto_id,
       mes_planeacion: v.mes_planeacion,
       semana_planeacion: v.semana_planeacion,
       prioridad_id: v.prioridad_id,
@@ -135,27 +152,27 @@ export function ActivityForm({
     <form onSubmit={submit} className="space-y-4">
       <div className="grid sm:grid-cols-2 gap-4">
         <Field label="Empresa (opcional)" error={form.formState.errors.empresa?.message}>
-          <SelectControlled
+          <ComboboxCreatable
             value={form.watch("empresa")}
             onChange={(v) => form.setValue("empresa", v)}
             options={options.empresas}
-            placeholder="Seleccionar empresa"
+            placeholder="Seleccionar o crear empresa"
           />
         </Field>
         <Field label="Proceso (opcional)" error={form.formState.errors.proceso?.message}>
-          <SelectControlled
+          <ComboboxCreatable
             value={form.watch("proceso")}
             onChange={(v) => form.setValue("proceso", v)}
             options={options.procesos}
-            placeholder="Seleccionar proceso"
+            placeholder="Seleccionar o crear proceso"
           />
         </Field>
         <Field label="Aplicación (opcional)" error={form.formState.errors.aplicacion?.message}>
-          <SelectControlled
+          <ComboboxCreatable
             value={form.watch("aplicacion")}
             onChange={(v) => form.setValue("aplicacion", v)}
             options={options.aplicaciones}
-            placeholder="Seleccionar aplicación"
+            placeholder="Seleccionar o crear aplicación"
           />
         </Field>
         <Field label="Stakeholder" error={form.formState.errors.stakeholder?.message}>
@@ -172,6 +189,30 @@ export function ActivityForm({
           </datalist>
         </Field>
       </div>
+
+      <Field label="Proyecto (opcional)" error={form.formState.errors.proyecto_id?.message}>
+        <Select
+          value={form.watch("proyecto_id") ? String(form.watch("proyecto_id")) : SIN_PROYECTO}
+          onValueChange={(v) => form.setValue("proyecto_id", v === SIN_PROYECTO ? null : Number(v))}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Sin proyecto" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={SIN_PROYECTO}>Sin proyecto</SelectItem>
+            {projects
+              // Un proyecto cerrado no debería recibir trabajo nuevo, pero
+              // sí seguir visible si la actividad que se edita ya le
+              // pertenece: quitarlo de la lista la desasignaría sin aviso.
+              .filter((p) => !isClosed(p) || p.pk === defaultValues?.proyecto_id)
+              .map((p) => (
+                <SelectItem key={p.pk} value={String(p.pk)}>
+                  {p.nombre}
+                </SelectItem>
+              ))}
+          </SelectContent>
+        </Select>
+      </Field>
 
       <div className="grid sm:grid-cols-2 gap-4">
         <Field label="Mes de planeación" error={form.formState.errors.mes_planeacion?.message}>
@@ -343,41 +384,6 @@ function Field({
       {children}
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
-  );
-}
-
-const EMPTY_OPTION = "__ninguna__";
-
-function SelectControlled({
-  value,
-  onChange,
-  options,
-  placeholder,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  options: string[];
-  placeholder: string;
-}) {
-  return (
-    <Select
-      value={value || EMPTY_OPTION}
-      onValueChange={(v) => onChange(v === EMPTY_OPTION ? "" : v)}
-    >
-      <SelectTrigger>
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value={EMPTY_OPTION} className="text-muted-foreground italic">
-          Sin especificar
-        </SelectItem>
-        {options.map((o) => (
-          <SelectItem key={o} value={o}>
-            {o}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
   );
 }
 

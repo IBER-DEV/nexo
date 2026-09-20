@@ -10,14 +10,19 @@ from .models import Organization
 
 
 class SequenceService:
+    #: nombre lógico de la secuencia → campo contador en Organization.
+    COUNTERS = {
+        "activity": "next_activity_numero",
+        "project": "next_project_numero",
+    }
+
     @staticmethod
     def next(organization: Organization, name: str = "activity") -> int:
-        if name != "activity":
+        field = SequenceService.COUNTERS.get(name)
+        if field is None:
             raise ValueError(f"Secuencia desconocida: {name}")
         with transaction.atomic():
             org = Organization.objects.select_for_update().get(pk=organization.pk)
-            numero = org.next_activity_numero
-            Organization.objects.filter(pk=org.pk).update(
-                next_activity_numero=F("next_activity_numero") + 1
-            )
+            numero = getattr(org, field)
+            Organization.objects.filter(pk=org.pk).update(**{field: F(field) + 1})
             return numero

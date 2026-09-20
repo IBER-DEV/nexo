@@ -22,6 +22,10 @@ RELATED = (
     "estado",
     "prioridad",
     "tipo",
+    # La organización del proyecto (y no solo el proyecto) porque
+    # `Project.codigo` lee `organization.codigo_prefix`: sin este tramo,
+    # serializar una lista de actividades dispara una consulta por fila.
+    "proyecto__organization",
 )
 
 

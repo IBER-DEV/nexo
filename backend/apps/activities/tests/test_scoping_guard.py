@@ -13,6 +13,7 @@ ROUTER_MODULES = [
     "apps.activities.urls",
     "apps.activities.urls_masters",
     "apps.organizations.urls_access_codes",
+    "apps.projects.urls",
 ]
 
 
