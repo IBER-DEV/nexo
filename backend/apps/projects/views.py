@@ -87,6 +87,54 @@ class ProjectViewSet(OrganizationScopedViewSetMixin, viewsets.ModelViewSet):
             ActivitySerializer(qs, many=True, context=self.get_serializer_context()).data
         )
 
+    @action(detail=True, methods=["get"], url_path="activity-defaults")
+    def activity_defaults(self, request, pk=None):
+        """Contexto de la última actividad del proyecto, para prellenar la
+        siguiente.
+
+        Las actividades de un mismo proyecto comparten casi siempre cliente,
+        proceso, aplicación y stakeholder: reescribirlos en cada alta es
+        trabajo puro. Acá solo viaja ese contexto repetible — nunca fechas,
+        estado, prioridad ni responsable, que son propios de cada actividad
+        y copiarlos silenciosamente sería peor que dejarlos en su default
+        (una fecha vieja o un responsable ajeno se cuelan sin que nadie los
+        mire).
+
+        Respeta el scoping por rol, igual que `activities`: se prellena
+        desde algo que este usuario ya podía ver. Si no ve ninguna, devuelve
+        vacío y el formulario se comporta como antes.
+
+        Es un endpoint aparte y no un campo del serializer de Project para
+        no pagar una subconsulta por fila al listar proyectos, donde este
+        dato no se usa.
+        """
+        project = self.get_object()
+        ultima = (
+            scope_activities_to_user(
+                project.activities.select_related(
+                    "cliente", "proceso", "aplicacion", "stakeholder"
+                ),
+                request.user,
+            )
+            .order_by("-pk")
+            .first()
+        )
+        if ultima is None:
+            return Response({})
+
+        def nombre(obj):
+            return obj.nombre if obj is not None else ""
+
+        return Response(
+            {
+                "empresa": nombre(ultima.cliente),
+                "proceso": nombre(ultima.proceso),
+                "aplicacion": nombre(ultima.aplicacion),
+                "stakeholder": nombre(ultima.stakeholder),
+                "tipo_id": ultima.tipo_id,
+            }
+        )
+
     @action(detail=False, methods=["get"], url_path="summary")
     def summary(self, request):
         """Una línea por semáforo para el dashboard, sin bajarse la lista

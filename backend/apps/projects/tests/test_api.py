@@ -255,3 +255,102 @@ class ProjectFechasTests(APITestCase):
         self.client.force_authenticate(admin)
         res = self.client.get(f"/api/v1/projects/{p.pk}/")
         self.assertEqual(res.data["metrics"]["dias_restantes"], 10)
+
+
+class ActivityDefaultsTests(APITestCase):
+    """Prellenado de la siguiente actividad de un proyecto."""
+
+    def setUp(self):
+        self.org = make_org(slug="defaults", nombre="Defaults")
+        ensure_masters(self.org)
+        self.admin = make_user("admin@defaults.com", "Admin", rol="admin", organization=self.org)
+        self.project = Project.objects.create(organization=self.org, nombre="Con contexto")
+
+    def _url(self, project=None):
+        return f"/api/v1/projects/{(project or self.project).pk}/activity-defaults/"
+
+    def test_proyecto_sin_actividades_devuelve_vacio(self):
+        """El formulario debe comportarse como antes, no romperse."""
+        self.client.force_authenticate(self.admin)
+        res = self.client.get(self._url())
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.data, {})
+
+    def test_devuelve_el_contexto_de_la_ultima_actividad(self):
+        make_activity(
+            self.admin,
+            organization=self.org,
+            proyecto=self.project,
+            empresa="Vieja",
+            proceso="Soporte",
+            aplicacion="ERP",
+            stakeholder="TI",
+        )
+        make_activity(
+            self.admin,
+            organization=self.org,
+            proyecto=self.project,
+            empresa="Acme Corp",
+            proceso="Infraestructura",
+            aplicacion="Oracle DB",
+            stakeholder="Dirección TI",
+        )
+        self.client.force_authenticate(self.admin)
+        res = self.client.get(self._url())
+        # La última (mayor pk), no la primera.
+        self.assertEqual(res.data["empresa"], "Acme Corp")
+        self.assertEqual(res.data["proceso"], "Infraestructura")
+        self.assertEqual(res.data["aplicacion"], "Oracle DB")
+        self.assertEqual(res.data["stakeholder"], "Dirección TI")
+
+    def test_no_devuelve_fechas_estado_prioridad_ni_responsable(self):
+        """Copiarlos en silencio sería peor que el default: una fecha vieja
+        o un responsable ajeno se cuelan sin que nadie los mire."""
+        make_activity(self.admin, organization=self.org, proyecto=self.project)
+        self.client.force_authenticate(self.admin)
+        res = self.client.get(self._url())
+        for prohibido in (
+            "fechaInicio",
+            "fechaLimite",
+            "estado_id",
+            "prioridad_id",
+            "responsable_id",
+            "nombre",
+            "descripcion",
+        ):
+            self.assertNotIn(prohibido, res.data)
+
+    def test_quien_no_ve_el_proyecto_no_llega_al_prellenado(self):
+        """El scoping de Project corta antes: sin relación con el proyecto
+        ni siquiera existe para este usuario."""
+        miembro = make_user("miembro@defaults.com", "Miembro", organization=self.org)
+        make_activity(self.admin, organization=self.org, proyecto=self.project, empresa="Secreta")
+        self.client.force_authenticate(miembro)
+        self.assertEqual(self.client.get(self._url()).status_code, 404)
+
+    def test_prellena_desde_lo_que_el_usuario_ve_no_desde_la_mas_reciente(self):
+        """Un miembro con una actividad en el proyecto sí lo ve, pero el
+        prellenado debe salir de la suya y no de una posterior que no le
+        pertenece — si no, el formulario le mostraría datos de una
+        actividad que tiene prohibido listar."""
+        miembro = make_user("miembro2@defaults.com", "Miembro", organization=self.org)
+        make_activity(
+            miembro, organization=self.org, proyecto=self.project, empresa="La del miembro"
+        )
+        # Posterior (pk mayor) y ajena: es la que vería un admin.
+        make_activity(
+            self.admin, organization=self.org, proyecto=self.project, empresa="La del admin"
+        )
+
+        self.client.force_authenticate(miembro)
+        self.assertEqual(self.client.get(self._url()).data["empresa"], "La del miembro")
+
+        self.client.force_authenticate(self.admin)
+        self.assertEqual(self.client.get(self._url()).data["empresa"], "La del admin")
+
+    def test_no_se_puede_pedir_el_de_otra_organizacion(self):
+        otra = make_org(slug="ajena-defaults", nombre="Ajena")
+        ajeno = Project.objects.create(organization=otra, nombre="Ajeno")
+        self.client.force_authenticate(self.admin)
+        res = self.client.get(self._url(ajeno))
+        self.assertEqual(res.status_code, 404)

@@ -7,6 +7,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { PriorityBadge } from "@/components/activities/PriorityBadge";
 import {
+  ProjectFilterSelect,
+  PROJECT_FILTER_ALL,
+  matchesProjectFilter,
+  type ProjectFilter,
+} from "@/components/projects/ProjectFilterSelect";
+import {
   DndContext,
   DragOverlay,
   PointerSensor,
@@ -45,6 +51,7 @@ function KanbanPage() {
     queryFn: () => activitiesService.list(),
   });
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [proyecto, setProyecto] = useState<ProjectFilter>(PROJECT_FILTER_ALL);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -52,10 +59,11 @@ function KanbanPage() {
     const map: Record<number, Activity[]> = {};
     kanbanStates.forEach((s) => (map[s.id] = []));
     (data ?? []).forEach((a) => {
+      if (!matchesProjectFilter(a, proyecto)) return;
       if (map[a.estado_id]) map[a.estado_id].push(a);
     });
     return map;
-  }, [data, kanbanStates]);
+  }, [data, kanbanStates, proyecto]);
 
   const active = data?.find((a) => a.id === activeId) ?? null;
 
@@ -79,6 +87,9 @@ function KanbanPage() {
       <PageHeader
         title="Tablero Kanban"
         description="Arrastra las tarjetas entre columnas para cambiar el estado"
+        actions={
+          <ProjectFilterSelect value={proyecto} onChange={setProyecto} activities={data ?? []} />
+        }
       />
 
       {isLoading ? (
@@ -153,6 +164,9 @@ function KanbanCard({ activity, dragging = false }: { activity: Activity; draggi
         <span className="text-[10px] font-mono font-semibold text-primary">{activity.id}</span>
         <GripVertical className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
       </div>
+      {activity.proyecto && (
+        <p className="text-[10px] text-muted-foreground truncate mb-1">{activity.proyecto}</p>
+      )}
       <p className="text-sm font-medium line-clamp-2 mb-3">{activity.nombre}</p>
       <div className="flex items-center justify-between gap-2">
         <PriorityBadge prioridadId={activity.prioridad_id} />

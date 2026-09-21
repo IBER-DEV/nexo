@@ -62,7 +62,7 @@ python manage.py migrate && python manage.py seed_data && python manage.py runse
 # Backend — Docker (Postgres real, hot-reload)
 docker compose up --build           # localhost:8000
 
-# Tests backend (259 tests: auth, CRUD, visibilidad, tenancy, maestros, sync, organización,
+# Tests backend (265 tests: auth, CRUD, visibilidad, tenancy, maestros, sync, organización,
 # plantillas, tokens, MCP, proyectos)
 docker compose exec -T backend python manage.py test
 
@@ -390,6 +390,15 @@ es un modelo de primera clase y el avance se **deriva**, no se teclea.
   (`SequenceService.COUNTERS` mapea nombre lógico → contador en `Organization`). Los contadores
   son `readonly_fields` en el admin: retrocederlos a mano genera códigos duplicados.
 - Escribir proyectos requiere rol de planeación (admin/coordinador); leerlos, cualquier miembro.
+- **`GET /projects/{pk}/activity-defaults/` prellena la siguiente actividad del proyecto** con el
+  contexto repetible de la última visible (empresa/proceso/aplicación/stakeholder/tipo). **Nunca
+  fechas, estado, prioridad ni responsable**: copiarlos en silencio es peor que el default — una
+  fecha vieja o un responsable ajeno se cuelan sin que nadie los mire. Es un endpoint aparte y no
+  un campo del serializer de Project para no pagar una subconsulta por fila al listar proyectos.
+  En el frontend (`ActivityForm`) el prellenado **solo corre al crear, nunca al editar** (ahí los
+  valores son datos reales y pisarlos sería destructivo) y solo escribe un campo si está vacío o
+  si sigue igual al prellenado anterior — así cambiar de proyecto actualiza el contexto pero lo
+  que el usuario escribió a mano no se pierde nunca.
 
 ## Operación (entornos, crons, respaldos)
 

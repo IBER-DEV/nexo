@@ -17,7 +17,13 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkspace } from "@/providers/WorkspaceProvider";
 import { useAuth } from "@/providers/AuthProvider";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import {
+  ProjectFilterSelect,
+  PROJECT_FILTER_ALL,
+  matchesProjectFilter,
+  type ProjectFilter,
+} from "@/components/projects/ProjectFilterSelect";
 
 export const Route = createFileRoute("/_app/reports")({
   head: () => ({
@@ -40,11 +46,13 @@ function ReportsPage() {
     }
   }, [canAccessPlanning, navigate]);
 
-  const { data, isLoading } = useQuery({
+  const { data: allData, isLoading } = useQuery({
     queryKey: ["activities"],
     queryFn: () => activitiesService.list(),
     enabled: canAccessPlanning,
   });
+  const [proyecto, setProyecto] = useState<ProjectFilter>(PROJECT_FILTER_ALL);
+  const data = allData?.filter((a) => matchesProjectFilter(a, proyecto));
 
   if (!canAccessPlanning) {
     return null;
@@ -92,7 +100,13 @@ function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Reportes" description="Análisis del backlog técnico" />
+      <PageHeader
+        title="Reportes"
+        description="Análisis del backlog técnico"
+        actions={
+          <ProjectFilterSelect value={proyecto} onChange={setProyecto} activities={allData ?? []} />
+        }
+      />
 
       <div className="grid lg:grid-cols-2 gap-4">
         <Card className="p-5">

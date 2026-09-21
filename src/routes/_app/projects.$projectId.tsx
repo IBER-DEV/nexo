@@ -10,6 +10,7 @@ import {
   CircleSlash,
   ListTodo,
   Pencil,
+  Plus,
   TriangleAlert,
   UserRound,
 } from "lucide-react";
@@ -39,10 +40,12 @@ import { ProgressBar } from "@/components/projects/ProgressBar";
 import { ProjectForm } from "@/components/projects/ProjectForm";
 import { StatusBadge } from "@/components/activities/StatusBadge";
 import { PriorityBadge } from "@/components/activities/PriorityBadge";
+import { ActivityForm } from "@/components/activities/ActivityForm";
 import { projectsService } from "@/services/projectsService";
+import { activitiesService } from "@/services/activitiesService";
 import { useAuth } from "@/providers/AuthProvider";
 import { useSound } from "@/providers/SoundProvider";
-import { PROJECT_ESTADO_LABEL, type ProjectInput } from "@/lib/types";
+import { PROJECT_ESTADO_LABEL, type ActivityInput, type ProjectInput } from "@/lib/types";
 
 export const Route = createFileRoute("/_app/projects/$projectId")({
   head: () => ({
@@ -59,6 +62,7 @@ function ProjectDetailPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
+  const [creatingActivity, setCreatingActivity] = useState(false);
 
   const { data: project, isLoading } = useQuery({
     queryKey: ["project", pk],
@@ -90,6 +94,24 @@ function ProjectDetailPage() {
     qc.invalidateQueries({ queryKey: ["projects"] });
     qc.invalidateQueries({ queryKey: ["activities-meta"] });
     setEditing(false);
+  };
+
+  const handleCreateActivity = async (values: ActivityInput) => {
+    await activitiesService.create(values);
+    toast.success("Actividad creada");
+    play("success");
+    // El avance del proyecto se deriva de sus actividades, así que la
+    // tarjeta de métricas de arriba también queda obsoleta — no basta con
+    // refrescar la tabla.
+    qc.invalidateQueries({ queryKey: ["project", pk] });
+    qc.invalidateQueries({ queryKey: ["project-activities", pk] });
+    qc.invalidateQueries({ queryKey: ["projects"] });
+    qc.invalidateQueries({ queryKey: ["activities"] });
+    qc.invalidateQueries({ queryKey: ["activities-meta"] });
+    // El prellenado de la próxima actividad sale de la última: la que
+    // acabamos de crear pasa a ser la fuente.
+    qc.invalidateQueries({ queryKey: ["project-activity-defaults", pk] });
+    setCreatingActivity(false);
   };
 
   const fecha = (iso: string | null) =>
@@ -195,19 +217,31 @@ function ProjectDetailPage() {
               Las que puedes ver con tu rol
             </p>
           </div>
-          <Button asChild variant="outline" size="sm">
-            <Link to="/activities" search={{ q: "" }}>
-              Ver en Actividades
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link to="/activities" search={{ q: "" }}>
+                Ver en Actividades
+              </Link>
+            </Button>
+            <Button size="sm" className="gap-1.5" onClick={() => setCreatingActivity(true)}>
+              <Plus className="h-4 w-4" />
+              Nueva actividad
+            </Button>
+          </div>
         </div>
 
         {loadingActivities ? (
           <Skeleton className="h-64 rounded-lg" />
         ) : activities.length === 0 ? (
-          <p className="py-10 text-center text-sm text-muted-foreground">
-            Este proyecto todavía no tiene actividades amarradas.
-          </p>
+          <div className="flex flex-col items-center gap-3 py-10 text-center">
+            <p className="text-sm text-muted-foreground">
+              Este proyecto todavía no tiene actividades amarradas.
+            </p>
+            <Button variant="outline" className="gap-2" onClick={() => setCreatingActivity(true)}>
+              <Plus className="h-4 w-4" />
+              Crear la primera
+            </Button>
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <Table>
@@ -264,6 +298,25 @@ function ProjectDetailPage() {
             defaultValues={project}
             onSubmit={handleSubmit}
             onCancel={() => setEditing(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={creatingActivity} onOpenChange={setCreatingActivity}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Nueva actividad en {project.nombre}</DialogTitle>
+            <DialogDescription>
+              Queda amarrada a este proyecto y su avance se recalcula al guardarla.
+            </DialogDescription>
+          </DialogHeader>
+          <ActivityForm
+            // El proyecto viene fijado; el resto del contexto (empresa,
+            // proceso, aplicación, stakeholder) lo prellena el propio
+            // formulario desde la última actividad de este proyecto.
+            defaultValues={{ proyecto_id: pk }}
+            onSubmit={handleCreateActivity}
+            onCancel={() => setCreatingActivity(false)}
           />
         </DialogContent>
       </Dialog>

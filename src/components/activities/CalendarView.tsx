@@ -155,6 +155,13 @@ function formatDeadlineBadge(fechaInicio: string, fechaLimite: string): string |
   return `→ ${format(end, "d MMM", { locale: es })}`;
 }
 
+import {
+  ProjectFilterSelect,
+  PROJECT_FILTER_ALL,
+  matchesProjectFilter,
+  type ProjectFilter,
+} from "@/components/projects/ProjectFilterSelect";
+
 export function CalendarView({ month, onMonthChange, onEdit }: CalendarViewProps) {
   const [localMonth, setLocalMonth] = useState(() => formatMonth(new Date()));
   const [mounted, setMounted] = useState(false);
@@ -164,6 +171,7 @@ export function CalendarView({ month, onMonthChange, onEdit }: CalendarViewProps
   const [statusFilter, setStatusFilter] = useState<number | "all">("all");
   const [priorityFilter, setPriorityFilter] = useState<number | "all">("all");
   const [responsableFilter, setResponsableFilter] = useState<string>("all");
+  const [proyectoFilter, setProyectoFilter] = useState<ProjectFilter>(PROJECT_FILTER_ALL);
 
   const isControlled = typeof month === "string";
   const activeMonth = isControlled ? month : localMonth;
@@ -202,11 +210,12 @@ export function CalendarView({ month, onMonthChange, onEdit }: CalendarViewProps
       if (statusFilter !== "all" && a.estado_id !== statusFilter) return false;
       if (priorityFilter !== "all" && a.prioridad_id !== priorityFilter) return false;
       if (responsableFilter !== "all" && a.responsable !== responsableFilter) return false;
+      if (!matchesProjectFilter(a, proyectoFilter)) return false;
       if (visibleRange && !overlapsVisibleRange(a, visibleRange.start, visibleRange.end))
         return false;
       return true;
     });
-  }, [data, statusFilter, priorityFilter, responsableFilter, visibleRange]);
+  }, [data, statusFilter, priorityFilter, responsableFilter, proyectoFilter, visibleRange]);
 
   const events = useMemo(() => {
     return filtered
@@ -214,9 +223,12 @@ export function CalendarView({ month, onMonthChange, onEdit }: CalendarViewProps
       .filter((event): event is EventInput => event !== null);
   }, [filtered, stateById]);
 
-  const activeFilterCount = [statusFilter, priorityFilter, responsableFilter].filter(
-    (f) => f !== "all",
-  ).length;
+  const activeFilterCount = [
+    statusFilter,
+    priorityFilter,
+    responsableFilter,
+    proyectoFilter,
+  ].filter((f) => f !== "all").length;
 
   useEffect(() => {
     setMounted(true);
@@ -284,6 +296,7 @@ export function CalendarView({ month, onMonthChange, onEdit }: CalendarViewProps
     setStatusFilter("all");
     setPriorityFilter("all");
     setResponsableFilter("all");
+    setProyectoFilter(PROJECT_FILTER_ALL);
   };
 
   return (
@@ -349,6 +362,13 @@ export function CalendarView({ month, onMonthChange, onEdit }: CalendarViewProps
               ))}
             </SelectContent>
           </Select>
+
+          <ProjectFilterSelect
+            value={proyectoFilter}
+            onChange={setProyectoFilter}
+            activities={data ?? []}
+            className="h-8 w-[170px] text-xs"
+          />
 
           {activeFilterCount > 0 && (
             <button

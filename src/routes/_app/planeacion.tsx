@@ -38,6 +38,12 @@ import { CalendarView } from "@/components/activities/CalendarView";
 import { StatusBadge } from "@/components/activities/StatusBadge";
 import { PriorityBadge } from "@/components/activities/PriorityBadge";
 import { MetricCard } from "@/components/dashboard/MetricCard";
+import {
+  ProjectFilterSelect,
+  PROJECT_FILTER_ALL,
+  matchesProjectFilter,
+  type ProjectFilter,
+} from "@/components/projects/ProjectFilterSelect";
 import type { Activity, ActivityInput } from "@/lib/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -75,6 +81,7 @@ function PlaneacionPage() {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importWeek, setImportWeek] = useState<number | "auto">("auto");
   const [importing, setImporting] = useState(false);
+  const [proyecto, setProyecto] = useState<ProjectFilter>(PROJECT_FILTER_ALL);
 
   useEffect(() => {
     if (!canAccessPlanning) {
@@ -92,12 +99,13 @@ function PlaneacionPage() {
     const map = new Map<number, Activity[]>();
     WEEKS.forEach((week) => map.set(week, []));
     (data ?? []).forEach((activity) => {
+      if (!matchesProjectFilter(activity, proyecto)) return;
       if (activity.semana_planeacion && map.has(activity.semana_planeacion)) {
         map.get(activity.semana_planeacion)?.push(activity);
       }
     });
     return map;
-  }, [data]);
+  }, [data, proyecto]);
 
   const activeWeek = useMemo(() => currentWeekOfMonth(month), [month]);
 
@@ -108,7 +116,7 @@ function PlaneacionPage() {
   );
 
   const monthStats = useMemo(() => {
-    const list = data ?? [];
+    const list = (data ?? []).filter((a) => matchesProjectFilter(a, proyecto));
     const now = Date.now();
     const done = list.filter((a) => isDone(a.estado_id)).length;
     const overdue = list.filter(
@@ -116,7 +124,7 @@ function PlaneacionPage() {
     ).length;
     const pending = list.length - done - list.filter((a) => isCancelled(a.estado_id)).length;
     return { total: list.length, done, pending, overdue };
-  }, [data, isDone, isOpen, isCancelled]);
+  }, [data, proyecto, isDone, isOpen, isCancelled]);
 
   if (!canAccessPlanning) {
     return null;
@@ -207,6 +215,14 @@ function PlaneacionPage() {
           </TabsList>
         </Tabs>
         <div className="flex items-center gap-2">
+          {view === "semanas" && (
+            <ProjectFilterSelect
+              value={proyecto}
+              onChange={setProyecto}
+              activities={data ?? []}
+              className="w-48 h-8 text-xs"
+            />
+          )}
           <Button variant="outline" size="sm" className="gap-2" onClick={() => setImportOpen(true)}>
             <Upload className="h-4 w-4" /> Importar Excel
           </Button>

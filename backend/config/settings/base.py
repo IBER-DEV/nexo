@@ -146,6 +146,11 @@ CORS_ALLOWED_ORIGINS = config(
     cast=Csv(),
 )
 CORS_ALLOW_CREDENTIALS = True
+# Sin esto, `Content-Disposition` llega en la respuesta pero fetch() del
+# navegador no lo expone a JS (las reglas CORS ocultan headers de
+# respuesta por defecto salvo los "simples") — la descarga de plantilla y
+# export de Excel necesitan leerlo para nombrar el archivo.
+CORS_EXPOSE_HEADERS = ["Content-Disposition"]
 
 # ─── AppSheet / Google Sheets sync ────────────────────────────────────────────
 GOOGLE_SHEETS_CREDENTIALS_JSON = config("GOOGLE_SHEETS_CREDENTIALS_JSON", default="")

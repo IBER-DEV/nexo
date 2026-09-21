@@ -1,5 +1,11 @@
 import { apiFetch } from "@/lib/api";
-import type { Activity, Project, ProjectInput, ProjectSummary } from "@/lib/types";
+import type {
+  Activity,
+  ActivityDefaults,
+  Project,
+  ProjectInput,
+  ProjectSummary,
+} from "@/lib/types";
 
 function unwrap<T>(res: { results: T[] } | T[]): T[] {
   // DRF pagina envolviendo en `results`; ambas formas llegan según el
@@ -43,5 +49,11 @@ export const projectsService = {
 
   async summary(): Promise<ProjectSummary> {
     return apiFetch<ProjectSummary>("/projects/summary/");
+  },
+
+  /** Contexto de la última actividad del proyecto, para prellenar la
+   *  siguiente. `{}` si no hay ninguna visible. */
+  async activityDefaults(pk: number): Promise<ActivityDefaults> {
+    return apiFetch<ActivityDefaults>(`/projects/${pk}/activity-defaults/`);
   },
 };

@@ -99,3 +99,56 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
+
+/** Descarga un archivo binario (plantilla/export de Excel) y dispara el
+ *  guardado del navegador. Comparte la lógica de auth/refresh de
+ *  `apiFetch`, pero esta no puede reutilizar esa función porque necesita
+ *  el `Blob` crudo, no `res.json()`. */
+export async function apiDownload(
+  path: string,
+  options: RequestInit = {},
+  fallbackFilename = "descarga",
+): Promise<void> {
+  let token = getAccessToken();
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+
+  const doRequest = (t: string | null) =>
+    fetch(`${BASE_URL}${path}`, {
+      ...options,
+      headers: buildHeaders(t, options.headers, isFormData),
+    });
+
+  let res = await doRequest(token);
+
+  if (res.status === 401) {
+    token = await tryRefresh();
+    if (!token) {
+      clearTokens();
+      window.dispatchEvent(new Event("auth:logout"));
+      throw new ApiError(401, null, "UNAUTHORIZED");
+    }
+    res = await doRequest(token);
+  }
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const message =
+      ((data as Record<string, unknown>)?.detail as string | undefined) ?? "Error al descargar";
+    toast.error(message);
+    throw new ApiError(res.status, data, message);
+  }
+
+  // El backend nombra el archivo en Content-Disposition; el fallback solo
+  // aplica si algún proxy/CORS lo despoja del header en el camino.
+  const disposition = res.headers.get("Content-Disposition") ?? "";
+  const match = /filename="?([^";]+)"?/i.exec(disposition);
+  const filename = match?.[1] ?? fallbackFilename;
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}

@@ -1,3 +1,4 @@
+from django.http import HttpResponse
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -10,8 +11,18 @@ from .models import Activity
 from .serializers import ActivitySerializer
 from .filters import ActivityFilter
 from .models import Cliente, Proceso, Aplicacion, Stakeholder
+from .excel_io import build_export_workbook, build_template_workbook, import_projects_sheet
 from .sync_utils import normalize_header, parse_date, parse_codigo, get_or_create_responsable
 from .visibility import RELATED, scope_to_user
+
+
+def _xlsx_response(workbook, filename: str) -> HttpResponse:
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    workbook.save(response)
+    return response
 
 
 class ActivityViewSet(OrganizationScopedViewSetMixin, viewsets.ModelViewSet):
@@ -122,9 +133,32 @@ class ActivityViewSet(OrganizationScopedViewSetMixin, viewsets.ModelViewSet):
             "fecha finalizacion": "fecha_limite",
         }
         optional_id_headers = {"id", "codigo", "codigo actividad", "id actividad"}
+        # "Proyecto" no es requerido a propósito: la mayoría de organizaciones
+        # importan actividades sin haber armado todavía su lista de
+        # proyectos, y ActivitySerializer ya sabe crear uno al vuelo por
+        # nombre (_get_or_create_project) — mismo criterio que empresa,
+        # proceso y aplicación.
+        optional_headers = {"proyecto": "proyecto"}
 
         wb = load_workbook(upload, data_only=True)
-        ws = wb.active
+
+        # La hoja "Proyectos" (si existe) se procesa antes que las
+        # actividades: así una actividad de la misma plantilla puede
+        # referenciar por nombre un proyecto recién creado en esta misma
+        # importación, en vez de depender de que ya existiera de antes.
+        projects_result = None
+        proyectos_sheet = next(
+            (s for s in wb.worksheets if normalize_header(s.title) == "proyectos"), None
+        )
+
+        # La hoja de actividades es la que se llama literalmente
+        # "Actividades" (como la que genera /activities/template/); si no
+        # existe con ese nombre —exports/plantillas de antes de que
+        # existiera el concepto de Proyecto— se cae a la hoja activa, que
+        # es el comportamiento de siempre.
+        ws = next(
+            (s for s in wb.worksheets if normalize_header(s.title) == "actividades"), wb.active
+        )
         rows = list(ws.iter_rows(values_only=True))
         if not rows:
             return Response({"detail": "Archivo sin filas"}, status=status.HTTP_400_BAD_REQUEST)
@@ -149,6 +183,8 @@ class ActivityViewSet(OrganizationScopedViewSetMixin, viewsets.ModelViewSet):
             key = normalize_header(header)
             if key in expected_headers:
                 header_map[expected_headers[key]] = idx
+            if key in optional_headers:
+                header_map[optional_headers[key]] = idx
             if key in optional_id_headers:
                 id_index = idx
 
@@ -165,6 +201,14 @@ class ActivityViewSet(OrganizationScopedViewSetMixin, viewsets.ModelViewSet):
         errors: list[dict[str, object]] = []
 
         with transaction.atomic():
+            # Adentro del mismo atomic() que las actividades: un dry_run
+            # debe revertir también los proyectos que hubiera creado, no
+            # solo las actividades.
+            if proyectos_sheet is not None:
+                projects_result = import_projects_sheet(
+                    proyectos_sheet, request.user.organization, request.user
+                )
+
             for row_index, row in enumerate(rows[header_row_index:], start=header_row_index + 1):
                 if not any(cell not in (None, "") for cell in row):
                     continue
@@ -201,6 +245,12 @@ class ActivityViewSet(OrganizationScopedViewSetMixin, viewsets.ModelViewSet):
                     "fechaInicio": fecha_inicio,
                     "fechaLimite": fecha_limite,
                 }
+                if "proyecto" in header_map:
+                    proyecto_val = row[header_map["proyecto"]]
+                    # "" es válido acá (ActivitySerializer._get_or_create_project
+                    # la trata como "sin proyecto"), a diferencia de los
+                    # campos de arriba que si vienen vacíos descartan la fila.
+                    data["proyecto"] = str(proyecto_val).strip() if proyecto_val is not None else ""
 
                 if mes_planeacion:
                     data["mes_planeacion"] = mes_planeacion
@@ -249,5 +299,45 @@ class ActivityViewSet(OrganizationScopedViewSetMixin, viewsets.ModelViewSet):
                 "skipped": skipped,
                 "errors": errors,
                 "dry_run": dry_run,
+                # None si no había hoja "Proyectos" — así un consumidor viejo
+                # (planeacion.tsx, que solo lee created/updated/skipped) no
+                # ve nada nuevo, y uno nuevo puede distinguir "sin hoja" de
+                # "hoja vacía" ({created:0,...}).
+                "projects": projects_result,
             }
         )
+
+    @action(detail=False, methods=["get"], url_path="template")
+    def template(self, request):
+        """Plantilla en blanco para cargar proyectos y actividades desde
+        cero — ver excel_io.build_template_workbook()."""
+        wb = build_template_workbook(request.user.organization)
+        return _xlsx_response(wb, "plantilla-nexo.xlsx")
+
+    @action(detail=False, methods=["post"], url_path="export")
+    def export_excel(self, request):
+        """Exporta a .xlsx exactamente las filas que el usuario tiene
+        filtradas/ordenadas en la tabla — por eso recibe la lista de pks en
+        vez de recalcular filtros en el backend. El filtrado de la tabla es
+        enteramente client-side (busqueda, estado, prioridad, responsable,
+        rango de fechas); reimplementarlo acá sería una segunda copia de esa
+        lógica, justo el tipo de duplicación que este proyecto evita en
+        todo lo demás (ver CLAUDE.md, "una regla con dos implementaciones
+        es una fuga esperando a que alguien toque solo una").
+        """
+        pks = request.data.get("pks")
+        if not isinstance(pks, list) or not pks:
+            return Response({"detail": "Se requiere una lista de pks"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            pks = [int(pk) for pk in pks]
+        except (TypeError, ValueError):
+            return Response({"detail": "pks inválidos"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # get_queryset() ya aplica el aislamiento por organización y el
+        # scoping por rol (ver ActivityViewSet.get_queryset) — un pk que no
+        # pertenece a este usuario simplemente no aparece, no es un error.
+        by_pk = {a.pk: a for a in self.get_queryset().filter(pk__in=pks)}
+        ordered = [by_pk[pk] for pk in pks if pk in by_pk]
+
+        wb = build_export_workbook(ordered)
+        return _xlsx_response(wb, f"actividades-{request.user.organization.codigo_prefix}.xlsx")

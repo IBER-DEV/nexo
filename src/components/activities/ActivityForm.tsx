@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -20,7 +21,7 @@ import { CalendarIcon, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import type { Activity, ActivityInput, Project } from "@/lib/types";
+import type { Activity, ActivityDefaults, ActivityInput, Project } from "@/lib/types";
 import { activitiesService } from "@/services/activitiesService";
 import { projectsService } from "@/services/projectsService";
 import { usersService } from "@/services/usersService";
@@ -128,6 +129,57 @@ export function ActivityForm({
     },
   });
 
+  // Prellenado desde el proyecto: las actividades de un mismo proyecto
+  // comparten casi siempre cliente, proceso, aplicación y stakeholder, así
+  // que a partir de la segunda el usuario solo debería escribir nombre y
+  // descripción. Nunca al editar: ahí los valores del formulario son datos
+  // reales de la actividad y pisarlos sería destructivo.
+  const isEditing = defaultValues?.pk !== undefined;
+  const proyectoId = form.watch("proyecto_id");
+
+  const { data: projectDefaults } = useQuery({
+    queryKey: ["project-activity-defaults", proyectoId],
+    queryFn: () => projectsService.activityDefaults(proyectoId as number),
+    enabled: !isEditing && proyectoId != null,
+    staleTime: 60000,
+  });
+
+  // Lo último que autocompletamos. Permite reemplazarlo si el usuario
+  // cambia de proyecto, distinguiéndolo de lo que escribió a mano: un
+  // campo que sigue igual al prellenado anterior es nuestro y se puede
+  // pisar; uno que difiere lo tocó el usuario y no se toca.
+  const prefilled = useRef<ActivityDefaults | null>(null);
+
+  useEffect(() => {
+    if (!projectDefaults) return;
+    const previo = prefilled.current;
+
+    const aplicar = (campo: "empresa" | "proceso" | "aplicacion" | "stakeholder") => {
+      const nuevo = projectDefaults[campo];
+      if (nuevo === undefined) return;
+      const actual = form.getValues(campo);
+      if (actual === "" || actual === previo?.[campo]) {
+        form.setValue(campo, nuevo);
+      }
+    };
+    aplicar("empresa");
+    aplicar("proceso");
+    aplicar("aplicacion");
+    aplicar("stakeholder");
+
+    if (projectDefaults.tipo_id !== undefined) {
+      const actual = form.getValues("tipo_id");
+      if (actual == null || actual === previo?.tipo_id) {
+        form.setValue("tipo_id", projectDefaults.tipo_id ?? null);
+      }
+    }
+
+    prefilled.current = projectDefaults;
+  }, [projectDefaults, form]);
+
+  const hayPrellenado =
+    !isEditing && projectDefaults != null && Object.keys(projectDefaults).length > 0;
+
   const submit = form.handleSubmit(async (v) => {
     await onSubmit({
       empresa: v.empresa,
@@ -212,6 +264,14 @@ export function ActivityForm({
               ))}
           </SelectContent>
         </Select>
+        {/* El autocompletado no debe ser silencioso: si el usuario no sabe
+            de dónde salieron esos valores, no sabe que puede cambiarlos. */}
+        {hayPrellenado && (
+          <p className="text-xs text-muted-foreground">
+            Empresa, proceso, aplicación y stakeholder se tomaron de la última actividad de este
+            proyecto. Puedes cambiarlos.
+          </p>
+        )}
       </Field>
 
       <div className="grid sm:grid-cols-2 gap-4">

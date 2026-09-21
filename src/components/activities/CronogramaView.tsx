@@ -16,6 +16,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ChevronLeft, ChevronRight, CalendarRange } from "lucide-react";
 import type { Activity } from "@/lib/types";
+import {
+  ProjectFilterSelect,
+  PROJECT_FILTER_ALL,
+  matchesProjectFilter,
+  type ProjectFilter,
+} from "@/components/projects/ProjectFilterSelect";
 import { useWorkspace } from "@/providers/WorkspaceProvider";
 import { cn } from "@/lib/utils";
 
@@ -78,6 +84,7 @@ export function CronogramaView({ month, onMonthChange, showHeader = true }: Cron
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<number | "all">("all");
   const [priorityFilter, setPriorityFilter] = useState<number | "all">("all");
+  const [proyectoFilter, setProyectoFilter] = useState<ProjectFilter>(PROJECT_FILTER_ALL);
 
   const { data, isLoading } = useQuery({
     queryKey: ["activities-plan", activeMonth, week],
@@ -102,6 +109,7 @@ export function CronogramaView({ month, onMonthChange, showHeader = true }: Cron
       if (weekValue && a.semana_planeacion !== weekValue) return false;
       if (statusFilter !== "all" && a.estado_id !== statusFilter) return false;
       if (priorityFilter !== "all" && a.prioridad_id !== priorityFilter) return false;
+      if (!matchesProjectFilter(a, proyectoFilter)) return false;
       if (!q) return true;
       return (
         a.nombre.toLowerCase().includes(q) ||
@@ -110,7 +118,7 @@ export function CronogramaView({ month, onMonthChange, showHeader = true }: Cron
         a.id.toLowerCase().includes(q)
       );
     });
-  }, [data, query, week, statusFilter, priorityFilter]);
+  }, [data, query, week, statusFilter, priorityFilter, proyectoFilter]);
 
   const groups = useMemo(() => {
     const map = new Map<string, Activity[]>();
@@ -243,6 +251,12 @@ export function CronogramaView({ month, onMonthChange, showHeader = true }: Cron
             ))}
           </SelectContent>
         </Select>
+        <ProjectFilterSelect
+          value={proyectoFilter}
+          onChange={setProyectoFilter}
+          activities={data ?? []}
+          className="w-48"
+        />
         <Select value={groupBy} onValueChange={(v) => setGroupBy(v as GroupBy)}>
           <SelectTrigger className="w-44">
             <SelectValue />

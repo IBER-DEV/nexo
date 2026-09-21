@@ -121,6 +121,18 @@ export interface ProjectInput {
   is_active?: boolean;
 }
 
+/** Contexto repetible de la última actividad visible de un proyecto, para
+ *  prellenar la siguiente. Vacío (`{}`) si el proyecto no tiene ninguna que
+ *  este usuario pueda ver. Deliberadamente no trae fechas, estado,
+ *  prioridad ni responsable — ver `ProjectViewSet.activity_defaults`. */
+export interface ActivityDefaults {
+  empresa?: string;
+  proceso?: string;
+  aplicacion?: string;
+  stakeholder?: string;
+  tipo_id?: number | null;
+}
+
 export interface ProjectSummary {
   total: number;
   por_salud: Partial<Record<ProjectSalud, number>>;

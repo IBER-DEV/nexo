@@ -1,5 +1,20 @@
-import { apiFetch } from "@/lib/api";
+import { apiDownload, apiFetch } from "@/lib/api";
 import type { Activity, ActivityInput, ActivityMetaOptions } from "@/lib/types";
+
+export interface ImportResult {
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: Array<{ row: number; error: unknown; sheet?: string }>;
+  dry_run: boolean;
+  /** null si el libro no traía hoja "Proyectos". */
+  projects: {
+    created: number;
+    updated: number;
+    skipped: number;
+    errors: Array<{ row: number; error: unknown; sheet?: string }>;
+  } | null;
+}
 
 export const activitiesService = {
   async list(): Promise<Activity[]> {
@@ -42,16 +57,27 @@ export const activitiesService = {
     return Array.isArray(res) ? res : res.results;
   },
 
+  /** Descarga la plantilla .xlsx (hojas Proyectos + Actividades). */
+  async downloadTemplate(): Promise<void> {
+    return apiDownload("/activities/template/", {}, "plantilla-nexo.xlsx");
+  },
+
+  /** Exporta a .xlsx exactamente las filas dadas (las que el usuario tiene
+   *  filtradas/ordenadas en pantalla): el filtrado de la tabla es
+   *  client-side, así que se envían los pks en vez de repetir filtros en
+   *  el backend. */
+  async exportXlsx(pks: number[]): Promise<void> {
+    return apiDownload(
+      "/activities/export/",
+      { method: "POST", body: JSON.stringify({ pks }) },
+      "actividades.xlsx",
+    );
+  },
+
   async importExcel(
     file: File,
     params: { mes_planeacion?: string; semana_planeacion?: number },
-  ): Promise<{
-    created: number;
-    updated: number;
-    skipped: number;
-    errors: Array<{ row: number; error: unknown }>;
-    dry_run: boolean;
-  }> {
+  ): Promise<ImportResult> {
     const form = new FormData();
     form.append("file", file);
     if (params.mes_planeacion) form.append("mes_planeacion", params.mes_planeacion);

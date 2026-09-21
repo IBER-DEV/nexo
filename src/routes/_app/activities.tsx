@@ -47,12 +47,20 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ActivityForm } from "@/components/activities/ActivityForm";
+import {
+  ProjectFilterSelect,
+  PROJECT_FILTER_ALL,
+  matchesProjectFilter,
+  type ProjectFilter,
+} from "@/components/projects/ProjectFilterSelect";
 import type { Activity, ActivityInput } from "@/lib/types";
 import { useWorkspace } from "@/providers/WorkspaceProvider";
 import {
   ArrowUpDown,
   CalendarIcon,
   Download,
+  FileSpreadsheet,
+  Upload,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -105,6 +113,10 @@ function ActivitiesPage() {
   const [filterEstado, setFilterEstado] = useState<string>("all");
   const [filterPrioridad, setFilterPrioridad] = useState<string>("all");
   const [filterResponsable, setFilterResponsable] = useState<string>("all");
+  const [filterProyecto, setFilterProyecto] = useState<ProjectFilter>(PROJECT_FILTER_ALL);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
   const [filterInicioDesde, setFilterInicioDesde] = useState<Date | null>(null);
   const [filterInicioHasta, setFilterInicioHasta] = useState<Date | null>(null);
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({
@@ -142,6 +154,7 @@ function ActivitiesPage() {
       if (filterEstado !== "all" && String(a.estado_id) !== filterEstado) return false;
       if (filterPrioridad !== "all" && String(a.prioridad_id) !== filterPrioridad) return false;
       if (filterResponsable !== "all" && a.responsable !== filterResponsable) return false;
+      if (!matchesProjectFilter(a, filterProyecto)) return false;
       const inicio = dateOnly(new Date(a.fechaInicio));
       if (filterInicioDesde && inicio < dateOnly(filterInicioDesde)) return false;
       if (filterInicioHasta && inicio > dateOnly(filterInicioHasta)) return false;
@@ -180,6 +193,7 @@ function ActivitiesPage() {
     filterEstado,
     filterPrioridad,
     filterResponsable,
+    filterProyecto,
     filterInicioDesde,
     filterInicioHasta,
     sort,
@@ -196,46 +210,56 @@ function ActivitiesPage() {
     );
   };
 
-  const exportCSV = () => {
-    const headers = [
-      "ID",
-      "Proyecto",
-      "Empresa",
-      "Proceso",
-      "Aplicación",
-      "Nombre",
-      "Responsable",
-      "Stakeholder",
-      "Prioridad",
-      "Estado",
-      "Fecha inicio",
-      "Fecha límite",
-    ];
-    const rows = filtered.map((a) => [
-      a.id,
-      a.proyecto,
-      a.empresa,
-      a.proceso,
-      a.aplicacion,
-      a.nombre,
-      a.responsable,
-      a.stakeholder,
-      priorityById[a.prioridad_id]?.nombre ?? "",
-      stateById[a.estado_id]?.nombre ?? "",
-      format(new Date(a.fechaInicio), "yyyy-MM-dd"),
-      format(new Date(a.fechaLimite), "yyyy-MM-dd"),
-    ]);
-    const csv = [headers, ...rows]
-      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `actividades-${Date.now()}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Exportado a CSV");
+  // .xlsx real generado en el backend con exactamente las filas filtradas y
+  // ordenadas que se ven. El CSV anterior se abría en una sola columna en
+  // Excel con configuración regional en español (el separador de listas
+  // allí es ";", no ",").
+  const handleExport = async () => {
+    if (filtered.length === 0) {
+      toast.info("No hay actividades para exportar");
+      return;
+    }
+    try {
+      await activitiesService.exportXlsx(filtered.map((a) => a.pk));
+      toast.success("Exportado a Excel");
+    } catch {
+      /* apiDownload ya mostró el error */
+    }
+  };
+
+  const handleTemplate = async () => {
+    try {
+      await activitiesService.downloadTemplate();
+    } catch {
+      /* apiDownload ya mostró el error */
+    }
+  };
+
+  const handleImport = async () => {
+    if (!importFile) {
+      toast.error("Selecciona un archivo Excel");
+      return;
+    }
+    setImporting(true);
+    try {
+      const r = await activitiesService.importExcel(importFile, {});
+      qc.invalidateQueries({ queryKey: ["activities"] });
+      qc.invalidateQueries({ queryKey: ["projects"] });
+      qc.invalidateQueries({ queryKey: ["activities-meta"] });
+      const proy = r.projects
+        ? ` · Proyectos: ${r.projects.created} nuevos, ${r.projects.updated} actualizados`
+        : "";
+      toast.success(`Actividades: ${r.created} creadas, ${r.updated} actualizadas${proy}`);
+      play("success");
+      const omitidas = r.skipped + (r.projects?.skipped ?? 0);
+      if (omitidas) toast.info(`Filas omitidas: ${omitidas} (revisa campos requeridos)`);
+      setImportOpen(false);
+      setImportFile(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Error al importar");
+    } finally {
+      setImporting(false);
+    }
   };
 
   const handleSubmit = async (values: ActivityInput) => {
@@ -274,7 +298,13 @@ function ActivitiesPage() {
         description="Gestión completa del backlog técnico"
         actions={
           <>
-            <Button variant="outline" onClick={exportCSV} className="gap-2">
+            <Button variant="outline" onClick={handleTemplate} className="gap-2">
+              <FileSpreadsheet className="h-4 w-4" /> Plantilla
+            </Button>
+            <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-2">
+              <Upload className="h-4 w-4" /> Importar
+            </Button>
+            <Button variant="outline" onClick={handleExport} className="gap-2">
               <Download className="h-4 w-4" /> Exportar
             </Button>
             <Button
@@ -294,7 +324,7 @@ function ActivitiesPage() {
 
       <Card className="p-4">
         <div className="space-y-3">
-          <div className="grid gap-2 xl:grid-cols-[minmax(260px,1.2fr)_repeat(3,auto)]">
+          <div className="grid gap-2 xl:grid-cols-[minmax(260px,1.2fr)_repeat(4,auto)]">
             <div className="relative min-w-60">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -366,6 +396,14 @@ function ActivitiesPage() {
                 ))}
               </SelectContent>
             </Select>
+            <ProjectFilterSelect
+              value={filterProyecto}
+              onChange={(v) => {
+                setFilterProyecto(v);
+                setPage(1);
+              }}
+              activities={data ?? []}
+            />
           </div>
           <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
             <DateRangeFilter
@@ -568,6 +606,37 @@ function ActivitiesPage() {
               setEditing(null);
             }}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={importOpen}
+        onOpenChange={(o) => {
+          setImportOpen(o);
+          if (!o) setImportFile(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Importar desde Excel</DialogTitle>
+            <DialogDescription>
+              Sube la plantilla con las hojas «Proyectos» y «Actividades». Si no la tienes,
+              descárgala con el botón «Plantilla».
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            type="file"
+            accept=".xlsx"
+            onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setImportOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleImport} disabled={importing || !importFile} className="gap-2">
+              <Upload className="h-4 w-4" /> {importing ? "Importando..." : "Importar"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
